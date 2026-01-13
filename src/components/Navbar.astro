@@ -1,0 +1,158 @@
+---
+import { verificarToken } from '../utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+
+import Inicio from '../assets/icons/inicio.svg';
+import Tasa from '../assets/icons/tasa.svg';
+import Clientes from '../assets/icons/clientes.svg';
+import Ventas from '../assets/icons/ventas.svg';
+import Cargas from '../assets/icons/cargas.svg';
+import Creditos from '../assets/icons/creditos.svg';
+import Presupuestos from '../assets/icons/presupuestos.svg';
+import Productos from '../assets/icons/productos.svg';
+import Reportes from '../assets/icons/reportes.svg';
+import Usuarios from '../assets/icons/usuarios.svg';
+
+---
+
+<div class="navbar-wrapper">
+    <button class="toggle-btn" id="toggleMenu">☰</button>
+    <nav class="sidebar" id="sidebar">
+        <a href="/"><Inicio />Inicio</a>
+        <a href="/tasa"><Tasa />Tasa del Día</a>
+        <a href="/clientes"><Clientes />Clientes</a>
+        <a href="/ventas"><Ventas />Ventas</a>
+        <a href="/creditos"><Creditos />Créditos</a>
+        <a href="/presupuestos"><Presupuestos />Presupuestos</a>
+        {usuario?.rol === 'admin' && (
+            <>
+                <a href="/productos"><Productos /> Productos</a>
+                <a href="/cargas"><Cargas /> Cargas</a>
+                <a href="/reportes"><Reportes /> Reportes</a>
+                <a href="/usuarios"><Usuarios /> Usuarios</a>
+            </>
+        )}
+        <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
+    </nav>
+</div>
+
+<style>
+    
+    .navbar-wrapper {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .toggle-btn {
+        display: none; 
+        color: var(--primary-color);
+        background: transparent;
+        font-size: 3rem;
+        padding: .5rem;
+        border: none;
+        cursor: pointer;
+        position: fixed;
+        top: 0;
+        right: 0;
+        z-index: 1000;
+        border-radius: 8px;
+    }
+
+    .sidebar {
+        width: 180px;
+        min-height: 100vh;
+        background-color: var(--primary-color);
+        color: white;
+        padding: 2rem 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: .7rem;
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar a {
+        color: white;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: .85rem;
+        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+        display: flex;
+        gap: .5rem;
+        justify-content: flex-start;
+        align-items: center;
+    }
+
+    .sidebar a:hover {
+        background-color: #374151;
+    }
+
+    @media (max-width: 768px) {
+        .toggle-btn {
+            display: block;
+        }
+
+        .sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 220px;
+            height: 100vh;
+            z-index: 999;
+            background-color: var(--primary-color);
+            gap: .7rem;
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+        }
+    }
+
+    .logout-btn {
+        margin-top: .3rem;
+        background: var(--danger-color);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: .5rem 1rem;
+        font-size: .75;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.1s;
+    }
+
+    .logout-btn:hover {
+        background: var(--danger-hover-color);
+        scale: 1.05;
+    }
+
+    .logout-btn:active {
+        scale: 0.95;
+    }
+
+</style>
+
+<script type="module" is:inline>
+    const toggleBtn = document.getElementById('toggleMenu');
+    const sidebar = document.getElementById('sidebar');
+
+    toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/logout', { method: 'POST' });
+            if (res.ok) {
+                window.location.href = '/login';
+            }
+        } catch (err) {
+            console.error('Error al cerrar sesión');
+        }
+    });
+</script>

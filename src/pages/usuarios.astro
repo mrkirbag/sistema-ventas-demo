@@ -1,0 +1,117 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/'); 
+}
+---
+
+<Layout>
+    <h1>USUARIOS</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/usuarios/agregarUsuarios">Agregar Usuario</a>
+    </div>
+
+    <table>
+        <thead id="thead">
+            <tr>
+                <th>Nombre</th>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="listaUsuarios">
+        </tbody>
+    </table>
+
+    <div id="mensaje"></div>
+</Layout>
+
+<script >
+
+    import { noRegistros } from "@/utils/helpers/mensajes.js";
+
+    interface Usuario {
+        id: number;
+        nombre: string;
+        usuario: string;
+        rol: string;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+
+        // Elementos del DOM
+        const tbody = document.getElementById('listaUsuarios') as HTMLTableSectionElement;
+        const thead = document.getElementById('thead') as HTMLTableSectionElement;
+
+        try {
+            const res = await fetch('/api/usuarios');
+            const usuarios : Usuario[] = await res.json();
+
+            // Validar que no haya usuarios
+            if (res.status === 204) {
+                tbody.innerHTML = "";
+                thead.style.display = 'none';
+                noRegistros("No hay usuarios registrados")
+                return;
+            }
+
+            thead.style.display = 'table-header-group';
+            usuarios.forEach(usuario => {
+
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `    
+                                    <td data-label="Nombre">${usuario.nombre ? usuario.nombre.toUpperCase() : ''}</td>
+                                    <td data-label="Usuario">${usuario.usuario}</td>
+                                    <td data-label="Rol">${usuario.rol ? usuario.rol.toUpperCase() : ''}</td>
+                                `;
+
+                // Botones de acciones
+                const tdAcciones = document.createElement('td');
+                tdAcciones.classList.add('acciones');
+
+                // Boton de eliminar
+                const btnEliminar = document.createElement('button');   
+                btnEliminar.classList.add('btn-eliminar');
+                btnEliminar.textContent = 'DEL';
+
+                btnEliminar.onclick = async () => {
+
+                    // Confirmación antes de eliminar
+                    const confirmar = confirm(`¿Estás seguro de eliminar al usuario ${usuario.nombre}?`);
+                    if (!confirmar) return;
+
+                    // Enviar solicitud de eliminación al servidor
+                    try {
+                        const res = await fetch('/api/usuarios/', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: usuario.id })
+                        });
+
+                        window.location.reload();
+                    } catch(error) {
+                        console.error("Error eliminando usuario:", error);
+                    }    
+                }
+                tdAcciones.appendChild(btnEliminar);
+
+                // Adjuntar acciones al tr
+                tr.appendChild(tdAcciones);
+                tbody.appendChild(tr);
+
+            });
+        } catch (err) {
+            console.error('Error al cargar usuarios:', err);
+        }
+    });
+
+</script>

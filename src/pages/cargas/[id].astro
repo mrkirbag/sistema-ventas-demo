@@ -1,0 +1,113 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/'); 
+}
+
+const id = Astro.params.id;
+---
+
+<Layout>
+    <h1>DETALLES DE LA CARGA {id}</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/cargas">Regresar</a>
+    </div>
+
+    <main id="infoCarga"></main>
+
+    <table>
+        <thead id="thead">
+            <tr>
+                <th>
+                    Código y Nombre del Producto
+                </th>
+                <th>P. Costo</th>
+                <th>Unidades Nuevas</th>
+            </tr>
+        </thead>
+        <tbody id="lista">
+        </tbody>
+    </table>
+
+    <div id="mensaje"></div>
+
+</Layout>
+
+<script>
+
+    import { formatearFecha } from '@/utils/helpers/formateoFecha.js';
+    import { cambioUSDaCOP } from '@/utils/helpers/cambioMoneda.js';
+    import { noRegistros } from '@/utils/helpers/mensajes.js';
+
+    interface DetalleCarga {
+        codigo_producto: string;
+        nombre_producto: string;
+        costo: number;
+        unidades_nuevas: number;
+    }
+
+    const id = location.pathname.split('/').pop() as string;
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+
+        const infoCarga = document.getElementById('infoCarga') as HTMLDivElement;
+        const thead = document.getElementById('thead') as HTMLTableSectionElement;
+        const lista = document.getElementById('lista') as HTMLTableSectionElement;
+
+        try {
+            const respuesta = await fetch(`/api/cargas/${id}`);
+            const datos = await respuesta.json();
+
+            if (respuesta.status === 204) {
+                thead.style.display = "none";
+                noRegistros("No se encontró la carga de factura solicitada");
+                return;
+            }
+
+            const { detalles } : { detalles: DetalleCarga[] } = datos;
+
+            // Obtener tasa de cambio
+            const tasaCambio = await cambioUSDaCOP();   
+
+            // Mostrar info de la carga
+            infoCarga.innerHTML = `
+                <p><strong>Proveedor:</strong> ${datos.proveedor.toUpperCase()}</p>
+                <p><strong>Fecha:</strong> ${formatearFecha(datos.fecha)}</p>
+                <p><strong>Monto Total:</strong> ${datos.monto_total.toFixed(2)} USD / ${(datos.monto_total * tasaCambio).toFixed(2)} COP</p>
+            `;
+
+            // Mostrar los detalles en la tabla
+            thead.style.display = "thead-table-group";
+
+            detalles.forEach(detalle => {
+                const fila = document.createElement('tr');
+
+                fila.innerHTML = `
+                    <td data-label="Código y Nombre">
+                        <strong>${detalle.codigo_producto.toUpperCase()}</strong>
+                        <br>
+                        ${detalle.nombre_producto.toUpperCase()}
+                    </td>
+                    <td data-label="P. Costo">
+                        ${detalle.costo.toFixed(2)} USD
+                        <br>
+                        ${(detalle.costo * tasaCambio).toFixed(2)} COP
+                    </td>
+                    <td data-label="Unidades Nuevas">${detalle.unidades_nuevas}</td>
+                `;
+
+                lista.appendChild(fila);
+            });
+            
+        } catch (error) {
+            console.error(error);
+        }
+    });
+</script>

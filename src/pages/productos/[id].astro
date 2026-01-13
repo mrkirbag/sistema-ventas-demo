@@ -1,0 +1,164 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/'); 
+}
+---
+
+<Layout>
+    <h1>EDITAR PRODUCTO</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/productos">Regresar</a>
+    </div>
+
+    <section class="form-container">
+        <form id="formulario">
+            <div>
+                <label for="codigo">Código</label>
+                <input type="text" name="codigo" id="codigo" placeholder="Código del Producto" />
+            </div>
+            <div>
+                <label for="nombre">Nombre</label>
+                <input type="text" name="nombre" id="nombre" placeholder="Nombre" />
+            </div>
+            <div>
+                <label for="unidad_medida">Unidad de medida</label>
+                <input type="text" name="unidad_medida" id="unidad_medida" placeholder="Unidad de Medida (ej. kg, lt, und)" />
+            </div>
+            <div>
+                <label for="stock">Stock actual</label>
+                <input type="text" name="stock" id="stock" placeholder="Cantidad de Stock Inicial" min="0"/>
+            </div>
+            <div>
+                <label for="costo">Precio de costo</label>
+                <input type="text" name="costo" id="costo" placeholder="Precio de Costo en USD" min="0"/>
+            </div>
+            <div>
+                <label for="venta">Precio de venta</label>
+                <input type="text" name="venta" id="venta" placeholder="Precio de Venta en USD" min="0"/>
+            </div>
+
+            <button type="submit">Actualizar</button>
+        </form>
+    </section>
+
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+    
+</Layout>
+
+<script>
+
+    import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
+
+    // Rellenar campos con los datos existentes
+    const id = location.pathname.split("/").pop() as string;
+    const nombre = document.querySelector("#nombre") as HTMLInputElement;
+    const codigo = document.querySelector("#codigo") as HTMLInputElement;
+    const unidadMedida = document.querySelector("#unidad_medida") as HTMLInputElement;
+    const stock = document.querySelector("#stock") as HTMLInputElement;
+    const costo = document.querySelector("#costo") as HTMLInputElement;
+    const venta = document.querySelector("#venta") as HTMLInputElement;
+    
+    document.addEventListener('DOMContentLoaded', rellenarCampos);
+
+    async function rellenarCampos(){
+
+        const response = await fetch(`/api/productos/${id}`);
+        const producto = await response.json();
+
+        codigo.value = producto.codigo || '';
+        nombre.value = producto.nombre || '';
+        unidadMedida.value = producto.unidad_medida || '';
+        stock.value = producto.stock;
+        costo.value = producto.costo;
+        venta.value = producto.venta;
+    }
+
+    const formulario = document.getElementById('formulario') as HTMLFormElement;
+
+    formulario.addEventListener('submit', async (event : SubmitEvent) => { 
+        
+        event.preventDefault();
+        
+        const formData = new FormData(formulario);
+        const id = location.pathname.split("/").pop();
+
+        const codigo = formData.get('codigo') as string;
+        const nombre = formData.get('nombre') as string;
+        const stockString = formData.get('stock') as string;
+        const costoString = formData.get('costo') as string;
+        const ventaString = formData.get('venta') as string;
+        const unidadMedida = formData.get('unidad_medida') as string;
+
+
+        // Validar campos vacios
+        if (codigo === '' || nombre === '' || stockString === '' || costoString === '' || ventaString === '' || unidadMedida === '') {
+            mostrarError('Todos los campos son obligatorios');
+            return;
+        }
+
+        // Validar stock
+        const normalizado = stockString.replace(",", ".");
+        const stockValido = /^\d+(\.\d+)?$/.test(normalizado);
+        const stockNumero = parseFloat(normalizado);
+
+        if (!stockValido || isNaN(stockNumero) || stockNumero <= 0) {
+            mostrarError("La cantidad en stock debe ser un número positivo mayor a 0 (se permiten decimales con . o ,)");
+            return;
+        }
+
+        // Validar costo
+        const costoNum = parseFloat(costoString.replace(',', '.'));
+        if (isNaN(costoNum) || costoNum <= 0) {
+            mostrarError('El costo debe ser un número positivo mayor a 0');
+            return;
+        }
+
+        // Validar precio venta
+        const ventaNum = parseFloat(ventaString.replace(',', '.'));
+        if (isNaN(ventaNum) || ventaNum <= 0) {
+            mostrarError('El precio de venta debe ser un número positivo mayor a 0');
+            return;
+        }
+
+        // Parseo
+        const stock = stockNumero;
+        const costo = costoNum;
+        const venta = ventaNum;
+
+        // Enviar datos al servidor
+        const response = await fetch("/api/productos", {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id, codigo, nombre, stock, costo, venta, unidad_medida: unidadMedida }),
+        });
+
+        // Verificar si la respuesta es exitosa
+        if (!response.ok) {
+            if (response.status === 409) {
+                const mensaje = await response.text();
+                mostrarError(mensaje);
+            } else {
+                mostrarError('Error al editar producto: ' + response.status);
+            }
+            return;
+        }
+
+        const data = await response.json();
+        mostrarMensaje(data.message);
+        setTimeout(() => {
+            window.location.href = '/productos';
+        }, 1000);
+    });
+</script>

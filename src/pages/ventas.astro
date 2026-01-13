@@ -1,0 +1,247 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+
+const fechaActual = new Date().toLocaleDateString("es-VE", {
+    timeZone: "America/Caracas",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+}).split('/').reverse().join('-');
+---
+
+<Layout>
+    <h1>VENTAS</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/ventas/agregarVentas">Agregar Venta</a>
+    </div>
+
+
+    <p>Selecciona una fecha para ver las ventas de ese día</p>
+    <div class="input-busqueda_container">
+        <input type="date" id="inputBusqueda" value={fechaActual} />
+    </div>
+
+    <div class="btn-add_container">
+        <a class="btn-add" id="imprimir" style="display: none;">Imprimir</a>
+    </div>
+    <table id="tabla">
+        <thead id="tablaVentasHead" style="display: none;">
+            <tr>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Tipo Pago</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="listaVentas">
+        </tbody>
+    </table>
+
+    <div id="mensaje"></div>
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+
+</Layout>
+
+<style>
+
+    p {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        text-align: center;
+        font-weight: 700;
+    }
+
+</style>
+
+<script>
+
+    import { noRegistros } from "@/utils/helpers/mensajes.js";
+    import { mostrarMensaje, mostrarError } from "@/utils/helpers/mensajes.js";
+    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
+    import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
+
+    interface Venta {
+        id: number;
+        fecha: string;
+        cliente: string;
+        cedula_cliente: string;
+        total: number;
+        tipo_pago: string;
+        estado: string;
+    }
+
+    // Disparar el evento input al cargar la página para mostrar las ventas del día actual
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputBusqueda = document.getElementById("inputBusqueda") as HTMLInputElement;
+        inputBusqueda.dispatchEvent(new Event('input'));
+    });
+
+    const inputBusqueda = document.getElementById("inputBusqueda") as HTMLInputElement;
+    inputBusqueda.addEventListener('input', async () => {
+
+        // Elementos del DOM
+        const tablaVentasHead = document.getElementById('tablaVentasHead') as HTMLTableSectionElement;
+        const tbody = document.getElementById('listaVentas') as HTMLTableSectionElement;
+        const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+
+        tbody.innerHTML = "";
+
+        try {
+            const res = await fetch(`/api/ventas?fecha=${inputBusqueda.value}`);
+            const ventas : Venta[] = await res.json();
+
+            // Validar que no haya ventas
+            if (res.status === 202) {
+                btnImprimir.style.display = 'none';
+                tablaVentasHead.style.display = 'none';
+                noRegistros("No hay ventas registradas para esa fecha");
+                return;
+            } else {
+                tbody.innerHTML = "";
+                noRegistros("");
+            }
+
+            tablaVentasHead.style.display = 'table-header-group';
+            btnImprimir.style.display = 'block'
+
+            // Obtener tasa de cambio
+            const tasa = await cambioUSDaCOP();
+
+            ventas.forEach(ventas => {
+
+                const fechaFormateada = formatearFecha(ventas.fecha);
+                const totalCOP = Math.ceil(ventas.total * tasa);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `    
+                                    <td data-label="Fecha">${fechaFormateada}</td>
+                                    <td data-label="Cliente">
+                                        ${ventas.cliente.toUpperCase()}<br />
+                                        C.I. ${ventas.cedula_cliente}
+                                    </td>
+                                    <td data-label="Monto Total">
+                                        ${ventas.total} USD
+                                        <br />
+                                        ${totalCOP} COP
+                                    </td>
+                                    <td data-label="Tipo Pago">${ventas.tipo_pago.toUpperCase()}</td>
+                                    <td data-label="Estado">${ventas.estado.toUpperCase()}</td>
+                                `;
+
+                // Botones de acciones
+                const tdAcciones = document.createElement('td');
+                tdAcciones.classList.add('acciones');
+
+                // Boton de eliminar
+                const btnEliminar = document.createElement('button');
+                btnEliminar.classList.add('btn-eliminar');
+                btnEliminar.textContent = 'ANULAR';
+
+                btnEliminar.onclick = async () => {
+
+                    // Confirmación antes de eliminar
+                    const confirmar = confirm(`¿Estás seguro de ANULAR la venta del cliente ${ventas.cliente.toUpperCase()} C.I. ${ventas.cedula_cliente} con fecha de ${fechaFormateada}?`);
+                    if (!confirmar) return;
+
+                    // Enviar solicitud de eliminación al servidor
+                    try {
+                        const res = await fetch(`/api/ventas/anularVenta`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: ventas.id })
+                        });
+
+                        // Validar
+                        if(res.status === 409 || res.status === 404){
+                            const data = await res.json();
+                            mostrarError(data.message);
+                            return; 
+                        }
+
+                        const data = await res.json();
+                        mostrarMensaje(data.message); 
+
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+
+                    } catch(error) {
+                        console.error("Error anulando ventas:", error);
+                    }    
+                }
+                tdAcciones.appendChild(btnEliminar);
+
+                // Boton de ver informacion
+                const btnVerInfo = document.createElement('button');
+                btnVerInfo.classList.add('btn-editar');
+                btnVerInfo.textContent = 'VER INFO';
+
+                btnVerInfo.onclick = () => {
+                    window.location.href = `/ventas/${ventas.id}`;
+                };
+
+                tdAcciones.appendChild(btnVerInfo);
+
+                // Adjuntar acciones al tr
+                tr.appendChild(tdAcciones);
+                tbody.appendChild(tr);
+
+            });
+        } catch (err) {
+            console.error('Error al cargar usuarios:', err);
+        }
+    });
+
+    const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+
+    btnImprimir.addEventListener('click', () => {
+        
+        const tabla = document.getElementById('tabla');
+        if (!tabla) return;
+
+        const tablaClon : any = tabla.cloneNode(true);
+
+        // Eliminamos la última celda de cada fila
+        for (const fila of tablaClon.rows) {
+            if (fila.cells.length > 0) {
+            fila.deleteCell(fila.cells.length - 1);
+            }
+        }
+
+        // Creamos una ventana temporal para imprimir
+        const ventana = window.open('', '', 'width=800,height=600') as Window;
+        ventana.document.write(`
+                                <html>
+                                    <head>
+                                        <title>Impresión de ventas</title>
+                                        <style>
+                                            body { font-family: sans-serif; padding: 20px; }
+                                            table { border-collapse: collapse; width: 100%; }
+                                            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <h1>REPORTE DE VENTAS DEL DIA</h1>
+                                        ${tablaClon.outerHTML}
+                                    </body>
+                                </html>
+                            `);
+        ventana.document.close();
+        ventana.focus();
+        ventana.print();
+        ventana.close();
+    });
+
+
+</script>

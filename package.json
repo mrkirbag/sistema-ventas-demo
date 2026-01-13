@@ -1,0 +1,24 @@
+{
+  "name": "sistema-demo-inventario",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/netlify": "^6.6.3",
+    "@libsql/client": "^0.15.15",
+    "astro": "^5.16.4",
+    "bcrypt": "^6.0.0",
+    "chart.js": "^4.5.1",
+    "chartjs-plugin-datalabels": "^2.2.0",
+    "cookie": "^1.1.1",
+    "dotenv": "^17.2.3",
+    "html-to-image": "^1.11.13",
+    "jsonwebtoken": "^9.0.3",
+    "xlsx": "^0.18.5"
+  }
+}

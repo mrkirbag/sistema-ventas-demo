@@ -1,0 +1,190 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/'); 
+}
+---
+
+<Layout>
+    <h1>CARGAR PRODUCTOS DESDE ARCHIVO EXCEL (.XLSX)</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/productos">Regresar</a>
+    </div>
+
+    <section class="form-container">
+        <form id="formulario">
+            <div>
+                <label for="archivo">Archivo Excel:</label>
+                <input type="file" class="btn-file" name="archivo" id="archivo" accept=".xlsx" />
+            </div>
+            <div>
+                <label for="proveedor">Proveedor:</label>
+                <input type="text" name="proveedor" id="proveedor" placeholder="Nombre del proveedor" />
+            </div>
+            <button type="submit">Cargar</button>
+        </form>
+    </section>
+
+    <div id="spinner" style="display: none;">
+        <div class="loader"></div>
+        <p>Cargando productos...</p>
+    </div>
+
+    <div id="respuesta" style="display: none;"></div>
+
+    <div id="overlay" class="overlay oculto">  
+        <div id="modal" class="modal"></div>
+    </div>
+</Layout>
+
+<style>
+    input[type="file"]::file-selector-button {
+        background-color: #1f2937;
+        color: #fff;
+        border-radius: 5px;
+        padding: .35rem .75rem;
+        text-align: center;
+        font-size: .9rem;
+        font-weight: 600;
+        border: none;
+        outline: none;
+        cursor: pointer;
+    }
+
+    input[type="file"]::file-selector-button:hover {
+        background: #4b4b8a;
+    }
+
+    #respuesta {
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 2px solid #4b4b8a;
+        border-radius: 8px;
+        background-color: #f8f9ff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        max-width: 400px;
+    }
+
+    #respuesta h3 {
+        margin: 0 0 0.5rem;
+        font-size: 1.1rem;
+        color: #2c2c6c;
+    }
+
+    #respuesta .resumen p {
+        margin: 0.4rem 0;
+        font-size: 0.95rem;
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px dashed #ccc;
+        padding-bottom: 0.2rem;
+    }
+
+    #respuesta .resumen span {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: .5rem;
+    }
+
+    #spinner {
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #4b4b8a;
+        font-weight: bold;
+    }
+
+    .loader {
+        width: 32px;
+        height: 32px;
+        border: 4px solid #ccc;
+        border-top: 4px solid #4b4b8a;
+        border-radius: 50%;
+        animation: girar 0.8s linear infinite;
+    }
+
+    @keyframes girar {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+    import { mostrarError } from "@/utils/helpers/mensajes.js";
+
+    const formulario = document.getElementById('formulario') as HTMLFormElement;
+    const archivoInput = document.getElementById('archivo') as HTMLInputElement;
+    const proveedorInput = document.getElementById('proveedor') as HTMLInputElement;
+    const respuestaDiv = document.getElementById('respuesta') as HTMLDivElement;
+    const spinner = document.getElementById('spinner') as HTMLDivElement;
+
+    formulario.addEventListener('submit', async (e : SubmitEvent) => {
+        e.preventDefault();
+
+        const archivo = archivoInput.files?.[0];
+        const proveedor = proveedorInput.value.trim() || "Desconocido";
+
+        // Validación defensiva
+        if (!archivo) {
+            mostrarError('Debe seleccionar un archivo Excel (.xlsx)');
+            return;
+        }
+
+        if (!archivo.name.endsWith('.xlsx')) {
+            mostrarError('Solo se permiten archivos .xlsx');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+        formData.append('proveedor', proveedor);
+
+        spinner.style.display = 'flex';
+
+        try {
+            const res = await fetch('/api/productos/cargaMasiva', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error(`Error ${res.status}`);
+
+            const data = await res.json();
+
+            if (Array.isArray(data.resultados)) {
+                const total = data.resultados.length;
+
+                respuestaDiv.style.display = 'block';
+                respuestaDiv.innerHTML = `
+                    <div class="estado-carga">
+                        <h3>Carga Completada</h3>
+                        <div class="resumen">
+                            <p><strong>Total procesados:</strong> <span>${total}</span></p>
+                            <p><strong>ID Carga:</strong> <span>${data.idCarga}</span></p>
+                        </div>
+                    </div>
+                `;
+
+                // Limpiar input
+                archivoInput.value = "";
+                proveedorInput.value = "";
+
+            } else {
+                mostrarError('Respuesta inesperada del servidor');
+            }
+
+        } catch (err) {
+            console.error('Error al cargar productos:', err);
+            mostrarError('No se pudo procesar el archivo');
+        } finally {
+            spinner.style.display = 'none';
+        }
+    });
+</script>

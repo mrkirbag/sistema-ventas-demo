@@ -1,0 +1,734 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '../utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/'); 
+}
+---
+
+<Layout>
+    <h1>REPORTES Y ESTADÍSTICAS</h1>
+
+    <main class="form-container">
+        <form>
+            <div>
+                <label for="desde">Desde:</label>
+                <input type="date" id="desde" name="desde" required />
+            </div>
+
+            <div>
+                <label for="hasta">Hasta:</label>
+                <input type="date" id="hasta" name="hasta" required />
+            </div>
+        </form>
+    </main>
+
+    <section class="menu-reportes">
+        <nav>
+            <button id="masVendido">Rendimiento</button>
+            <button id="stock">Baja Existencia</button>
+            <button id="caja">Reporte de Caja</button>
+            <button id="ventas">Ventas Totales</button>
+            <button id="anuladas">Anuladas</button>
+            <button id="creditos">Créditos</button>
+        </nav>
+    </section>
+
+    <div id="reportes"></div>
+
+    <div class="btn-add_container" >
+        <a class="btn-add" id="imprimir" style="display: none;">Imprimir</a>
+    </div>
+
+    <div id="mensaje"></div>
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+
+</Layout>
+
+<style>
+
+    form{
+        display: flex;
+        flex-direction: row;
+    }
+
+    .menu-reportes nav {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .menu-reportes button {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        color: #f4f4f4;
+        background-color: var(--secondary-color);
+        font-weight: 500;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.1s ease-in-out;
+        white-space: nowrap;
+    }
+
+    .menu-reportes button:hover {
+        scale: 1.05;
+    }
+
+    .menu-reportes button:active {
+        scale: 0.95;
+    }
+
+    #reportes {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    @media (max-width: 600px) {
+        .menu-reportes nav {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .menu-reportes button {
+            width: 90%;
+            max-width: 300px;
+        }
+    }
+
+    :global(.grid-reportes) {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* siempre 3 columnas */
+        gap: 1.2rem;
+        margin-top: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+        :global(.grid-reportes) {
+            grid-template-columns: repeat(2, 1fr); /* 2 columnas en pantallas medianas */
+        }
+    }
+
+    :global(.card) {
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    :global(.card h3) {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+
+    :global(.card p) {
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin: 0;
+        color: var(--secondary-color); 
+    }
+
+    :global(.card small) {
+        display: block;
+        margin-top: 0.3rem;
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    :global(.card.highlight) {
+        background: var(--secondary-color);
+        color: #fff;
+    }
+
+    :global(.card.highlight h3),
+    :global(.card.highlight p),
+    :global(.card.highlight small) {
+        color: #fff;
+    }
+
+</style>
+
+<script>
+
+    import { mostrarError, noRegistros } from '@/utils/helpers/mensajes.js';
+    import { cambioUSDaCOP } from '@/utils/helpers/cambioMoneda.js';
+    import { formatearFecha } from '@/utils/helpers/formateoFecha';
+    import { renderChart } from '@/utils/helpers/chart.js';
+    import { toPng } from "html-to-image";
+
+    const masVendidoBtn = document.querySelector('#masVendido');
+    const stockBtn = document.querySelector('#stock');
+    const anuladasBtn = document.querySelector('#anuladas');
+    const cajaBtn = document.querySelector('#caja');
+    const ventasBtn = document.querySelector('#ventas');    
+    const creditosBtn = document.querySelector('#creditos');
+
+    interface Producto {
+        codigo_producto: string;
+        nombre_producto: string;
+        cantidad_total: number;
+        total_usd: number;
+        unidad_medida: string;
+    }
+
+    interface VentaAnulada {
+        fecha_venta: string;
+        nombre_cliente: string;
+        cedula_cliente: string;
+        total_usd: number;
+        tipo_pago: string;
+        estado: string;
+    }
+
+    // Resetear contenedor de reportes y mensajes
+    function resetContenedor() {
+        const container = document.getElementById('reportes') as HTMLDivElement;
+        container.innerHTML = '';
+        const mensaje = document.getElementById('mensaje') as HTMLDivElement;
+        mensaje.style.display = 'none';
+        const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+        btnImprimir.style.display = 'none';
+    }
+
+    // Reporte de productos mas vendidos
+    masVendidoBtn?.addEventListener("click", async (e: Event) => {
+
+        e.preventDefault();
+
+        resetContenedor();
+
+        const desde = (document.querySelector("#desde") as HTMLInputElement)?.value;
+        const hasta = (document.querySelector("#hasta") as HTMLInputElement)?.value;
+
+        // Validaciones de las fechas
+        if (!desde || !hasta) {
+            mostrarError("Debe seleccionar ambas fechas");
+            return;
+        }
+        if (hasta < desde) {
+            mostrarError("La fecha final no puede ser menor que la inicial");
+            return;
+        }
+
+        try {
+
+            const response = await fetch(`/api/reportes/productosMasVendidos?desde=${desde}&hasta=${hasta}`);
+
+            if (!response.ok) throw new Error(`Error ${response.status}`);
+
+            const productos: {
+                mas_vendidos: Producto[];
+                menos_vendidos: Producto[];
+            } = await response.json();
+
+
+            if (!productos || !Array.isArray(productos.mas_vendidos) || !Array.isArray(productos.menos_vendidos) || (productos.mas_vendidos.length === 0 && productos.menos_vendidos.length === 0)) {
+                mostrarError("No hay productos vendidos en ese rango de fecha");
+                return;
+            }
+
+            const btnImprimir = (document.querySelector('#imprimir') as HTMLAnchorElement);
+            btnImprimir.style.display = 'block';
+
+            // Datos para el grafico de mas vendidos
+            renderChart(
+                "Productos Más Vendidos",
+                productos.mas_vendidos.map((p: Producto) => p.nombre_producto.toUpperCase()),
+                productos.mas_vendidos.map((p: Producto) => p.cantidad_total)
+            );
+
+            // Datos para el grafico de menos vendidos
+            renderChart(
+                "Productos Menos Vendidos",
+                productos.menos_vendidos.map((p: Producto) => p.nombre_producto.toUpperCase()),
+                productos.menos_vendidos.map((p: Producto) => p.cantidad_total)
+            );
+
+        } catch (error) {
+            console.error("Error al generar reporte:", error);
+            mostrarError("No se pudo generar el reporte");
+        }
+    });
+
+    // Reporte de productos con menos stock
+    stockBtn?.addEventListener('click', async (e: Event) => {
+
+        e.preventDefault();
+
+        resetContenedor();
+
+        try {
+            const response = await fetch(`/api/reportes/menosStock`);
+            if (!response.ok) throw new Error(`Error ${response.status}`);
+
+            const productos = await response.json();
+
+            if (!productos || !Array.isArray(productos.bajos) 
+                || !Array.isArray(productos.agotados) 
+                || (productos.bajos.length === 0 && productos.agotados.length === 0)
+            ) {
+                mostrarError("No hay productos con poco stock");
+                return;
+            }
+
+            const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+            btnImprimir.style.display = 'block';
+
+            renderChart(
+                "Productos Bajos en Stock",
+                productos.bajos.map((p: Producto) => p.nombre_producto.toUpperCase()),
+                productos.bajos.map((p: Producto) => p.cantidad_total)
+            );
+
+            if (productos.agotados.length === 0) return;
+
+            // Renderizar tabla de productos agotados
+            const tablaAgotados : string = `
+            <br /><br />
+            <h2>Productos Agotados</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Código</th>
+                    <th>Cantidad</th>
+                </tr>
+                </thead>
+                <tbody>
+                ${productos.agotados
+                    .map(
+                    (p: Producto) => `
+                    <tr>
+                    <td>${p.nombre_producto.toUpperCase()}</td>
+                    <td>${p.codigo_producto}</td>
+                    <td>${p.cantidad_total} ${p.unidad_medida}</td>
+                    </tr>
+                `
+                    )
+                    .join("")}
+                </tbody>
+            </table>
+            `;
+
+            // Insertar en el DOM (ejemplo)
+            const contenedor = document.getElementById("reportes") as HTMLDivElement;
+            contenedor.insertAdjacentHTML("beforeend", tablaAgotados);      
+
+        } catch (error) {
+            console.error('Error al generar reporte:', error);
+            mostrarError('No se pudo generar el reporte');
+        }
+    });
+
+    // Reporte de ingresos netos
+    cajaBtn?.addEventListener('click', async (e: Event) => {
+
+        e.preventDefault();
+
+        resetContenedor();
+
+        const desde = (document.querySelector("#desde") as HTMLInputElement)?.value;
+        const hasta = (document.querySelector("#hasta") as HTMLInputElement)?.value;
+        const container = document.getElementById('reportes') as HTMLDivElement;
+
+        // Validaciones de las fechas
+        if (desde === '' || hasta === '') {
+            mostrarError('Debe seleccionar ambas fechas');
+            return;
+        }
+        if (hasta < desde) {
+            mostrarError('La fecha final no puede ser menor que la inicial');
+            return;
+        }
+
+        try {
+
+            const response = await fetch(`/api/reportes/ingresos?desde=${desde}&hasta=${hasta}`);
+            if (!response.ok) throw new Error(`Error ${response.status}`);
+
+            const ventas = await response.json();
+
+            if (!ventas || !ventas.resumen || ventas.resumen.ventas_contado === 0) {
+                container.innerHTML = '';
+                noRegistros("No hay ingresos en ese rango de fecha")
+                return;
+            }
+
+            const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+            btnImprimir.style.display = 'block';
+
+            // Obtener tasa de cambio
+            const tasa = await cambioUSDaCOP();
+
+            // Crear grid
+            container.innerHTML = `
+                <div class="grid-reportes">
+                    <div class="card">
+                        <h3>Nro. Ventas a Contado</h3>
+                        <p>${ventas.resumen.ventas_contado}</p>
+                    </div>
+                    <div class="card">
+                        <h3>Nro. Abonos</h3>
+                        <p>${ventas.resumen.abonos_realizados}</p>
+                    </div>
+                    <div class="card highlight">
+                        <h3>Total en Caja</h3>
+                        <p>${Number(ventas.resumen.total_ventas_contado + ventas.resumen.total_abonos_realizados).toFixed(2)} USD</p>
+                        <small>${Math.ceil((ventas.resumen.total_ventas_contado + ventas.resumen.total_abonos_realizados) * tasa)} COP</small>
+                    </div>
+                    <div class="card">
+                        <h3>Total de Contado</h3>
+                        <p>${ventas.resumen.total_ventas_contado.toFixed(2)} USD</p>
+                        <small>${Math.ceil(ventas.resumen.total_ventas_contado * tasa)} COP</small>
+                    </div>
+                    <div class="card">
+                        <h3>Total de Abonos</h3>
+                        <p>${ventas.resumen.total_abonos_realizados.toFixed(2)} USD</p>
+                        <small>${Math.ceil(ventas.resumen.total_abonos_realizados * tasa)} COP</small>
+                    </div>
+
+                    <div class="card">
+                        <h3>Ganancia Neta de Contado</h3>
+                        <p>${ventas.resumen.margen_ganancia.toFixed(2)} USD</p>
+                        <small>${Math.ceil(ventas.resumen.margen_ganancia * tasa)} COP</small>
+                    </div>
+                </div>
+            `;
+
+            // Construir arrays para el gráfico
+            const labels = [
+                "Contado",
+                "Crédito",
+                "Abonos",
+                "Total",
+                "Ganancia"
+            ];
+
+            const data = [
+                Math.ceil(ventas.resumen.total_ventas_contado),
+                Math.ceil(ventas.resumen.total_ventas_credito),
+                Math.ceil(ventas.resumen.total_abonos_realizados),
+                Math.ceil(ventas.resumen.total_en_caja),
+                Math.ceil(ventas.resumen.margen_ganancia),
+            ];
+
+            // Renderizar gráfico
+            renderChart("Reporte de Caja en USD", labels, data);
+
+        } catch (error) {
+            console.error('Error al generar reporte:', error);
+            mostrarError('No se pudo generar el reporte');
+        }
+    });
+
+    // Reporte de ventas totales
+    ventasBtn?.addEventListener('click', async (e: Event) => {
+
+        e.preventDefault();
+
+        resetContenedor();
+        const container = document.getElementById('reportes') as HTMLDivElement;
+
+        const desde = (document.querySelector("#desde") as HTMLInputElement)?.value;
+        const hasta = (document.querySelector("#hasta") as HTMLInputElement)?.value;
+
+        // Validaciones de las fechas
+        if (desde === '' || hasta === '') {
+            mostrarError('Debe seleccionar ambas fechas');
+            return;
+        }
+
+        if (hasta < desde) {
+            mostrarError('La fecha final no puede ser menor que la inicial');
+            return;
+        }
+
+        try {
+
+            const response = await fetch(`/api/reportes/ventasTotales?desde=${desde}&hasta=${hasta}`);
+            if (!response.ok) throw new Error(`Error ${response.status}`);
+
+            const ventas : VentaAnulada[] = await response.json();
+
+            if (ventas.length === 0) {
+                container.innerHTML = '';
+                noRegistros("No hay ventas en ese rango de fecha")
+                return;
+            }
+
+            const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+            btnImprimir.style.display = 'block';
+
+            // Obtener tasa de cambio
+            const tasa = await cambioUSDaCOP();
+
+            const tabla = document.createElement('table');
+            tabla.classList.add('tabla-reportes');
+
+            tabla.innerHTML = `
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Cliente</th>
+                                        <th>Monto</th>
+                                        <th>Tipo de Pago</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${ventas.map(v => `
+                                    <tr>
+                                        <td data-label="Fecha">
+                                            ${formatearFecha(v.fecha_venta)}
+                                        </td>
+                                        <td data-label="Cliente">
+                                            ${v.nombre_cliente.toUpperCase()}
+                                            <br />
+                                            C.I. ${v.cedula_cliente}    
+                                        </td>
+                                        <td data-label="Monto">
+                                            ${v.total_usd.toFixed(2)} USD
+                                            <br />
+                                            ${Math.ceil(v.total_usd * tasa)} COP
+                                        </td>
+                                        <td data-label="Tipo de Pago">${v.tipo_pago.toUpperCase()}</td>
+                                        <td data-label="Estado">${
+                                            v.estado.toUpperCase()
+                                        }</td>  
+                                    </tr>
+                                    `).join('')}
+                                </tbody>
+                            `;
+            container.appendChild(tabla);
+        } catch (error) {
+            console.error('Error al generar reporte:', error);
+            mostrarError('No se pudo generar el reporte');
+        }
+    });
+
+    // Reporte de ventas anuladas
+    anuladasBtn?.addEventListener('click', async (e: Event) => {
+
+        e.preventDefault();
+
+        resetContenedor();
+        const container = document.getElementById('reportes') as HTMLDivElement;
+
+        const desde = (document.querySelector("#desde") as HTMLInputElement)?.value;
+        const hasta = (document.querySelector("#hasta") as HTMLInputElement)?.value;
+
+        // Validaciones de las fechas
+        if (desde === '' || hasta === '') {
+            mostrarError('Debe seleccionar ambas fechas');
+            return;
+        }
+
+        if (hasta < desde) {
+            mostrarError('La fecha final no puede ser menor que la inicial');
+            return;
+        }
+
+        try {
+
+            const response = await fetch(`/api/reportes/ventasAnuladas?desde=${desde}&hasta=${hasta}`);
+            if (!response.ok) throw new Error(`Error ${response.status}`);
+
+            const ventas : VentaAnulada[] = await response.json();
+
+            if (ventas.length === 0) {
+                container.innerHTML = '';
+                noRegistros("No hay ventas anuladas en ese rango de fecha")
+                return;
+            }
+
+            const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+            btnImprimir.style.display = 'block';
+
+            // Obtener tasa de cambio
+            const tasa = await cambioUSDaCOP();
+
+            const tabla = document.createElement('table');
+            tabla.classList.add('tabla-reportes');
+
+            tabla.innerHTML = `
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Cliente</th>
+                                        <th>Monto</th>
+                                        <th>Tipo de Pago</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${ventas.map(v => `
+                                    <tr>
+                                        <td data-label="Fecha">
+                                            ${formatearFecha(v.fecha_venta)}
+                                        </td>
+                                        <td data-label="Cliente">
+                                            ${v.nombre_cliente.toUpperCase()}
+                                            <br />
+                                            C.I. ${v.cedula_cliente}    
+                                        </td>
+                                        <td data-label="Monto">
+                                            ${v.total_usd.toFixed(2)} USD
+                                            <br />
+                                            ${Math.ceil(v.total_usd * tasa)} COP
+                                        </td>
+                                        <td data-label="Tipo de Pago">${v.tipo_pago.toUpperCase()}</td>
+                                        <td data-label="Estado">${v.estado.toUpperCase()}</td>
+                                    </tr>
+                                    `).join('')}
+                                </tbody>
+                            `;
+
+            container.appendChild(tabla);
+
+        } catch (error) {
+            console.error('Error al generar reporte:', error);
+            mostrarError('No se pudo generar el reporte');
+        }
+    });
+
+    // Reporte de créditos otorgados
+    creditosBtn?.addEventListener('click', async (e: Event) => {
+
+        e.preventDefault();
+
+        resetContenedor();
+        const container = document.getElementById('reportes') as HTMLDivElement;
+
+        const desde = (document.querySelector("#desde") as HTMLInputElement)?.value;
+        const hasta = (document.querySelector("#hasta") as HTMLInputElement)?.value;
+
+        // Validaciones de las fechas
+        if (desde === '' || hasta === '') {
+            mostrarError('Debe seleccionar ambas fechas');
+            return;
+        }
+
+        if (hasta < desde) {
+            mostrarError('La fecha final no puede ser menor que la inicial');
+            return;
+        }
+
+        try {
+
+            const response = await fetch(`/api/reportes/ventasCreditos?desde=${desde}&hasta=${hasta}`);
+            if (!response.ok) throw new Error(`Error ${response.status}`);
+
+            const ventas : VentaAnulada[] = await response.json();
+
+            if (ventas.length === 0) {
+                container.innerHTML = '';
+                noRegistros("No hay ventas a crédito en ese rango de fecha")
+                return;
+            }
+
+            const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+            btnImprimir.style.display = 'block';
+
+            // Obtener tasa de cambio
+            const tasa = await cambioUSDaCOP();
+
+            const tabla = document.createElement('table');
+            tabla.classList.add('tabla-reportes');
+
+            tabla.innerHTML = `
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Cliente</th>
+                                        <th>Monto</th>
+                                        <th>Tipo de Pago</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${ventas.map(v => `
+                                    <tr>
+                                        <td data-label="Fecha">
+                                            ${formatearFecha(v.fecha_venta)}
+                                        </td>
+                                        <td data-label="Cliente">
+                                            ${v.nombre_cliente.toUpperCase()}
+                                            <br />
+                                            C.I. ${v.cedula_cliente}    
+                                        </td>
+                                        <td data-label="Monto">
+                                            ${v.total_usd.toFixed(2)} USD
+                                            <br />
+                                            ${Math.ceil(v.total_usd * tasa)} COP
+                                        </td>
+                                        <td data-label="Tipo de Pago">${v.tipo_pago.toUpperCase()}</td>
+                                        <td data-label="Estado">${v.estado.toUpperCase()}</td>
+                                    </tr>
+                                    `).join('')}
+                                </tbody>
+                            `;
+
+            container.appendChild(tabla);
+
+        } catch (error) {
+            console.error('Error al generar reporte:', error);
+            mostrarError('No se pudo generar el reporte');
+        }
+    });
+        
+    // Impresion
+    const btnImprimir = document.querySelector('#imprimir');
+
+    btnImprimir?.addEventListener("click", async () => {
+        const contenido = document.getElementById("reportes") as HTMLDivElement;
+        if (!contenido) return console.error("No se encontró el reporte");
+
+        // Captura literal del div como imagen
+        const imgData = await toPng(contenido, { cacheBust: true });
+
+        const ventana = window.open("", "", "width=800,height=600");
+        if (!ventana) return;
+
+        // Crear estructura básica
+        ventana.document.write(`
+            <html>
+            <head>
+                <title>Impresion</title>
+                <style>
+                body { font-family: sans-serif; padding: 20px; text-align: center; }
+                img { max-width: 100%; height: auto; }
+                </style>
+            </head>
+            <body>
+            </body>
+            </html>
+        `);
+        ventana.document.close();
+
+        // Crear imagen y añadirla al body
+        const img = ventana.document.createElement("img");
+        img.src = imgData;
+        img.onload = () => {
+            ventana.focus();
+            ventana.print();
+            ventana.close();
+        };
+        ventana.document.body.appendChild(img);
+    });
+
+</script>

@@ -1,0 +1,481 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '../utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+---
+
+<Layout>
+    <h1>PRESUPUESTO</h1>
+
+    <section class="form-container">
+        <form>
+            <input type="text" id="busquedaProductos" placeholder="Buscar producto por nombre o código..." />
+
+            <select name="producto" id="productoSelect"></select>
+
+            <div>
+                <label for="cantidad">Cantidad:</label>
+                <input type="number" min="1" id="cantidad" placeholder="Ingrese la cantidad"/>
+            </div>
+
+            <div>
+                <label for="precio">Precio por Unidad:</label>
+                <input type="text" id="precio"/>
+            </div>
+
+            <div>
+                <button id="agregarProducto">Agregar</button>
+            </div>
+        </form>
+    </section>
+    
+
+    <table id="contenidoImpresion">
+        <thead id="headerTablaProductos" style="opacity: 0;">
+            <tr>
+                <th>Producto</th>
+                <th>Precio por Unidad</th>
+                <th>Cantidad Seleccionada</th>
+                <th>Subtotal</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="listaProductos">
+        </tbody>
+    </table>
+    
+    <p><span id="total"></span></p>
+
+    <div class="btns-container" style="opacity: 0;" id="btns">
+        <button id="imprimir" disabled>Imprimir</button>
+        <button id="reiniciar" disabled>Cancelar</button>
+    </div>   
+</Layout>
+
+<style>
+    .btns-container {
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+        margin-top: 1rem;
+
+        & button {
+            display: block;
+            background-color: #1f2937;
+            color: #fff;
+            border-radius: 5px;
+            padding: .35rem .75rem;
+            text-align: center;
+            font-size: .9rem;
+            font-weight: 600;
+            border: none;
+            outline: none;
+
+            &:hover {
+                background: #4b4b8a;
+                cursor: pointer;
+            }
+        }
+    }
+
+    #total {
+        margin-top: 1rem;
+        text-align: center;
+    }
+</style>
+
+<script >
+
+    import { mostrarError } from "@/utils/helpers/mensajes";
+
+    interface Producto {
+        codigo: string;
+        nombre: string;
+        precio: number;
+        cantidad: number;
+        id: number;
+
+        stock: number;
+        costo: number;
+        venta: number;
+    }
+
+    (document.querySelector('#imprimir') as HTMLButtonElement).addEventListener('click', () => {
+
+        const tablaOriginal = document.querySelector('#contenidoImpresion') as HTMLTableElement;
+        const totalTexto = (document.querySelector('#total') as HTMLParagraphElement).textContent;
+
+        // Clonar solo las filas visibles y omitir columna de acciones
+        const filas = Array.from(tablaOriginal.querySelectorAll('tbody tr')).map(fila => {
+            const celdas = fila.querySelectorAll('td');
+            return `
+            <tr>
+                <td>${celdas[0]?.textContent}</td>
+                <td>${celdas[1]?.textContent}</td>
+                <td>${celdas[2]?.textContent}</td>
+                <td>${celdas[3]?.textContent}</td>
+            </tr>
+            `;
+        }).join('');
+
+        const ventana = window.open('', '', 'width=800,height=600') as Window;
+
+        ventana.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Presupuestos</title>
+                <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    font-size: 13px;
+                }
+                h2 {
+                    text-align: center;
+                    margin-bottom: 1rem;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 1.5rem;
+                }
+                th, td {
+                    border: 1px solid #000;
+                    padding: 8px;
+                    text-align: left;
+                }
+                thead {
+                    background: #ddd;
+                    font-weight: bold;
+                }
+                p.total {
+                    text-align: right;
+                    font-size: 14px;
+                    font-weight: bold;
+                    margin-top: 1rem;
+                }
+                </style>
+            </head>
+            <body>
+                <h2>Presupuesto</h2>
+                <table>
+                <thead>
+                    <tr>
+                    <th>Producto</th>
+                    <th>Precio por Unidad</th>
+                    <th>Cantidad</th>
+                    <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filas}
+                </tbody>
+                </table>
+                <p class="total">${totalTexto}</p>
+            </body>
+            </html>
+        `);
+
+        ventana.document.close();
+        ventana.print();
+    });
+
+    document.addEventListener('DOMContentLoaded', rellenarSelectProductos);
+
+    async function rellenarSelectProductos() {
+
+        const busqueda = document.getElementById("busquedaProductos") as HTMLInputElement;
+        const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
+
+        let productosListados: Producto[] = [];
+
+        try {
+
+            const response = await fetch("/api/productos");
+            const data = await response.json();
+
+            productosListados = data;
+
+            const renderOpciones = (productos: Producto[]) => {
+                productoSelect.innerHTML = ""; // Limpiar opciones previas
+
+                // Opción inicial vacía
+                const defaultOption = document.createElement("option");
+                defaultOption.value = "";
+                defaultOption.textContent = "Selecciona un producto";
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                productoSelect.appendChild(defaultOption);
+
+                // Mensaje si no hay registros para esa busqueda
+                if (productos.length === 0) {
+                    const noResultsOption = document.createElement("option");
+                    noResultsOption.value = "";
+                    noResultsOption.textContent = "— Sin coincidencias para la búsqueda —";
+                    noResultsOption.disabled = true;
+                    productoSelect.appendChild(noResultsOption);
+                    return;
+                }
+
+                productos.forEach(producto => {
+                    const option = document.createElement("option");
+                    option.value = producto.id.toString();
+                    option.textContent = `${producto.codigo.toUpperCase()} - ${producto.nombre} - ${producto.stock}u. - ${producto.venta}USD`;
+                    productoSelect.appendChild(option);
+                });
+            };
+
+            // Render inicial
+            renderOpciones(productosListados);
+
+            // Listener de búsqueda
+            busqueda.addEventListener("input", () => {
+                const filtro = busqueda.value.trim().toLowerCase();
+
+                if (!filtro) {
+                    renderOpciones(productosListados);
+                    return;
+                }
+
+                const productosFiltrados = productosListados.filter(producto => {
+                    const nombre = String(producto.nombre || "").toLowerCase();
+                    const codigo = String(producto.codigo || "").toLowerCase();
+                    return nombre.includes(filtro) || codigo.includes(filtro);
+                });
+
+                renderOpciones(productosFiltrados);
+            });
+
+
+        } catch (error) {
+            console.error("Error al cargar los productos:", error);
+        }
+    }
+
+    // Reiniciar presupuesto
+    const btnReiniciar = document.querySelector('#reiniciar') as HTMLButtonElement;
+    btnReiniciar.addEventListener('click', () => {
+        window.location.reload();
+    });
+
+    async function cambioCop() {
+        const responseTasa = await fetch('/api/tasa');
+        if (!responseTasa.ok) throw new Error('Error al obtener la tasa de cambio');
+        const dataTasa = await responseTasa.json();
+        const tasa = Number(dataTasa.valor);
+
+        return tasa;
+    }
+
+    const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
+    const precioInput = document.getElementById("precio") as HTMLInputElement;
+
+    // Evento para actualizar el input del precio segun el inventario
+    productoSelect.addEventListener("change", async () => {
+
+        const productoId = productoSelect.value;
+
+        if (!productoId) {
+            precioInput.value = "";
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/productos/${productoId}`);
+
+            if (!response.ok) {
+                console.error("Error al obtener el producto:", response.status);
+                precioInput.value = "";
+                return;
+            }
+
+            const producto = await response.json();
+
+            if (typeof producto.venta === "number") {
+                precioInput.value = producto.venta.toFixed(2); // Formato profesional
+            } else {
+                precioInput.value = "";
+            }
+
+        } catch (error) {
+            console.error("Error de red o parsing:", error);
+            precioInput.value = "";
+        }
+    });
+
+    const btnagregarProducto = document.getElementById("agregarProducto") as HTMLButtonElement;
+
+    // Agregar el producto a la tabla
+    btnagregarProducto.addEventListener("click", async (e) => {
+
+        e.preventDefault();
+
+        const productoId = productoSelect.value;
+        const cantidadInput = document.getElementById("cantidad") as HTMLInputElement;
+
+        const cantidad = Number(cantidadInput.value);
+        const precio = parseFloat(precioInput.value);
+
+        try {
+
+            const response = await fetch(`/api/productos/${productoId}`);
+            if (!response.ok) {
+                throw new Error('Error al obtener el producto: ' + response.status);
+            }
+            const producto = await response.json();
+
+            // Validaciones
+            if (!producto || !producto.stock) {
+                mostrarError('Producto no encontrado o sin stock disponible');
+                return;
+            }
+            if (isNaN(cantidad) || Number(cantidad) <= 0) {
+                mostrarError("Ingresa una cantidad válida mayor a cero");
+                return;
+            }
+            if (isNaN(precio) || Number(precio) <= 0) {
+                mostrarError("El precio del producto no es válido");
+                return;
+            }
+            if (Number(cantidad) > producto.stock) {
+                mostrarError(`Cantidad insuficiente en stock. Stock disponible: ${producto.stock}`);
+                return;
+            }
+
+            //Información necesaria
+            let productoSeleccionado = {
+                codigo: producto.codigo,
+                nombre: producto.nombre,
+                cantidad,
+                precio,
+                subtotal: (precio * cantidad)
+            }
+
+            // Guardar datos del producto en la tabla
+            mostrarProductosEnTabla(productoSeleccionado)
+            
+        } catch (error) {
+            console.error("Error al obtener el producto:", error);
+            return;
+        }
+    });
+
+    async function mostrarProductosEnTabla(productoSeleccionado : { codigo: string; nombre: string; cantidad: number; precio: number; subtotal: number; }) {
+        
+        const tbody = document.querySelector('#listaProductos') as HTMLTableSectionElement;
+        const thead = document.querySelector('#headerTablaProductos') as HTMLTableSectionElement;
+        const cantidadInput = document.getElementById("cantidad") as HTMLInputElement;
+        const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
+        const precioInput = document.getElementById("precio") as HTMLInputElement;
+
+        const tasa = await cambioCop();
+        let precioPesos = Math.ceil(tasa * productoSeleccionado.precio);
+        let subtotalPesos = Math.ceil(tasa * productoSeleccionado.subtotal);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+                        <td data-label="Producto">
+                            ${productoSeleccionado.codigo.toUpperCase()}
+                            <br />
+                            ${productoSeleccionado.nombre.toUpperCase()}
+                        </td>
+
+                        <td data-label="Precio por Unidad">
+                            ${productoSeleccionado.precio.toFixed(2)} USD
+                            <br />
+                            <span style="font-size: .75rem;">${precioPesos} COP</span>
+                        </td>
+
+                        <td data-label="Cantidad">${productoSeleccionado.cantidad}</td>
+
+                        <td data-label="Subtotal">
+                            <span class='subtotal'>${productoSeleccionado.subtotal.toFixed(2)}</span> USD
+                            <br />    
+                            <span style="font-size: .75rem;">${subtotalPesos} COP</span>
+                        </td>
+                    `;
+
+        // Botones de acciones
+        const tdAcciones = document.createElement('td');
+        tdAcciones.classList.add('acciones');
+
+        // Boton de eliminar
+        const btnEliminar = document.createElement('button');
+        btnEliminar.classList.add('btn-eliminar');
+        btnEliminar.textContent = 'DEL';
+        btnEliminar.addEventListener('click', () => {
+            tr.remove();
+            totalizar();
+            // Si se eliminan todos los registros se desaparece el thead y los btns
+            if (tbody && tbody.querySelectorAll('tr').length <= 0) {
+                thead.style.opacity = "0";
+
+                const btnsContainer = document.querySelector('#btns') as HTMLDivElement;
+                btnsContainer.style.opacity = "0";
+                const btnImprimir = document.querySelector('#imprimir') as HTMLButtonElement;
+                const btnCancelar = document.querySelector('#reiniciar') as HTMLButtonElement;
+                btnImprimir.disabled = true;
+                btnCancelar.disabled = true ;
+            }
+        });
+
+        tdAcciones.appendChild(btnEliminar);
+        tr.appendChild(tdAcciones);
+        tbody.appendChild(tr);
+
+        // Aparecer el header de la tabla y los btns
+        if (tbody && tbody.querySelectorAll('tr').length > 0) {
+            thead.style.opacity = "1";
+
+            const btnsContainer = document.querySelector('#btns') as HTMLDivElement;
+            btnsContainer.style.opacity = "1";
+            const btnImprimir = document.querySelector('#imprimir') as HTMLButtonElement;
+            const btnCancelar = document.querySelector('#reiniciar') as HTMLButtonElement;
+            btnImprimir.disabled = false;
+            btnCancelar.disabled = false;
+        }
+
+        // Resetear el formulario
+        productoSelect.value = "";
+        cantidadInput.value = "";
+        precioInput.value = "";
+        
+        //Manejo del total
+        totalizar();
+    }
+
+    async function totalizar(){
+        const elementosSubtotal = document.querySelectorAll('.subtotal') as NodeListOf<HTMLSpanElement>;
+        const total = document.querySelector('#total') as HTMLSpanElement;
+
+        total.innerHTML = '';
+
+        const valoresSubtotal = Array.from(elementosSubtotal)
+            .map(el => {
+                const texto = el.textContent.trim();
+                const match = texto.match(/[\d,.]+/); // Extrae el primer número
+                return match ? parseFloat(match[0].replace(',', '')) : 0;
+            });
+
+        const responseTasa = await fetch('/api/tasa');
+        if (!responseTasa.ok) throw new Error('Error al obtener la tasa de cambio');
+        const dataTasa = await responseTasa.json();
+        const tasa = Number(dataTasa.valor);
+
+        let totalUSD = 0;
+
+        valoresSubtotal.forEach(subtotal => {
+            totalUSD += subtotal;
+        });
+        
+        total.textContent =  `Total: ${totalUSD.toFixed(2)} USD o ${Math.ceil(tasa * totalUSD)} COP`;      
+    }
+
+
+
+</script>

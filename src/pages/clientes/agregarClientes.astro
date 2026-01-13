@@ -1,0 +1,104 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { verificarToken } from '../../utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+---
+
+<Layout>
+    <h1>AGREGAR CLIENTE</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/clientes">Regresar</a>
+    </div>
+
+    <section class="form-container">
+        <form id="formulario">
+            <div>
+                <input type="text" name="nombre" placeholder="Nombre y Apellido" />
+            </div>
+            <div>
+                <input type="text" name="telefono" placeholder="Número de Teléfono" />
+            </div>
+            <div>
+                <input type="number" name="cedula" placeholder="Cédula del Cliente" min="0"/>
+            </div>
+            <button type="submit">Agregar</button>
+        </form>
+    </section>
+
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+
+</Layout>
+
+<script>
+
+    import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
+
+    const formulario = document.getElementById('formulario') as HTMLFormElement;
+
+    formulario.addEventListener('submit', async (event : SubmitEvent) => { 
+        
+        event.preventDefault();
+
+        const formData = new FormData(formulario);
+        const nombre = formData.get('nombre') as string;
+        const telefono = formData.get('telefono') as string;
+        const cedulaText = formData.get('cedula') as string;
+
+        // Validar campos vacios
+        if (nombre === '' || telefono === '' || cedulaText === '') {
+            mostrarError('Todos los campos son obligatorios');
+            return;
+        }
+
+        // Validar formato de teléfono
+        const telefonoRegex = /^\d+$/; 
+        if (!telefonoRegex.test(telefono)) {
+            mostrarError('El número de teléfono debe contener solo números');
+            return;
+        }
+
+        // Validar cedula
+        const cedulaRegex = /^[1-9]\d*$/;
+        if (!cedulaRegex.test(cedulaText)) {
+            mostrarError("La cédula debe ser un número entero positivo mayor a cero");
+            return;
+        }
+
+        // Parsear cedula
+        const cedula = parseInt(cedulaText);
+
+        // Enviar datos al servidor
+        const response = await fetch("/api/clientes", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ nombre, telefono, cedula })
+        });
+
+        // Verificar si la respuesta es exitosa
+        if (!response.ok) {
+            if (response.status === 409) {
+                const mensaje = await response.text();
+                mostrarError(mensaje);
+            } else {
+                mostrarError('Error al agregar cliente: ' + response.status);
+            }
+            return;
+        }
+
+        const data = await response.json();
+        mostrarMensaje(data.message);
+        setTimeout(() => {
+            window.location.href = '/clientes';
+        }, 1000);
+    });
+    
+</script>

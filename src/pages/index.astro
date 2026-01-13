@@ -1,0 +1,288 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '../utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+
+const usuarioNombre = usuario.nombre;
+---
+
+<Layout>
+    <main>
+        <section class="empresa">
+            <img src="/logo.png" alt="Logo de la Empresa" />
+            <div>
+                <h2 class="title">Nombre Empresa</h2>
+                <h3>Rif / Tlf</h3>
+            </div>
+        </section>
+
+        <section class="usuario">
+            <h1>Bienvenido, {usuarioNombre.toUpperCase()}</h1>
+        </section>
+
+        <section class="agotados">
+            <h2>Productos Agotados</h2>
+            <div id="tablaAgotados" class="noResponsive"></div>
+        </section>
+
+        <section class="ventas">
+            <h2>Ultimas Ventas del Día</h2>
+            <div id="ventasDia" class="noResponsive"></div>
+        </section>
+
+        <section class="stock-bajo">
+            <h2>Productos Bajos en Stock</h2>
+            <div id="reportes"></div>
+        </section>
+    </main>
+</Layout>
+
+<style>
+
+    :global(main) {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: auto auto;
+        gap: 2rem;
+        padding: 2rem;
+        background: linear-gradient(to bottom, #f4f4f4, #fff);
+        border-radius: 30px;
+        width: 100%;
+        height: 93dvh;
+    }
+
+    @media (max-width: 768px) {
+
+        :global(main) {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;              
+        }
+
+        section {
+            width: 100%;
+        }
+
+        :global(.empresa),
+        :global(.stock-bajo) {
+            display: none !important;
+        }
+
+        :global(.noResponsive table) {
+            display: table !important;
+            width: auto !important;
+        }
+
+        :global(.noResponsive thead) {
+            display: table-header-group !important;
+        }
+
+        :global(.noResponsive tbody) {
+            display: table-row-group !important;
+        }
+
+        :global(.noResponsive tr) {
+            display: table-row !important;
+            margin: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+        }
+
+        :global(.noResponsive th),
+        :global(.noResponsive td) {
+            display: table-cell !important;
+            width: auto !important;
+            text-align: inherit !important;
+            position: static !important;
+        }
+
+        :global(.noResponsive td)::before {
+            content: none !important;
+        }
+    }
+
+
+    /* Secciones */
+    section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow:
+            0 2px 4px rgba(0, 0, 0, 0.1),
+            0 8px 16px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .empresa {
+        grid-column: 1 / 2;
+        grid-row: 1 / 2;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+
+        & img {
+            max-width: 150px;
+            height: auto;
+        }
+
+        & div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+    }
+
+    .usuario {
+        grid-column: 2 / 4;
+        grid-row: 1 / 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--secondary-color);
+        color: #fff;
+    }
+
+    .agotados {
+        padding: .5rem;
+        grid-column: 1 / 2;
+        grid-row: 2 / 3;
+        color: var(--primary-color);
+    }
+
+    .ventas {
+        grid-column: 2 / 3;
+        grid-row: 2 / 3;
+    }
+
+    .stock-bajo {
+        grid-column: 3 / 4;
+        grid-row: 2 / 3;
+    }
+
+    .title {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 1.5rem;
+        text-align: center;
+        color: var(--secondary-color);
+    }
+
+    h3, h2 {
+        color: var(--secondary-color);
+        font-weight: 700;
+        font-size: 1.25rem;
+    }
+
+    :global(table) {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .8rem;
+    }
+
+</style>
+
+<script>
+
+    import { formatearFecha } from "@/utils/helpers/formateoFecha";
+    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda";
+    import { renderChart } from "@/utils/helpers/chart.js";
+    
+
+    interface Producto {
+        nombre: string;
+        codigo: string;
+        stock: number;
+        unidad_medida: string;
+    }
+
+    interface Ventas {
+        id: number;
+        fecha: string;
+        total: number;
+        cliente: string;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+
+        const tasa = await cambioUSDaCOP();
+        
+        // agotados
+        const tablaAgotados = document.getElementById('tablaAgotados') as HTMLElement;
+
+        const response = await fetch('/api/index/agotados');
+        const productos: Producto[] = await response.json();
+
+        if(response.status === 200){
+
+            let tablaHTML = `<table><tbody>`;
+
+            productos.forEach(producto => {
+                tablaHTML += `<tr><td>${producto.nombre}<br/>${producto.codigo}</td><td>${producto.stock} ${producto.unidad_medida}.</td></tr>`;
+            });
+
+            tablaHTML += '</tbody></table>';
+            tablaAgotados.innerHTML = tablaHTML;
+        } else {
+            tablaAgotados.innerHTML = '<p>No hay productos agotados</p>';
+        }
+
+        // ultimas tres ventas del día
+        const ventasDiaDiv = document.getElementById('ventasDia') as HTMLElement;
+
+        const ventasResponse = await fetch('/api/index/ventas');
+        const ventasData :Ventas[] = await ventasResponse.json();
+
+        if(ventasResponse.status === 200){
+
+            let ventasHTML = `<table><tbody>`;
+
+            ventasData.forEach(venta => {
+
+                const fechaFormateada = formatearFecha(venta.fecha);
+                ventasHTML += `<tr><td>${venta.cliente.toUpperCase()}</td><td>${venta.total.toFixed(2)} USD <br/> ${Math.ceil(venta.total * tasa)} COP</td></tr>`;
+            });
+
+            ventasHTML += '</tbody></table>';
+            ventasDiaDiv.innerHTML = ventasHTML;
+
+        } else {
+            ventasDiaDiv.innerHTML = '<p>No hay ventas hoy</p>';
+        }
+
+        // Grafica de productos bajos en stock
+        const stokBajo = document.getElementById('reportes') as HTMLDivElement;
+
+        const stockResponse = await fetch('/api/index/stockBajo');
+        const stockData :Producto[] = await stockResponse.json();
+
+        if(stockResponse.status === 200){
+
+            renderChart(
+                'Productos Bajos en Stock', 
+                stockData.map(producto => producto.nombre), 
+                stockData.map(producto => producto.stock)
+            );
+
+        } else {
+            stokBajo.innerHTML = '<p>No hay productos bajos en stock</p>';
+        }
+
+    });
+    
+
+
+
+</script>

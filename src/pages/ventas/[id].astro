@@ -1,0 +1,291 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+
+const {id} = Astro.params;
+---
+
+<Layout>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/ventas">Regresar</a>
+    </div>
+
+
+    <header id="headerImp">
+        <h3>EMPRESA</h3>
+        <h1>FADI KIRBAG</h1>
+        <h3>RIF / TLF</h3>
+    </header>
+
+    <main>
+        <section class="datos-cliente" id="datosClienteImp">
+            <p>Nombre: <span id="clienteNombre"></span></p>
+            <p>C.I. <span id="clienteCedula"></span></p>
+            <p>Telf: <span id="clienteTelefono"></span></p>
+            <p>Fecha de Compra: <span id="fecha"></span></p>
+            <p>Tipo de Pago: <span id="tipoPago"></span></p>
+            <p>Estado: <span id="estado"></span></p>
+        </section>
+
+        <table id="table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>P. Unitario</th>
+                    <th>Cantidad</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody id="listaProductos"></tbody>
+        </table>
+
+        <section class="total" id="totalImp">
+            <p>El total de la venta es de</p>
+            <p><span id="total"></span> USD</p>
+            <p>o</p>
+            <p><span id="totalCOP"></span> COP</p>
+        </section>
+    </main>
+
+    <div class="btn-add_container">
+        <a class="btn-add" id="imprimir">Imprimir</a>
+    </div>
+
+    <div id="mensaje"></div>
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+</Layout>
+
+<style>
+
+    header {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+
+        & h2{
+            font-size: 1.5rem;
+        }
+
+        & h3{
+            font-size: 1rem;
+        }
+    }
+
+    .datos-cliente {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    span {
+        font-weight: 700;
+        font-size: 1rem
+    }
+    
+    p {
+        font-size: .85rem;
+    }
+
+    .total {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+
+
+</style>
+
+<script>
+
+    import { mostrarError } from '@/utils/helpers/mensajes.js';
+    import { cambioUSDaCOP } from '@/utils/helpers/cambioMoneda.js';
+    import { formatearFecha } from '@/utils/helpers/formateoFecha.js';
+
+    interface Producto {
+        codigo_producto: string;
+        nombre_producto: string;
+        precio_unitario: number;
+        cantidad: number;
+        subtotal: number;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+
+        const id = location.pathname.split("/").pop() as string;
+        //Datos a rellenar del cliente
+        const clienteNombre = document.querySelector('#clienteNombre') as HTMLElement;
+        const clienteCedula = document.querySelector('#clienteCedula') as HTMLElement;
+        const clienteTelefono = document.querySelector('#clienteTelefono') as HTMLElement;
+        //Datos a rellenar de la venta
+        const fecha = document.querySelector('#fecha') as HTMLElement;
+        const tipoPago = document.querySelector('#tipoPago') as HTMLElement;
+        const estado = document.querySelector('#estado') as HTMLElement;
+        const total = document.querySelector('#total') as HTMLElement;
+
+        const totalCOP = document.querySelector('#totalCOP') as HTMLElement;
+        const listaProductos = document.querySelector('#listaProductos') as HTMLElement;
+
+        try {
+
+            const res = await fetch(`/api/ventas/${id}`);
+
+            if (!res.ok) {
+                mostrarError('Error al obtener los datos de la venta');
+                const errorText = await res.text();
+                throw new Error(`Status ${res.status} Mensaje ${errorText}`);
+            }
+
+            const data : any = await res.json();
+
+            // Cliente
+            clienteNombre.textContent = data.cliente.nombre.toUpperCase();
+            clienteCedula.textContent = data.cliente.cedula;
+            clienteTelefono.textContent = data.cliente.telefono;
+
+            // Formatear Fecha
+            const fechaFormateada = formatearFecha(data.venta.fecha);
+
+            // Venta
+            fecha.textContent = fechaFormateada;
+            tipoPago.textContent = data.venta.tipo_pago.toUpperCase();
+            estado.textContent = data.venta.estado.toUpperCase();
+            total.textContent = data.venta.monto_total.toFixed(2);
+
+            //Traer la tasa para los precios:
+            const tasa = await cambioUSDaCOP();
+
+            totalCOP.textContent = Math.ceil(Number(data.venta.monto_total) * Number(tasa)).toString();
+
+            // Productos
+            listaProductos.innerHTML = '';
+
+            const dataProductos = data.productos as Producto[];
+
+            dataProductos.forEach(p => {
+                const row = document.createElement('tr');
+                const pUnitarioPesos = p.precio_unitario * tasa;
+                const subtotalPesos = p.subtotal * tasa
+                row.innerHTML = `
+                                    <td data-label="Código">${p.codigo_producto.toUpperCase()}</td>
+                                    <td data-label="Producto">${p.nombre_producto.toUpperCase()}</td>
+                                    <td data-label="P. Unitario">
+                                        ${p.precio_unitario.toFixed(2)} USD
+                                        <br />
+                                        ${pUnitarioPesos} COP
+                                        
+                                    </td>
+                                    <td data-label="Cantidad">${p.cantidad}</td>
+                                    <td data-label="Subtotal">
+                                        ${p.subtotal.toFixed(2)} USD
+                                        <br />
+                                        ${subtotalPesos} COP
+                                    </td>
+                                `;
+                listaProductos.appendChild(row);
+            });
+
+        }catch(error){
+            console.error(error)
+        }
+    });
+
+    const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+
+    btnImprimir.addEventListener('click', () => {
+
+        const headerImp = document.querySelector('#headerImp');
+        const datosClienteImp = document.querySelector('#datosClienteImp');
+        const table = document.querySelector('#table');
+        const totalImp = document.querySelector('#totalImp');
+
+        // Creamos una ventana temporal para imprimir
+        const ventana = window.open('', '', 'width=800,height=600') as Window;
+        ventana.document.write(`
+                                <html>
+                                    <head>
+                                        <title>Impresion de Venta</title>
+                                        <style>
+                                            @media print {
+                                                @page {
+                                                    size: 5.5in 8.5in;
+                                                    margin: 0.5in;
+                                                }
+                                                body {
+                                                    font-size: 11pt;
+                                                }
+                                            }
+
+                                            body {
+                                                font-family: Arial, sans-serif;
+                                                margin: 20px;
+                                                font-size: 12px;
+                                            }
+
+                                            h1, h3{
+                                                margin: 0;
+                                                padding: 2px 0;
+                                                text-align: center;
+                                            }
+
+                                            table {
+                                                width: 100%;
+                                                border-collapse: collapse;
+                                                margin-top: 1rem;
+                                                margin-bottom: 1rem;
+                                            }
+
+                                            th, td {
+                                                border: 1px solid #000;
+                                                padding: 6px;
+                                                text-align: left;
+                                                font-size: 11px;
+                                            }
+
+                                            thead {
+                                                background: #eee;
+                                            }
+
+                                            p {
+                                                margin: 4px 0;
+                                            }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <div class="seccion centrado">
+                                            ${headerImp?.outerHTML || '<h2>Encabezado no disponible</h2>'}
+                                        </div>
+
+                                        <div class="seccion izquierda">
+                                            ${datosClienteImp?.outerHTML || '<p>Datos del cliente no disponibles</p>'}
+                                        </div>
+
+                                        <div class="seccion centrado">
+                                            ${table?.outerHTML || '<p>Tabla no disponible</p>'}
+                                        </div>
+
+                                        <div class="seccion izquierda">
+                                            ${totalImp?.outerHTML || '<p>Total no disponible</p>'}
+                                        </div>
+                                    </body>
+                                </html>
+                                `);
+
+        ventana.document.close();
+        ventana.focus();
+        ventana.print();
+        ventana.close();
+    });
+</script>

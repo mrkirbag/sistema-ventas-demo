@@ -1,0 +1,160 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const {id} = Astro.params;
+
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/'); 
+}
+---
+
+<Layout>
+    <h1>AGREGAR UNIDADES</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/productos">Regresar</a>
+    </div>
+
+    <div class="informacion">
+        <span id="codigo" class="codigo"></span>
+        <h3 id="nombre" class="nombre"></h3>
+        <p>Cantidad actual en inventario: <span id="stockViejo" class="span"></span> <strong id="unidadMedida"></strong>.</p>
+    </div>
+
+    <div class="form-container">
+        <form id="formulario">
+            <input type="text" name="stockNuevo" id="stockNuevo" placeholder="¿Cuántas unidades desea agregar?" min="0"/>
+            <button type="submit">Actualizar Stock</button>
+        </form>
+    </div>
+
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+</Layout>
+
+<script>
+
+    import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
+
+    // Rellenar campos con los datos existentes
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    const nombre = document.querySelector("#nombre") as HTMLElement;
+    const codigo = document.querySelector("#codigo") as HTMLElement;
+    const stock = document.querySelector("#stockViejo") as HTMLElement;
+    const unidadMedida = document.querySelector("#unidadMedida") as HTMLElement;
+    
+    document.addEventListener('DOMContentLoaded', rellenarCampos);
+
+    async function rellenarCampos(){
+
+        const response = await fetch(`/api/productos/${id}`);
+        const producto = await response.json();
+
+        codigo.textContent = producto.codigo.toUpperCase();
+        nombre.textContent = producto.nombre.toUpperCase();
+        stock.textContent = producto.stock;
+        unidadMedida.textContent = producto.unidad_medida;
+    }
+
+    const formulario = document.getElementById('formulario') as HTMLFormElement;
+
+    formulario.addEventListener('submit', async (event : SubmitEvent) => { 
+        
+        event.preventDefault();
+        
+        const formData = new FormData(formulario);
+        const stockNuevo = formData.get('stockNuevo') as string;
+
+        // Validar campos vacios
+        if (stockNuevo == '') {
+            mostrarError('Debe ingresar cuantas unidades desea agregar');
+            return;
+        }
+
+        // Validar stock
+        const normalizado = stockNuevo.replace(",", ".");
+        const stockValido = /^\d+(\.\d+)?$/.test(normalizado);
+        const stockNumero = parseFloat(normalizado);
+
+        if (!stockValido || isNaN(stockNumero) || stockNumero <= 0) {
+            mostrarError("La cantidad en stock debe ser un número positivo mayor a 0 (se permiten decimales con . o ,)");
+            return;
+        }
+
+        // Confirmacion
+        const confirmar = confirm(`¿Desea agregar ${stockNuevo} unidades?`);
+        if (!confirmar) return;
+
+
+        // Enviar datos al servidor
+        const response = await fetch("/api/productos/agregarStock", {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id, stockNumero }),
+        });
+
+        // Verificar si la respuesta es exitosa
+        if (!response.ok) {
+            if (response.status === 409) {
+                const mensaje = await response.text();
+                mostrarError(mensaje);
+            } else {
+                mostrarError('Error al agregar stock nuevo: ' + response.status);
+            }
+            return;
+        }
+
+        const data = await response.json();
+        mostrarMensaje(data.message);
+        setTimeout(() => {
+            window.location.href = '/productos';
+        }, 1000);
+    });
+</script>
+
+<style>
+
+    .informacion {
+        background: #f7f7f7;
+        padding: 1rem;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+
+        & .codigo {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        & .nombre {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        & p {
+            font-size: .9rem;
+        }
+
+        & .span {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        &:hover {
+            background: #f2f2f2;
+        }
+    }
+
+</style>

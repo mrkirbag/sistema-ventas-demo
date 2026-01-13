@@ -1,0 +1,104 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '../utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+---
+
+<Layout>
+    <h1>TASAS MULTIMONEDA</h1>
+
+    <p>Tasa del día a COP: <span id="tasaTextoContainer"></span> COP</p>
+
+    <section class="form-container">
+        <form id="formulario">
+            <div>
+                <label for="tasa">Cambio en COP</label>
+                <input type="text" id="tasa" name="tasa" required />
+            </div>
+            <button type="submit">Actualizar Tasa</button>
+        </form>
+    </section>
+        
+    <div id="mensaje"></div>
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+</Layout>
+
+<script>
+
+    import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const tasaTextoContainer = document.getElementById('tasaTextoContainer') as HTMLElement;
+        const inputTasa = document.getElementById('tasa') as HTMLInputElement;
+
+        try {
+            const response = await fetch('/api/tasa');
+            const data = await response.json();
+
+            // Verificar si no hay registros
+            if(response.status === 204) {
+                mostrarMensaje(data.message);
+                tasaTextoContainer.textContent = '';
+                return;
+            }
+
+            // Verificar si la respuesta es exitosa
+            if (!response.ok) mostrarError(data.error || 'Error al cargar la tasa del día');
+
+            tasaTextoContainer.textContent = data.valor;
+            inputTasa.value = data.valor;
+
+        } catch (error : any) {
+            mostrarError(error.message);
+        }
+
+        
+    });
+    
+    const formulario = document.getElementById('formulario') as HTMLFormElement;
+
+    formulario?.addEventListener('submit', async (event : SubmitEvent) => { 
+        
+        event.preventDefault();
+
+        const tasaInput = (document.getElementById('tasa') as HTMLInputElement).value;
+        let tasa = parseFloat(tasaInput);
+
+        try {
+            const response = await fetch('/api/tasa', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ tasa })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) mostrarError(data.error || 'Error al actualizar la tasa');
+
+            mostrarMensaje('Tasa actualizada correctamente');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+
+        } catch (error : any) {
+            mostrarError(error.message);
+        }
+    });
+</script>
+
+<style>
+
+    #tasaTextoContainer {
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+</style>

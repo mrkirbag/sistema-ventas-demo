@@ -1,0 +1,288 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '../utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/'); 
+}
+---
+
+<Layout>
+    <h1>INVENTARIO DE PRODUCTOS</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/productos/agregarProductos">Agregar Producto</a>
+    </div>
+
+    <div class="buttons">
+        <div class="btn-add_container">
+            <a class="btn-add" href="/productos/cargaMasiva">Cargar de Excel</a>
+        </div>
+
+        <div class="btn-add_container">
+            <a class="btn-add" id="exportarBtn">Exportar a Excel</a>
+        </div>
+    </div>
+
+
+    <div class="input-busqueda_container">
+        <input type="text" id="inputBusqueda" placeholder="Buscar producto..." />
+    </div>
+
+    <table>
+        <thead id="thead">
+            <tr>
+                <th>
+                    Código
+                    <br />
+                    Nombre
+                </th>
+                <th>Cantidad</th>
+                <th>Costo Promedio</th>
+                <th>Precio Venta</th>
+                <th>Acciones</th> 
+            </tr>
+        </thead>
+        <tbody id="listaProductos">
+        </tbody>
+    </table>
+
+    <div class="btn-vermas_container">
+        <button id="btnVerAnterior" class="btn-vermas">Anterior</button>
+        <button id="btnVerMas" class="btn-vermas">Siguiente</button>
+    </div>
+
+    <div id="mensaje"></div>
+</Layout>
+
+<script>
+
+    import { noRegistros } from "@/utils/helpers/mensajes.js";
+    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
+
+    document.addEventListener('DOMContentLoaded', async () => {
+
+        // Elementos del DOM
+        const thead = document.getElementById('thead') as HTMLTableSectionElement;
+        const tbody = document.getElementById('listaProductos') as HTMLTableSectionElement;
+        const btnVerMas = document.getElementById('btnVerMas') as HTMLButtonElement;
+        const btnVerAnterior = document.getElementById('btnVerAnterior') as HTMLButtonElement;
+        const busqueda = document.getElementById('inputBusqueda') as HTMLInputElement;
+
+        busqueda.value = '';
+
+        // Estado
+        let productosListados = [] as any[];
+        let productosFiltrados = [] as any[];
+        let paginaActual = 1;
+        const porPagina = 10;
+
+        // Obtener tasa de cambio
+        const tasaCambio = await cambioUSDaCOP();
+
+        // Mostrar lote de clientes
+        async function mostrarPagina(pagina : number) {
+
+            const inicio = (pagina - 1) * porPagina;
+            const fin = inicio + porPagina;
+            const lote = productosFiltrados.slice(inicio, fin);
+
+            tbody.innerHTML = '';
+
+            // Si no hay clientes al buscar, mostrar mensaje
+            if (lote.length === 0) {
+                tbody.innerHTML = "";
+                thead.style.display = 'none';
+                noRegistros('No se encontraron productos con ese nombre o código');
+                btnVerMas.style.display = 'none';
+                btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
+                return;
+            } else {
+                noRegistros("");
+            }
+
+            thead.style.display = 'table-header-group';
+
+            lote.forEach( producto => {
+                const tr = document.createElement('tr');
+
+                let costoPesos = producto.costo * tasaCambio;
+                let ventaPesos = producto.venta * tasaCambio;
+
+                tr.innerHTML = `    
+                                    <td data-label="Código y Nombre">
+                                        ${producto.codigo}
+                                        <br />
+                                        ${producto.nombre.toUpperCase()}
+                                    </td>
+                                    <td data-label="Cantidad">${producto.stock} ${producto.unidad_medida}</td>
+                                    <td data-label="Precio de Costo">
+                                        ${producto.costo.toFixed(2)} USD
+                                        <br />
+                                        <span style="font-size: .75rem;">${Math.ceil(costoPesos)} COP
+                                    </td>
+                                    <td data-label="Precio de Venta">
+                                        ${producto.venta.toFixed(2)} USD
+                                        <br />
+                                        <span style="font-size: .75rem;">${Math.ceil(ventaPesos)} COP
+                                    </td>
+                                `;
+
+                // Botones de acciones
+                const tdAcciones = document.createElement('td');
+                tdAcciones.classList.add('acciones');
+
+                // Boton de agregar a stock
+                const btnStock = document.createElement('button');
+                btnStock.classList.add('btn-stock');
+                btnStock.textContent = '+UNIDADES';
+
+                btnStock.onclick = async () => {
+                    window.location.href = `/productos/agregarStock?id=${producto.id}`;
+                }
+
+                tdAcciones.appendChild(btnStock)
+
+                // Boton de eliminar
+                const btnEliminar = document.createElement('button');
+                btnEliminar.classList.add('btn-eliminar');
+                btnEliminar.textContent = 'DEL';
+
+                btnEliminar.onclick = async () => {
+                    // Confirmación antes de eliminar
+                    const confirmar = confirm(`¿Estás seguro de eliminar al producto ${producto.codigo} - ${producto.nombre}?`);
+                    if (!confirmar) return;
+
+                    // Enviar solicitud de eliminación al servidor
+                    try {
+                        const res = await fetch('/api/productos/', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: producto.id })
+                        });
+
+                        // Actualiza el array local y repinta
+                        productosListados = productosListados.filter(c => c.id !== producto.id);
+                        productosFiltrados = aplicarFiltro(busqueda.value);
+                        mostrarPagina(1);
+                    } catch (error) {
+                        console.error("Error eliminando producto:", error);
+                    }
+                };
+                tdAcciones.appendChild(btnEliminar);
+
+                // Boton de editar
+                const btnEditar = document.createElement('button');
+                btnEditar.classList.add('btn-editar');
+                btnEditar.textContent = 'EDIT';
+                btnEditar.onclick = () => {
+                    window.location.href = `/productos/${producto.id}`;
+                };
+                tdAcciones.appendChild(btnEditar);
+
+                // Adjuntar acciones al tr
+                tr.appendChild(tdAcciones);
+                tbody.appendChild(tr);
+            });
+
+            btnVerMas.style.display = productosFiltrados.length > fin ? 'block' : 'none';
+            btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
+        }
+
+        // Filtro local por nombre o código
+        function aplicarFiltro(texto : string) : any[] {
+            if (!texto.trim()) return [...productosListados];
+
+            const filtro = texto.toLowerCase();
+
+            return productosListados.filter(producto =>
+                producto.nombre.toLowerCase().includes(filtro) ||
+                producto.codigo.toLowerCase().includes(filtro)
+            );
+        }
+
+        // Cargar desde el backend una sola vez
+        async function cargarProductos() {
+            try {
+                const res = await fetch('/api/productos');
+                const data = await res.json();
+
+                if (data.message) {
+                    tbody.innerHTML = "";
+                    thead.style.display = 'none';
+                    noRegistros("No hay productos registrados");
+                    btnVerMas.style.display = 'none';
+                    btnVerAnterior.style.display = 'none';
+                    return;
+                }
+
+                productosListados = data;
+                productosFiltrados = [...productosListados];
+                mostrarPagina(paginaActual);
+            } catch (err) {
+                console.error('Error al cargar productos:', err);
+            }
+        }
+
+        // Eventos
+        busqueda.addEventListener('input', () => {
+            paginaActual = 1;
+            productosFiltrados = aplicarFiltro(busqueda.value);
+            mostrarPagina(paginaActual);
+        });
+
+        btnVerMas.addEventListener('click', () => {
+            paginaActual++;
+            mostrarPagina(paginaActual);
+        });
+
+        btnVerAnterior.addEventListener('click', () => {
+            if (paginaActual > 1) {
+                paginaActual--;
+                mostrarPagina(paginaActual);
+            }
+        });
+
+        cargarProductos();
+    });
+
+    const exportarBtn = document.getElementById('exportarBtn' ) as HTMLAnchorElement;
+    exportarBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch('/api/productos/exportar', {
+                method: 'GET',
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al exportar los productos');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'productos.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error al exportar los productos:', error);
+        }
+    });
+
+</script>
+
+<style>
+
+    .buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+</style>

@@ -1,0 +1,139 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/'); 
+}
+---
+
+<Layout>
+    <h1>AGREGAR USUARIO</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/usuarios">Regresar</a>
+    </div>
+
+    <section class="form-container">
+        <form id="formulario">
+            <div>
+                <input type="text" name="nombre" id="nombre" placeholder="Nombre y Apellido" />
+            </div>
+            <div>
+                <input type="text" name="usuario" id="usuario" placeholder="Usuario" autocomplete="username"/>
+            </div>
+            <div>
+                <select name="rol" id="rol">
+                    <option value="" disabled selected>Seleccionar rol</option>
+                    <option value="admin">Administrador</option>
+                    <option value="empleado">Empleado</option>
+                </select>
+            </div>
+            <div class="password-container">
+                <input type="password" name="contrasena" id="contrasena" placeholder="Contraseña" autocomplete="new-password"/>
+                <img id="img1" src="/ver.png" alt="ver contrasena">
+            </div>
+            <div class="password-container">
+                <input type="password" name="contrasena2" id="contrasena2" placeholder="Repetir contraseña" autocomplete="new-password"/>
+                <img id="img2" src="/ver.png" alt="ver contrasena">
+            </div>
+            <button type="submit">Agregar</button>
+        </form>
+    </section>
+
+    <div id="mensaje"></div>
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+</Layout>
+
+<script>
+
+    import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
+
+    function togglePassword(inputId: string, imgId: string): void {
+        const input = document.querySelector(`#${inputId}`) as HTMLInputElement | null;
+        const img = document.getElementById(imgId) as HTMLImageElement | null;
+
+        if (!input || !img) {
+            console.error("No se encontró el input o la imagen");
+            return;
+        }
+
+        input.type = input.type === "password" ? "text" : "password";
+        img.src = input.type === "text" ? "/ocultar.png" : "/ver.png";
+    }
+
+    // Asignar eventos
+    (document.querySelector("#img1") as HTMLImageElement).addEventListener('click', () => {
+        togglePassword("contrasena", "img1");
+    });
+
+    (document.querySelector("#img2") as HTMLImageElement).addEventListener('click', () => {
+        togglePassword("contrasena2", "img2");
+    });
+
+    const formulario = document.getElementById('formulario') as HTMLFormElement;
+
+    formulario.addEventListener('submit', async (event) => { 
+        
+        event.preventDefault();
+        
+        const nombre = (document.getElementById('nombre') as HTMLInputElement).value;
+        const usuario = (document.getElementById('usuario') as HTMLInputElement).value;
+        const contrasena = (document.getElementById('contrasena') as HTMLInputElement).value;
+        const contrasena2 = (document.getElementById('contrasena2') as HTMLInputElement).value;
+        const rol = (document.getElementById('rol') as HTMLSelectElement).value;
+        // Validar que las contrasenas coincidan
+        if(contrasena !== contrasena2){
+            mostrarError('Las contraseñas no coinciden');
+            return;
+        }
+
+        // Validar campos vacios
+        if (nombre === '' || usuario === '' || contrasena === '' || contrasena2 === '' || rol === '') {
+            mostrarError('Todos los campos son obligatorios.'); 
+            return;
+        }
+
+        try{
+            const response = await fetch("/api/usuarios/registrar", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ nombre, usuario, contrasena, rol })
+            });
+
+            if(!response.ok){
+                throw new Error('Error al agregar usuario: ' + response.status);
+            } else {
+                mostrarMensaje('Usuario agregado exitosamente.');
+                setTimeout(() => {
+                    window.location.href = '/usuarios';
+                }, 1000);
+            }
+
+        } catch(error){
+            console.error(error);
+        }
+    });
+
+</script>
+
+<style>
+
+    #img1, #img2 {
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+        background: var(--primary-color);
+        padding: 5px;
+        border-radius: 8px;
+    }
+
+</style>

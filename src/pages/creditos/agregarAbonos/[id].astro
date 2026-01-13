@@ -1,0 +1,186 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+
+const {id} = Astro.params;
+const fechaVenezuela = new Intl.DateTimeFormat('es-VE', {
+        timeZone: 'America/Caracas',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(new Date());
+
+// Convertir de formato DD/MM/YYYY a YYYY-MM-DD
+const [dia, mes, ano] = fechaVenezuela.split('/');
+const fechaCompleta = `${ano}-${mes}-${dia}`;
+---
+
+<Layout>
+    <h1>AGREGAR ABONO</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href=`/creditos/${id}`>Regresar</a>
+    </div>
+
+    <section class="datos-cliente">
+        <p>Saldo pendiente de pagar: <span id="pendiente"></span> USD / <span id="pendienteCOP"></span> COP</p>
+    </section>
+
+    <div class="form-container">
+        <form id="formulario">
+            <input type="date" name="fecha" id="fecha" value={fechaCompleta}>
+            <input type="text" name="montoAbono" id="montoAbono" placeholder="¿Cuánto desea abonar en USD?" />
+            <button type="submit">Registrar Abono</button>
+        </form>
+    </div>
+
+    <div id="mensaje"></div>
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+</Layout>
+
+<style>
+    .datos-cliente {
+        min-width: 280px;
+        max-width: 320px;
+        padding: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background-color: #f9f9f9;
+        box-shadow: 0 0 4px rgba(0,0,0,0.1);
+    }
+
+    span {
+        font-weight: 700;
+        font-size: 1rem
+    }
+    
+    p {
+        font-size: .85rem;
+    }
+</style>
+
+<script>
+
+    import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
+    import { cambioUSDaCOP } from '@/utils/helpers/cambioMoneda.js';
+
+    // Rellenar campos con los datos existentes
+    const id = location.pathname.split("/").pop() as string;
+    const saldoPendiente = document.querySelector('#pendiente') as HTMLElement;
+    const saldoPendienteCOP = document.querySelector('#pendienteCOP') as HTMLElement;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+
+        try {
+
+            const response = await fetch(`/api/creditos/${id}`);
+            const data = await response.json();
+
+            const saldo = data.credito.saldo_pendiente.toFixed(2);
+            saldoPendiente.textContent = saldo;
+
+            // Obtener tasa de cambio
+            const tasa = await cambioUSDaCOP();
+
+            saldoPendienteCOP.textContent = Math.ceil(tasa * parseFloat(saldo)).toString();
+
+        } catch (error){
+            console.error('Error al cargar datos de crédito o tasa:', error);
+            saldoPendiente.textContent = '—';
+            saldoPendienteCOP.textContent = '—';
+        }
+    });
+
+    const formulario = document.getElementById('formulario') as HTMLFormElement;
+
+    formulario.addEventListener('submit', async (event : Event) => { 
+        event.preventDefault();
+
+        const montoAbonoInput = document.querySelector('#montoAbono') as HTMLInputElement;
+        const fechaInput = document.querySelector('#fecha') as HTMLInputElement;
+
+        const raw = montoAbonoInput.value.trim().replace(',', '.');
+        const montoAbono = parseFloat(raw);
+
+        const fecha = fechaInput.value?.trim();
+
+        // Validar monto
+        if (!montoAbonoInput.value || isNaN(montoAbono) || montoAbono <= 0) {
+            mostrarError('Debe ingresar un monto válido mayor a cero');
+            return;
+        }
+        // Validar fecha
+        if (!fecha) {
+            mostrarError('Debe seleccionar una fecha válida');
+            return;
+        }
+        // Validar formato de fecha (opcional, si esperas YYYY-MM-DD)
+        const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(fecha);
+        if (!fechaValida) {
+            mostrarError('El formato de fecha no es válido');
+            return;
+        }
+        // Validación de fecha futura (opcional)
+        const hoy = new Date().toISOString().split('T')[0];
+        if (fecha > hoy) {
+            mostrarError('La fecha no puede ser futura');
+            return;
+        }
+
+        // Confirmacion
+        const confirmar = confirm(`¿Desea abonar ${montoAbono} USD?`);
+        if (!confirmar) return;
+
+        // Enviar datos al servidor
+        const response = await fetch("/api/abonos/agregarAbono", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id, fecha, montoAbono }),
+        });
+
+        if (!response.ok) {
+            const mensaje = await response.text();
+            switch (response.status) {
+                case 400:
+                    mostrarError('Datos inválidos: ' + mensaje);
+                    break;
+                case 404:
+                    mostrarError('Crédito no encontrado');
+                    break;
+                case 409:
+                    mostrarError(mensaje);
+                    break;
+                case 500:
+                    mostrarError('Error interno del servidor');
+                    break;
+                default:
+                    mostrarError('Error inesperado: ' + response.status);
+            }
+            return;
+        }
+
+        const data = await response.json();
+        mostrarMensaje(data.message);
+
+        if (data.venta_actualizada) {
+            mostrarMensaje('La venta fue completada con este abono');
+            return setTimeout(() => {
+                window.location.href = `/creditos/`;
+            }, 2000);
+        }
+
+        setTimeout(() => {
+            window.location.href = `/creditos/${id}`;
+        }, 1000);
+
+    });
+</script>

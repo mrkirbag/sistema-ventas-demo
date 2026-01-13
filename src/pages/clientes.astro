@@ -1,0 +1,203 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '../utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+---
+
+<Layout>
+    <h1>LISTA DE CLIENTES</h1>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/clientes/agregarClientes">Agregar Cliente</a>
+    </div>
+
+    <div class="input-busqueda_container">
+        <input type="text" id="inputBusqueda" placeholder="Buscar cliente por nombre o cédula..." />
+    </div>
+
+    <table>
+        <thead id="thead">
+            <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Teléfono</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="listaClientes">
+        </tbody>
+    </table>
+
+    <div class="btn-vermas_container">
+        <button id="btnVerAnterior" class="btn-vermas">Anterior</button>
+        <button id="btnVerMas" class="btn-vermas">Siguiente</button>
+    </div>
+
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
+
+    <div id="mensaje"></div>
+</Layout>
+
+<script>
+
+    import { noRegistros } from "@/utils/helpers/mensajes.js";
+
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const thead = document.getElementById('thead') as HTMLTableSectionElement;
+        const tbody = document.getElementById('listaClientes') as HTMLTableSectionElement;
+        const btnVerMas = document.getElementById('btnVerMas') as HTMLButtonElement;
+        const btnVerAnterior = document.getElementById('btnVerAnterior') as HTMLButtonElement;
+        const busqueda = document.getElementById('inputBusqueda') as HTMLInputElement;
+
+        busqueda.value = '';
+
+        let todosLosClientes = [] as any[];
+        let clientesFiltrados = [] as any[];
+        let paginaActual = 1;
+        const porPagina = 10;
+
+        function mostrarPagina(pagina : number) {
+
+            const inicio = (pagina - 1) * porPagina;
+            const fin = inicio + porPagina;
+            const lote = clientesFiltrados.slice(inicio, fin);
+
+            tbody.innerHTML = '';
+
+            // Si no hay clientes al buscar, mostrar mensaje
+            if (lote.length === 0) {
+                tbody.innerHTML = "";
+                thead.style.display = 'none';
+                noRegistros('No se encontraron clientes con ese nombre o cédula');
+                btnVerMas.style.display = 'none';
+                btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
+                return;
+            } else {
+                noRegistros("");
+            }
+
+            thead.style.display = 'table-header-group';
+
+            lote.forEach(cliente => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                                    <td data-label="Nombre">${cliente.nombre.toUpperCase()}</td>
+                                    <td data-label="Cédula">${cliente.cedula}</td>
+                                    <td data-label="Teléfono">${cliente.telefono}</td>
+                                `;
+
+                // Botones de acciones
+                const tdAcciones = document.createElement('td');
+                tdAcciones.classList.add('acciones');
+
+                // Boton de eliminar
+                const btnEliminar = document.createElement('button');
+                btnEliminar.classList.add('btn-eliminar');
+                btnEliminar.textContent = 'DEL';
+
+                btnEliminar.onclick = async () => {
+
+                    // Confirmación antes de eliminar
+                    const confirmar = confirm(`¿Estás seguro de eliminar al cliente ${cliente.nombre}?`);
+                    if (!confirmar) return;
+
+                    // Enviar solicitud de eliminación al servidor
+                    try {
+                        const res = await fetch('/api/clientes/', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: cliente.id })
+                        });
+
+                        const result = await res.json();
+
+                        // Actualiza el array local y repinta
+                        todosLosClientes = todosLosClientes.filter(c => c.id !== cliente.id);
+                        clientesFiltrados = aplicarFiltro(busqueda.value);
+                        mostrarPagina(1);
+                    } catch (error) {
+                        console.error("Error eliminando cliente:", error);
+                    }
+                };
+                tdAcciones.appendChild(btnEliminar);
+
+                // Boton de editar
+                const btnEditar = document.createElement('button');
+                btnEditar.classList.add('btn-editar');
+                btnEditar.textContent = 'EDIT';
+                btnEditar.onclick = () => {
+                    window.location.href = `/clientes/${cliente.id}`;
+                };
+                tdAcciones.appendChild(btnEditar);
+
+                // Adjuntar acciones al tr
+                tr.appendChild(tdAcciones);
+                tbody.appendChild(tr);
+            });
+
+            btnVerMas.style.display = clientesFiltrados.length > fin ? 'block' : 'none';
+            btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
+        }
+
+        // Filtro local por nombre o cédula
+        function aplicarFiltro(texto : string) {
+            const filtro = texto.toLowerCase();
+            return todosLosClientes.filter(cliente =>
+                cliente.nombre.toLowerCase().includes(filtro) ||
+                cliente.cedula?.toString().includes(filtro)
+            );
+        }
+
+        // Cargar desde el backend una sola vez
+        async function cargarClientes() {
+            try {
+                const res = await fetch('/api/clientes');
+                const data = await res.json();
+
+                if (data.message) {
+                    tbody.innerHTML = "";
+                    thead.style.display = 'none';
+                    noRegistros("No hay clientes registrados");
+                    btnVerMas.style.display = 'none';
+                    btnVerAnterior.style.display = 'none';
+                    return;
+                }
+
+                todosLosClientes = data;
+                clientesFiltrados = [...todosLosClientes];
+                mostrarPagina(paginaActual);
+            } catch (err) {
+                console.error('Error al cargar clientes:', err);
+            }
+        }
+
+        // Eventos
+        busqueda.addEventListener('input', () => {
+            paginaActual = 1;
+            clientesFiltrados = aplicarFiltro(busqueda.value);
+            mostrarPagina(paginaActual);
+        });
+
+        btnVerMas.addEventListener('click', () => {
+            paginaActual++;
+            mostrarPagina(paginaActual);
+        });
+
+        btnVerAnterior.addEventListener('click', () => {
+            if (paginaActual > 1) {
+                paginaActual--;
+                mostrarPagina(paginaActual);
+            }
+        });
+
+        cargarClientes();
+    });
+
+</script>

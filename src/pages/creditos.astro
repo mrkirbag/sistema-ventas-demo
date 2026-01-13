@@ -1,0 +1,112 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+---
+
+<Layout>
+    <h1>CRÉDITOS PENDIENTES DE PAGO</h1>
+
+    <table>
+        <thead id="thead">
+            <tr>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Monto a Pagar</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="listaCreditos">
+        </tbody>
+    </table>
+
+    <div id="mensaje"></div>
+</Layout>
+
+<script>
+
+    import { noRegistros } from "@/utils/helpers/mensajes.js";
+    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
+    import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
+
+    interface Credito {
+        id_credito: number;
+        fecha: string;
+        nombre: string;
+        cedula: string;
+        saldo_pendiente: number;
+        estado: string;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+
+        const tbody = document.getElementById('listaCreditos') as HTMLTableSectionElement;
+        const thead = document.getElementById('thead') as HTMLTableSectionElement;
+
+        try {
+            const res = await fetch('/api/creditos');
+            const creditos :Credito[] = await res.json();
+
+            if (res.status === 202) {
+                tbody.innerHTML = "";
+                thead.style.display = 'none';
+                noRegistros("No hay ventas a crédito pendientes");
+                return;
+            }
+
+            thead.style.display = 'table-header-group';
+
+            // Obtener tasa de cambio
+            const tasa = await cambioUSDaCOP();
+
+            creditos.forEach(credito => {
+
+                // Formatear fecha
+                const fechaFormateada = formatearFecha(credito.fecha);
+
+                const tr = document.createElement('tr');
+                const montoCop = tasa * credito.saldo_pendiente;
+
+                tr.innerHTML = `    
+                                    <td data-label="Fecha">${fechaFormateada}</td>
+                                    <td data-label="Cliente">
+                                        ${credito.nombre.toUpperCase()}
+                                        <br />
+                                        C.I. ${credito.cedula}
+                                    </td>
+                                    <td data-label="Monto a Pagar">
+                                        ${credito.saldo_pendiente} USD
+                                        <br />    
+                                        ${montoCop} COP
+                                    </td>
+                                    <td data-label="Estado">${credito.estado.toUpperCase()}</td>
+                                `;
+
+                // Botones de acciones
+                const tdAcciones = document.createElement('td');
+                tdAcciones.classList.add('acciones');
+
+                // Boton de abonos
+                const btnAbonos = document.createElement('button');
+                btnAbonos.classList.add('btn-editar');
+                btnAbonos.textContent = 'ABONOS';
+                btnAbonos.onclick = () => {
+                    window.location.href = `/creditos/${credito.id_credito}`;
+                };
+                tdAcciones.appendChild(btnAbonos);
+
+                tr.appendChild(tdAcciones);
+                tbody.appendChild(tr);
+            });
+            
+        } catch (err) {
+            console.error('Error al cargar creditos:', err);
+        }
+    });
+
+</script>
