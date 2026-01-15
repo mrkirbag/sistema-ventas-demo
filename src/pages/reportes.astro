@@ -363,12 +363,6 @@ if (usuario.rol !== 'admin') {
 
             const ventas = await response.json();
 
-            if (!ventas || !ventas.resumen || ventas.resumen.ventas_contado === 0) {
-                container.innerHTML = '';
-                noRegistros("No hay ingresos en ese rango de fecha")
-                return;
-            }
-
             const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
             btnImprimir.style.display = 'block';
 

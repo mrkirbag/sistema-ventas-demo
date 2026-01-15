@@ -57,9 +57,9 @@ export function renderChart(canvasId, labels, values) {
                     color: "#000"
                 },
                 datalabels: {
-                    anchor: 'end',   
-                    align: 'top',   
-                    color: '#000', 
+                    anchor: 'center',   
+                    align: 'center',   
+                    color: '#fff', 
                     font: {
                         weight: 'bold'
                     },
@@ -68,17 +68,22 @@ export function renderChart(canvasId, labels, values) {
             },
             layout: {
                 padding: {
-                    top: 25
+                    top: 5
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { color: "#000" } 
+                    ticks: { color: "#000" }
                 },
                 x: {
-                    ticks: { color: "#000" } 
-                }
+                    ticks: {
+                        display: false // oculta los nombres
+                    },
+                    grid: {
+                        display: false // opcional: oculta las líneas del eje X
+                    }
+                },
             }
         },
     });

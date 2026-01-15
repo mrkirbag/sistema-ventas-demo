@@ -90,6 +90,7 @@ if (!usuario) {
 
 <script >
 
+    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda";
     import { mostrarError } from "@/utils/helpers/mensajes";
 
     interface Producto {
@@ -102,8 +103,10 @@ if (!usuario) {
         stock: number;
         costo: number;
         venta: number;
+        unidad_medida: string;
     }
 
+    // Impresion
     (document.querySelector('#imprimir') as HTMLButtonElement).addEventListener('click', () => {
 
         const tablaOriginal = document.querySelector('#contenidoImpresion') as HTMLTableElement;
@@ -185,8 +188,8 @@ if (!usuario) {
         ventana.print();
     });
 
+    // Cargar productos
     document.addEventListener('DOMContentLoaded', rellenarSelectProductos);
-
     async function rellenarSelectProductos() {
 
         const busqueda = document.getElementById("busquedaProductos") as HTMLInputElement;
@@ -225,7 +228,7 @@ if (!usuario) {
                 productos.forEach(producto => {
                     const option = document.createElement("option");
                     option.value = producto.id.toString();
-                    option.textContent = `${producto.codigo.toUpperCase()} - ${producto.nombre} - ${producto.stock}u. - ${producto.venta}USD`;
+                    option.textContent = `${producto.codigo.toUpperCase()} - ${producto.nombre} - ${producto.stock} ${producto.unidad_medida} - ${producto.venta}USD`;
                     productoSelect.appendChild(option);
                 });
             };
@@ -262,15 +265,6 @@ if (!usuario) {
     btnReiniciar.addEventListener('click', () => {
         window.location.reload();
     });
-
-    async function cambioCop() {
-        const responseTasa = await fetch('/api/tasa');
-        if (!responseTasa.ok) throw new Error('Error al obtener la tasa de cambio');
-        const dataTasa = await responseTasa.json();
-        const tasa = Number(dataTasa.valor);
-
-        return tasa;
-    }
 
     const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
     const precioInput = document.getElementById("precio") as HTMLInputElement;
@@ -373,7 +367,7 @@ if (!usuario) {
         const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
         const precioInput = document.getElementById("precio") as HTMLInputElement;
 
-        const tasa = await cambioCop();
+        const tasa = await cambioUSDaCOP();
         let precioPesos = Math.ceil(tasa * productoSeleccionado.precio);
         let subtotalPesos = Math.ceil(tasa * productoSeleccionado.subtotal);
 
@@ -462,10 +456,7 @@ if (!usuario) {
                 return match ? parseFloat(match[0].replace(',', '')) : 0;
             });
 
-        const responseTasa = await fetch('/api/tasa');
-        if (!responseTasa.ok) throw new Error('Error al obtener la tasa de cambio');
-        const dataTasa = await responseTasa.json();
-        const tasa = Number(dataTasa.valor);
+        const tasa = await cambioUSDaCOP();
 
         let totalUSD = 0;
 
