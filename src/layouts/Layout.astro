@@ -20,6 +20,26 @@ import Navbar from "../components/Navbar.astro"
 		<div class="content">
 			<slot />
 		</div>
+
+		<script is:inline>
+			(() => {
+				const disableSuggestions = () => {
+					document.querySelectorAll('form').forEach((form) => {
+						form.setAttribute('autocomplete', 'off');
+					});
+
+					document.querySelectorAll('input, textarea').forEach((field) => {
+						field.setAttribute('autocomplete', 'off');
+						field.setAttribute('autocorrect', 'off');
+						field.setAttribute('autocapitalize', 'none');
+						field.setAttribute('spellcheck', 'false');
+					});
+				};
+
+				disableSuggestions();
+				document.addEventListener('astro:page-load', disableSuggestions);
+			})();
+		</script>
 	</body>
 </html>
 

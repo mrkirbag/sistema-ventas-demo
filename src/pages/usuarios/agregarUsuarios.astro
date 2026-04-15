@@ -19,12 +19,12 @@ if (usuario.rol !== 'admin') {
     </div>
 
     <section class="form-container">
-        <form id="formulario">
+        <form id="formulario" autocomplete="off">
             <div>
-                <input type="text" name="nombre" id="nombre" placeholder="Nombre y Apellido" />
+                <input type="text" name="nombre" id="nombre" placeholder="Nombre y Apellido" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
             </div>
             <div>
-                <input type="text" name="usuario" id="usuario" placeholder="Usuario" autocomplete="username"/>
+                <input type="text" name="usuario" id="usuario" placeholder="Usuario" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"/>
             </div>
             <div>
                 <select name="rol" id="rol">
@@ -34,11 +34,11 @@ if (usuario.rol !== 'admin') {
                 </select>
             </div>
             <div class="password-container">
-                <input type="password" name="contrasena" id="contrasena" placeholder="Contraseña" autocomplete="new-password"/>
+                <input type="password" name="contrasena" id="contrasena" placeholder="Contraseña" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"/>
                 <img id="img1" src="/ver.png" alt="ver contrasena">
             </div>
             <div class="password-container">
-                <input type="password" name="contrasena2" id="contrasena2" placeholder="Repetir contraseña" autocomplete="new-password"/>
+                <input type="password" name="contrasena2" id="contrasena2" placeholder="Repetir contraseña" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"/>
                 <img id="img2" src="/ver.png" alt="ver contrasena">
             </div>
             <button type="submit">Agregar</button>
