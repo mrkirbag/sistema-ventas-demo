@@ -60,16 +60,20 @@ function resetModal(modal, overlay) {
     overlay.classList.add('oculto');
 }
 
+const MODAL_ICONS = {
+    success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>`,
+    error: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/></svg>`,
+    confirm: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5M12 16h.01"/><circle cx="12" cy="12" r="9"/></svg>`,
+};
+
 function renderModal({ mensaje, titulo, variante, acciones = [] }) {
     const { overlay, modal } = ensureModalElements();
 
     resetModal(modal, overlay);
 
-    const icon = variante === 'success' ? 'OK' : variante === 'error' ? '!' : '?';
-
     modal.setAttribute('data-variant', variante);
     modal.innerHTML = `
-        <div class="modal-icon">${icon}</div>
+        <div class="modal-icon">${MODAL_ICONS[variante] ?? MODAL_ICONS.confirm}</div>
         <h3 class="modal-title">${titulo}</h3>
         <p class="modal-message">${mensaje}</p>
         <div class="modal-actions"></div>
@@ -92,29 +96,31 @@ function renderModal({ mensaje, titulo, variante, acciones = [] }) {
     return { overlay, modal };
 }
 
-function mostrarModal(mensaje, variante) {
+function mostrarModal(mensaje, variante, opciones = {}) {
     const titulos = {
-        success: 'Operacion exitosa',
-        error: 'Atencion',
+        success: 'Operación exitosa',
+        error: 'Atención',
     };
 
     const { overlay, modal } = renderModal({
         mensaje,
-        titulo: titulos[variante],
+        titulo: opciones.titulo ?? titulos[variante],
         variante,
     });
 
+    const duracion = opciones.duracion ?? 1600;
+
     activeTimer = window.setTimeout(() => {
         resetModal(modal, overlay);
-    }, 1600);
+    }, duracion);
 }
 
-export function mostrarMensaje(mensaje) {
-    mostrarModal(mensaje, 'success');
+export function mostrarMensaje(mensaje, opciones = {}) {
+    mostrarModal(mensaje, 'success', opciones);
 }
 
-export function mostrarError(mensaje) {
-    mostrarModal(mensaje, 'error');
+export function mostrarError(mensaje, opciones = {}) {
+    mostrarModal(mensaje, 'error', opciones);
 }
 
 export function confirmarAccion(mensaje, opciones = {}) {

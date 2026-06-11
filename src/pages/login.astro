@@ -157,42 +157,69 @@
             const clave = claveInput.value;
 
             if (!usuario || !clave) {
-                mostrarError('Por favor, completa todos los campos');
+                mostrarError('Completa usuario y contraseña para continuar.', {
+                    titulo: 'Campos incompletos',
+                });
                 return;
             }
 
             submitBtn.disabled = true;
             submitBtn.classList.add('is-loading');
 
+            let redirigiendo = false;
+
             try {
                 const res = await fetch('/api/usuarios/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuario, clave })
+                    body: JSON.stringify({ usuario, clave }),
                 });
 
-                const data = await res.json();
+                if (res.ok) {
+                    redirigiendo = true;
+                    mostrarMensaje('Redirigiendo al panel operativo…', {
+                        titulo: 'Inicio exitoso',
+                        duracion: 1400,
+                    });
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1400);
+                    return;
+                }
 
-                if (res.status === 500) {
-                    mostrarError('Error del servidor. Inténtalo de nuevo más tarde');
+                let data: { error?: string } = {};
+                try {
+                    data = await res.json();
+                } catch {
+                    /* respuesta no JSON */
                 }
 
                 if (res.status === 401) {
-                    mostrarError(data.error || 'Usuario o clave incorrectos');
-                }
-
-                if (res.ok) {
-                    mostrarMensaje('¡Inicio de sesión exitoso!');
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
+                    mostrarError('Verifica tu usuario y contraseña.', {
+                        titulo: 'Credenciales inválidas',
+                    });
                     return;
                 }
+
+                if (res.status >= 500) {
+                    mostrarError('Inténtalo de nuevo en unos momentos.', {
+                        titulo: 'Error del servidor',
+                    });
+                    return;
+                }
+
+                mostrarError(data.error || 'No se pudo iniciar sesión.', {
+                    titulo: 'Atención',
+                });
             } catch {
-                mostrarError('Error de conexión. Inténtalo de nuevo más tarde');
+                mostrarError('Revisa tu conexión a internet e inténtalo de nuevo.', {
+                    titulo: 'Sin conexión',
+                });
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('is-loading');
+                if (!redirigiendo) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('is-loading');
+                }
             }
         });
     });
@@ -688,9 +715,12 @@
         border-radius: 50%;
         display: grid;
         place-items: center;
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 1.4rem;
         color: #fff;
+    }
+
+    .modal-icon svg {
+        width: 28px;
+        height: 28px;
     }
 
     .modal[data-variant='success'] .modal-icon {
