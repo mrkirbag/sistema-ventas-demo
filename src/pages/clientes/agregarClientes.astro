@@ -9,24 +9,52 @@ if (!usuario) {
 ---
 
 <Layout>
-    <h1>AGREGAR CLIENTE</h1>
+    <header class="page-header">
+        <p class="eyebrow">Gestión comercial</p>
+        <h1>Agregar cliente</h1>
+        <p class="page-intro">Registra un nuevo cliente con su nombre, teléfono y cédula.</p>
+    </header>
 
     <div class="btn-add_container">
         <a class="btn-add" href="/clientes">Regresar</a>
     </div>
 
-    <section class="form-container">
+    <section class="form-container page-form">
         <form id="formulario">
-            <div>
-                <input type="text" name="nombre" placeholder="Nombre y Apellido" />
+            <div class="form-field">
+                <label for="nombre">Nombre y apellido</label>
+                <input
+                    type="text"
+                    name="nombre"
+                    id="nombre"
+                    placeholder="Ej. Carlos Pérez"
+                />
             </div>
-            <div>
-                <input type="text" name="telefono" placeholder="Número de Teléfono" />
+
+            <div class="form-field">
+                <label for="telefono">Teléfono</label>
+                <input
+                    type="text"
+                    name="telefono"
+                    id="telefono"
+                    placeholder="Ej. 3001234567"
+                />
             </div>
-            <div>
-                <input type="number" name="cedula" placeholder="Cédula del Cliente" min="0"/>
+
+            <div class="form-field">
+                <label for="cedula">Cédula</label>
+                <input
+                    type="number"
+                    name="cedula"
+                    id="cedula"
+                    placeholder="Ej. 1234567890"
+                    min="0"
+                />
             </div>
-            <button type="submit">Agregar</button>
+
+            <div class="form-actions">
+                <button type="submit">Agregar cliente</button>
+            </div>
         </form>
     </section>
 
@@ -47,34 +75,29 @@ if (!usuario) {
         event.preventDefault();
 
         const formData = new FormData(formulario);
-        const nombre = formData.get('nombre') as string;
-        const telefono = formData.get('telefono') as string;
+        const nombre = (formData.get('nombre') as string).trim();
+        const telefono = (formData.get('telefono') as string).trim();
         const cedulaText = formData.get('cedula') as string;
 
-        // Validar campos vacios
         if (nombre === '' || telefono === '' || cedulaText === '') {
             mostrarError('Todos los campos son obligatorios');
             return;
         }
 
-        // Validar formato de teléfono
         const telefonoRegex = /^\d+$/; 
         if (!telefonoRegex.test(telefono)) {
             mostrarError('El número de teléfono debe contener solo números');
             return;
         }
 
-        // Validar cedula
         const cedulaRegex = /^[1-9]\d*$/;
         if (!cedulaRegex.test(cedulaText)) {
             mostrarError("La cédula debe ser un número entero positivo mayor a cero");
             return;
         }
 
-        // Parsear cedula
         const cedula = parseInt(cedulaText);
 
-        // Enviar datos al servidor
         const response = await fetch("/api/clientes", {
             method: 'POST',
             headers: {
@@ -83,7 +106,6 @@ if (!usuario) {
             body: JSON.stringify({ nombre, telefono, cedula })
         });
 
-        // Verificar si la respuesta es exitosa
         if (!response.ok) {
             if (response.status === 409) {
                 const mensaje = await response.text();

@@ -1,11 +1,18 @@
-import { db } from '../db.js'; 
+import { db } from '../db.js';
 import { verificarToken } from '@/utils/auth';
+import { withTransaction } from '@/utils/dbTransaction';
+
+const jsonHeaders = { 'Content-Type': 'application/json' };
 
 export async function POST({ request }) {
 
     const usuario = verificarToken(request);
     if (!usuario) {
-        return new Response('Unauthorized', { status: 401 });
+        return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: jsonHeaders });
+    }
+
+    if (usuario.rol !== 'admin') {
+        return new Response(JSON.stringify({ error: 'Solo administradores pueden anular ventas' }), { status: 403, headers: jsonHeaders });
     }
 
     const body = await request.json();
@@ -13,51 +20,90 @@ export async function POST({ request }) {
 
     if (!id || isNaN(Number(id))) {
         return new Response(JSON.stringify({ error: 'ID inválido' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
+            status: 400,
+            headers: jsonHeaders
         });
     }
 
     try {
 
-        //Validar que la venta exista y que no este anulada
-        const ventaCheck = await db.execute('SELECT estado FROM ventas WHERE id = ?',[id]);
-        const validarVenta = ventaCheck.rows[0];
+        await withTransaction(db, async (tx) => {
+            const ventaCheck = await tx.execute(
+                'SELECT estado, tipo_pago FROM ventas WHERE id = ?',
+                [id]
+            );
 
-        if (!ventaCheck.rows || ventaCheck.rows.length === 0) {
-            return new Response(JSON.stringify({ message: 'Venta no encontrada' }), {
-                status: 404,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
+            if (!ventaCheck.rows?.length) {
+                throw Object.assign(new Error('Venta no encontrada'), { status: 404 });
+            }
 
-        if (validarVenta.estado === 'anulado') {
-            return new Response(JSON.stringify({ message: 'Venta ya está anulada' }), {
-                status: 409,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
+            const validarVenta = ventaCheck.rows[0];
 
-        // Anular la venta
-        await db.execute('UPDATE ventas SET estado = ? WHERE id = ?',['anulado', id]);
+            if (validarVenta.estado === 'anulado') {
+                throw Object.assign(new Error('Venta ya está anulada'), { status: 409 });
+            }
 
-        // Obtener productos del detalle
-        const productos = await db.execute('SELECT codigo_producto, cantidad FROM detalle_venta WHERE id_venta = ?',[id]);
-        const productoArray = productos.rows;
+            const credito = await tx.execute(
+                'SELECT id, saldo_pendiente FROM creditos WHERE id_venta = ?',
+                [id]
+            );
 
-        // Devolver unidades 
-        for (const { codigo_producto, cantidad } of productoArray) {
-            await db.execute('UPDATE productos SET stock = stock + ? WHERE codigo = ?',[cantidad, codigo_producto]);
-        }
+            if (credito.rows?.length) {
+                const { id: idCredito, saldo_pendiente } = credito.rows[0];
+
+                const abonos = await tx.execute(
+                    'SELECT COUNT(*) AS total FROM abonos_credito WHERE id_credito = ?',
+                    [idCredito]
+                );
+
+                const totalAbonos = Number(abonos.rows[0]?.total ?? 0);
+
+                if (totalAbonos > 0) {
+                    throw Object.assign(
+                        new Error('No se puede anular una venta a crédito con abonos registrados'),
+                        { status: 409 }
+                    );
+                }
+
+                await tx.execute(
+                    'UPDATE creditos SET saldo_pendiente = 0 WHERE id = ?',
+                    [idCredito]
+                );
+            }
+
+            await tx.execute(
+                'UPDATE ventas SET estado = ? WHERE id = ?',
+                ['anulado', id]
+            );
+
+            const productos = await tx.execute(
+                'SELECT codigo_producto, cantidad FROM detalle_venta WHERE id_venta = ?',
+                [id]
+            );
+
+            for (const { codigo_producto, cantidad } of productos.rows) {
+                await tx.execute(
+                    'UPDATE productos SET stock = stock + ? WHERE codigo = ?',
+                    [cantidad, codigo_producto]
+                );
+            }
+        });
 
         return new Response(JSON.stringify({ message: 'Venta anulada correctamente' }), {
-            headers: { 'Content-Type': 'application/json' }
+            headers: jsonHeaders
         });
 
     } catch (err) {
-        return new Response(JSON.stringify({ error: 'Error interno del servidor' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
+        const status = err.status ?? 500;
+        const message = status === 500 ? 'Error interno del servidor' : err.message;
+
+        if (status === 500) {
+            console.error('Error anulando venta:', err);
+        }
+
+        return new Response(JSON.stringify({ error: message }), {
+            status,
+            headers: jsonHeaders
         });
     }
 }

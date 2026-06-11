@@ -14,6 +14,7 @@ if (usuario.rol !== 'admin') {
 <Layout>
     <h1>CARGAS DE FACTURAS</h1>
 
+    <div class="table-wrap">
     <table>
         <thead id="thead">
             <tr>
@@ -27,6 +28,7 @@ if (usuario.rol !== 'admin') {
         <tbody id="lista">
         </tbody>
     </table>
+    </div>
 
     <div id="mensaje"></div>
 </Layout>
@@ -64,7 +66,7 @@ if (usuario.rol !== 'admin') {
             const tasaCambio = await cambioUSDaCOP();   
 
             // Mostrar las cargas en la tabla
-            thead.style.display = "thead-table-group";
+            thead.style.display = "table-header-group";
 
             datos.forEach(carga => {
 
@@ -87,6 +89,7 @@ if (usuario.rol !== 'admin') {
 
                 // Boton de detalles
                 const btnDetalles = document.createElement('button');
+                btnDetalles.type = 'button';
                 btnDetalles.classList.add('btn-detalles');
                 btnDetalles.textContent = 'Ver Detalles';
 

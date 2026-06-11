@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { verificarToken } from '../utils/auth.js';
+import { verificarToken } from '@/utils/auth.js';
 
 const usuario = verificarToken(Astro.request);
 if (!usuario) {
@@ -9,88 +9,445 @@ if (!usuario) {
 ---
 
 <Layout>
-    <h1>PRESUPUESTO</h1>
+    <header class="page-header">
+        <p class="eyebrow">Gestión comercial</p>
+        <h1>Presupuestos</h1>
+        <p class="page-intro">Arma cotizaciones con productos del inventario, revisa los totales y genera un documento listo para imprimir.</p>
+    </header>
 
-    <section class="form-container">
-        <form>
-            <input type="text" id="busquedaProductos" placeholder="Buscar producto por nombre o código..." />
-
-            <select name="producto" id="productoSelect"></select>
-
-            <div>
-                <label for="cantidad">Cantidad:</label>
-                <input type="number" min="1" id="cantidad" placeholder="Ingrese la cantidad"/>
+    <main class="presupuesto-flow">
+        <section class="presupuesto-panel">
+            <div class="panel-heading">
+                <span class="step-badge">1</span>
+                <div>
+                    <p class="eyebrow">Productos</p>
+                    <h2>Agregar al presupuesto</h2>
+                </div>
             </div>
 
-            <div>
-                <label for="precio">Precio por Unidad:</label>
-                <input type="text" id="precio"/>
+            <section class="form-container page-form presupuesto-form">
+                <form>
+                    <div id="productos-container" class="producto-module">
+                        <div class="form-field producto-module_search">
+                            <label for="busquedaProductos">Buscar producto</label>
+                            <input type="text" id="busquedaProductos" placeholder="Nombre o código del producto" />
+                        </div>
+
+                        <div class="form-field producto-module_select">
+                            <label for="productoSelect">Producto</label>
+                            <select name="producto" id="productoSelect"></select>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="cantidad">Cantidad</label>
+                            <input type="number" min="1" id="cantidad" placeholder="Ej. 2"/>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="precio">Precio por unidad (USD)</label>
+                            <input type="text" id="precio" placeholder="0.00"/>
+                            <span class="precio-referencia" id="precioReferencia">Referencia: 0 COP</span>
+                        </div>
+
+                        <div class="form-actions producto-module_actions">
+                            <button type="button" id="agregarProducto">Agregar producto</button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+        </section>
+
+        <section class="presupuesto-panel invoice-table-card">
+            <div class="table-heading">
+                <div>
+                    <p class="eyebrow">Detalle</p>
+                    <h2>Productos cotizados</h2>
+                </div>
+                <p class="table-caption">Revisa cantidades y subtotales antes de imprimir.</p>
             </div>
 
-            <div>
-                <button id="agregarProducto">Agregar</button>
+            <div class="table-wrap">
+                <table id="contenidoImpresion">
+                    <thead id="headerTablaProductos" style="opacity: 0;">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio por unidad</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaProductos">
+                    </tbody>
+                </table>
             </div>
-        </form>
-    </section>
-    
+        </section>
 
-    <table id="contenidoImpresion">
-        <thead id="headerTablaProductos" style="opacity: 0;">
-            <tr>
-                <th>Producto</th>
-                <th>Precio por Unidad</th>
-                <th>Cantidad Seleccionada</th>
-                <th>Subtotal</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="listaProductos">
-        </tbody>
-    </table>
-    
-    <p><span id="total"></span></p>
+        <section class="presupuesto-summary-card" aria-live="polite">
+            <div class="summary-icon" aria-hidden="true">$</div>
+            <div>
+                <p class="summary-eyebrow">Estado del presupuesto</p>
+                <p class="summary-text" id="resumenPresupuesto">Agrega productos para comenzar el presupuesto.</p>
+                <p class="summary-subtext" id="resumenItems"></p>
+            </div>
+        </section>
 
-    <div class="btns-container" style="opacity: 0;" id="btns">
-        <button id="imprimir" disabled>Imprimir</button>
-        <button id="reiniciar" disabled>Cancelar</button>
-    </div>   
+        <section class="presupuesto-footer" id="presupuestoFooter" hidden>
+            <section class="total-box" id="totalResumen">
+                <p class="total-box_label">Total del presupuesto</p>
+                <div class="total-box_values">
+                    <div>
+                        <span class="total-box_caption">USD</span>
+                        <strong id="totalUSD">0.00</strong>
+                    </div>
+                    <div>
+                        <span class="total-box_caption">COP</span>
+                        <strong id="totalCOP">0</strong>
+                    </div>
+                </div>
+            </section>
+
+            <div class="btns-container" id="btns">
+                <button type="button" id="imprimir" disabled>Imprimir presupuesto</button>
+                <button type="button" id="reiniciar" class="btn-secundario" disabled>Cancelar</button>
+            </div>
+        </section>
+    </main>
+
+    <div id="mensaje"></div>
+    <div id="overlay" class="overlay oculto">
+        <div id="modal" class="modal"></div>
+    </div>
 </Layout>
 
 <style>
-    .btns-container {
+    .presupuesto-flow {
         display: flex;
-        justify-content: center;
-        gap: 3rem;
-        margin-top: 1rem;
-
-        & button {
-            display: block;
-            background-color: #1f2937;
-            color: #fff;
-            border-radius: 5px;
-            padding: .35rem .75rem;
-            text-align: center;
-            font-size: .9rem;
-            font-weight: 600;
-            border: none;
-            outline: none;
-
-            &:hover {
-                background: #4b4b8a;
-                cursor: pointer;
-            }
-        }
+        flex-direction: column;
+        gap: 1.2rem;
     }
 
-    #total {
-        margin-top: 1rem;
-        text-align: center;
+    .presupuesto-panel,
+    .invoice-table-card {
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(31, 10, 82, 0.08);
+        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.08);
+    }
+
+    .presupuesto-panel {
+        padding: 1.15rem;
+    }
+
+    .panel-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .step-badge {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: #fff;
+        font-family: "Archivo Black", sans-serif;
+        font-size: 1rem;
+        flex-shrink: 0;
+        box-shadow: 0 10px 20px rgba(15, 5, 41, 0.18);
+    }
+
+    .panel-heading h2 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    .presupuesto-form {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    .producto-module {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem 1rem;
+        padding: 1.1rem;
+        border-radius: var(--radius-md);
+        background: linear-gradient(180deg, rgba(236, 231, 246, 0.5), rgba(255, 255, 255, 0.72));
+        border: 1px solid rgba(31, 10, 82, 0.08);
+    }
+
+    .producto-module_search,
+    .producto-module_select,
+    .producto-module_actions {
+        grid-column: 1 / -1;
+    }
+
+    .precio-referencia {
+        margin-top: 0.35rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+    }
+
+    .invoice-table-card {
+        padding: 1.15rem;
+    }
+
+    .table-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .table-heading h2 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    .table-caption {
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #4f3d78;
+        text-align: right;
+        max-width: 28ch;
+        line-height: 1.5;
+    }
+
+    .presupuesto-summary-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.15rem;
+        border-radius: var(--radius-lg);
+        background: linear-gradient(135deg, rgba(31, 10, 82, 0.06), rgba(217, 209, 236, 0.42));
+        border: 1px solid rgba(31, 10, 82, 0.1);
+        box-shadow: var(--shadow-card);
+    }
+
+    .summary-icon {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: #fff;
+        font-family: "Archivo Black", sans-serif;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+        box-shadow: 0 10px 22px rgba(15, 5, 41, 0.2);
+    }
+
+    .summary-eyebrow {
+        margin: 0 0 0.2rem;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
+    }
+
+    .summary-text {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--primary-strong);
+        line-height: 1.5;
+    }
+
+    .summary-subtext {
+        margin: 0.25rem 0 0;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .presupuesto-footer {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .presupuesto-footer[hidden] {
+        display: none;
+    }
+
+    .total-box {
+        width: min(100%, 420px);
+        margin: 0 0 0 auto;
+        padding: 1rem 1.1rem;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #0f172a;
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        box-shadow: 0 18px 28px rgba(37, 99, 235, 0.14);
+    }
+
+    .total-box.is-empty {
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    }
+
+    .total-box p,
+    .total-box span,
+    .total-box strong {
+        color: inherit;
+    }
+
+    .total-box_label {
+        margin: 0 0 0.75rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #1d4ed8;
+    }
+
+    .total-box_values {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem;
+    }
+
+    .total-box_values div {
+        display: grid;
+        gap: 0.25rem;
+        padding: 0.85rem 0.9rem;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .total-box_caption {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #2563eb;
+    }
+
+    .total-box strong {
+        font-size: 1.25rem;
+        line-height: 1;
+        color: #0f172a;
+    }
+
+    .btns-container {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .btns-container button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 148px;
+        min-height: 44px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: #fff;
+        border-radius: 999px;
+        padding: 0.72rem 1rem;
+        font-size: 0.84rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        border: none;
+        box-shadow: 0 10px 24px rgba(15, 5, 41, 0.22);
+        transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    }
+
+    .btns-container button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 28px rgba(15, 5, 41, 0.28);
+        cursor: pointer;
+    }
+
+    .btns-container button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+        box-shadow: none;
+        transform: none;
+    }
+
+    .btn-secundario {
+        background: rgba(15, 5, 41, 0.08) !important;
+        color: var(--secondary-color) !important;
+        border: 1px solid rgba(31, 10, 82, 0.16) !important;
+        box-shadow: none !important;
+    }
+
+    .btn-secundario:hover:not(:disabled) {
+        background: rgba(15, 5, 41, 0.12) !important;
+        box-shadow: none !important;
+    }
+
+    :global(.monto-usd) {
+        font-weight: 700;
+        color: var(--primary-strong);
+    }
+
+    :global(.monto-cop) {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+    }
+
+    @media (max-width: 768px) {
+        .producto-module {
+            grid-template-columns: 1fr;
+        }
+
+        .table-heading {
+            flex-direction: column;
+        }
+
+        .table-caption {
+            text-align: left;
+            max-width: none;
+        }
+
+        .presupuesto-summary-card {
+            align-items: flex-start;
+            padding: 0.9rem 1rem;
+        }
+
+        .total-box {
+            width: 100%;
+            margin-inline: 0;
+        }
+
+        .total-box_values {
+            grid-template-columns: 1fr;
+        }
+
+        .btns-container {
+            justify-content: stretch;
+        }
+
+        .btns-container button {
+            width: 100%;
+            min-width: 0;
+        }
     }
 </style>
 
 <script >
 
     import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda";
+    import { imprimir } from '@/utils/helpers/imprimir.js';
     import { mostrarError } from "@/utils/helpers/mensajes";
 
     interface Producto {
@@ -106,13 +463,44 @@ if (!usuario) {
         unidad_medida: string;
     }
 
+    function actualizarResumen(cantidadItems: number, totalUSD = 0, totalCOP = 0) {
+        const resumen = document.getElementById('resumenPresupuesto') as HTMLParagraphElement;
+        const resumenItems = document.getElementById('resumenItems') as HTMLParagraphElement;
+        if (!resumen || !resumenItems) return;
+
+        if (cantidadItems === 0) {
+            resumen.textContent = 'Agrega productos para comenzar el presupuesto.';
+            resumenItems.textContent = '';
+            return;
+        }
+
+        const textoItems = cantidadItems === 1
+            ? '1 producto en el presupuesto'
+            : `${cantidadItems} productos en el presupuesto`;
+
+        resumen.textContent = textoItems;
+        resumenItems.textContent = `Total estimado: ${totalUSD.toFixed(2)} USD · ${totalCOP} COP`;
+    }
+
+    function togglePresupuestoActivo(activo: boolean) {
+        const thead = document.querySelector('#headerTablaProductos') as HTMLTableSectionElement;
+        const presupuestoFooter = document.querySelector('#presupuestoFooter') as HTMLElement;
+        const btnImprimir = document.querySelector('#imprimir') as HTMLButtonElement;
+        const btnCancelar = document.querySelector('#reiniciar') as HTMLButtonElement;
+
+        thead.style.opacity = activo ? '1' : '0';
+        presupuestoFooter.hidden = !activo;
+        btnImprimir.disabled = !activo;
+        btnCancelar.disabled = !activo;
+    }
+
     // Impresion
     (document.querySelector('#imprimir') as HTMLButtonElement).addEventListener('click', () => {
 
         const tablaOriginal = document.querySelector('#contenidoImpresion') as HTMLTableElement;
-        const totalTexto = (document.querySelector('#total') as HTMLParagraphElement).textContent;
+        const totalUSD = (document.querySelector('#totalUSD') as HTMLElement)?.textContent || '0.00';
+        const totalCOP = (document.querySelector('#totalCOP') as HTMLElement)?.textContent || '0';
 
-        // Clonar solo las filas visibles y omitir columna de acciones
         const filas = Array.from(tablaOriginal.querySelectorAll('tbody tr')).map(fila => {
             const celdas = fila.querySelectorAll('td');
             return `
@@ -125,70 +513,76 @@ if (!usuario) {
             `;
         }).join('');
 
-        const ventana = window.open('', '', 'width=800,height=600') as Window;
-
-        ventana.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Presupuestos</title>
-                <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    margin: 20px;
-                    font-size: 13px;
-                }
-                h2 {
-                    text-align: center;
-                    margin-bottom: 1rem;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 1.5rem;
-                }
-                th, td {
+        imprimir({
+            titulo: 'Presupuestos',
+            tituloDocumento: 'PRESUPUESTO',
+            estilosExtra: `
+                .total-box {
+                    margin-left: auto;
+                    width: 260px;
                     border: 1px solid #000;
-                    padding: 8px;
-                    text-align: left;
+                    border-radius: 14px;
+                    padding: 12px;
                 }
-                thead {
-                    background: #ddd;
+                .total-box_label {
+                    margin: 0 0 8px;
+                    font-size: 10px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
+                }
+                .total-box_values {
+                    display: table;
+                    width: 100%;
+                }
+                .total-row {
+                    display: table-row;
+                }
+                .total-row span,
+                .total-row strong {
+                    display: table-cell;
+                    padding: 4px 0;
+                }
+                .total-row span {
+                    font-size: 11px;
                     font-weight: bold;
                 }
-                p.total {
+                .total-row strong {
+                    font-size: 13px;
                     text-align: right;
-                    font-size: 14px;
-                    font-weight: bold;
-                    margin-top: 1rem;
                 }
-                </style>
-            </head>
-            <body>
-                <h2>Presupuesto</h2>
+            `,
+            contenido: `
                 <table>
-                <thead>
-                    <tr>
-                    <th>Producto</th>
-                    <th>Precio por Unidad</th>
-                    <th>Cantidad</th>
-                    <th>Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filas}
-                </tbody>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio por Unidad</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filas}
+                    </tbody>
                 </table>
-                <p class="total">${totalTexto}</p>
-            </body>
-            </html>
-        `);
-
-        ventana.document.close();
-        ventana.print();
+                <div class="total-box">
+                    <p class="total-box_label">Total del presupuesto</p>
+                    <div class="total-box_values">
+                        <div class="total-row">
+                            <span>USD</span>
+                            <strong>${totalUSD}</strong>
+                        </div>
+                        <div class="total-row">
+                            <span>COP</span>
+                            <strong>${totalCOP}</strong>
+                        </div>
+                    </div>
+                </div>
+            `,
+        });
     });
 
-    // Cargar productos
     document.addEventListener('DOMContentLoaded', rellenarSelectProductos);
     async function rellenarSelectProductos() {
 
@@ -202,12 +596,11 @@ if (!usuario) {
             const response = await fetch("/api/productos");
             const data = await response.json();
 
-            productosListados = data;
+            productosListados = Array.isArray(data) ? data : [];
 
             const renderOpciones = (productos: Producto[]) => {
-                productoSelect.innerHTML = ""; // Limpiar opciones previas
+                productoSelect.innerHTML = "";
 
-                // Opción inicial vacía
                 const defaultOption = document.createElement("option");
                 defaultOption.value = "";
                 defaultOption.textContent = "Selecciona un producto";
@@ -215,7 +608,6 @@ if (!usuario) {
                 defaultOption.selected = true;
                 productoSelect.appendChild(defaultOption);
 
-                // Mensaje si no hay registros para esa busqueda
                 if (productos.length === 0) {
                     const noResultsOption = document.createElement("option");
                     noResultsOption.value = "";
@@ -233,10 +625,8 @@ if (!usuario) {
                 });
             };
 
-            // Render inicial
             renderOpciones(productosListados);
 
-            // Listener de búsqueda
             busqueda.addEventListener("input", () => {
                 const filtro = busqueda.value.trim().toLowerCase();
 
@@ -260,7 +650,6 @@ if (!usuario) {
         }
     }
 
-    // Reiniciar presupuesto
     const btnReiniciar = document.querySelector('#reiniciar') as HTMLButtonElement;
     btnReiniciar.addEventListener('click', () => {
         window.location.reload();
@@ -268,14 +657,32 @@ if (!usuario) {
 
     const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
     const precioInput = document.getElementById("precio") as HTMLInputElement;
+    const precioReferencia = document.getElementById("precioReferencia") as HTMLSpanElement;
 
-    // Evento para actualizar el input del precio segun el inventario
+    function actualizarReferenciaPrecio(tasa: number) {
+        const precio = parseFloat(precioInput.value);
+
+        if (isNaN(precio) || precio <= 0) {
+            precioReferencia.textContent = 'Referencia: 0 COP';
+            return;
+        }
+
+        precioReferencia.textContent = `Referencia: ${Math.ceil(precio * tasa)} COP`;
+    }
+
+    precioInput.addEventListener('input', async () => {
+        const tasa = await cambioUSDaCOP();
+        actualizarReferenciaPrecio(tasa);
+    });
+
     productoSelect.addEventListener("change", async () => {
 
         const productoId = productoSelect.value;
+        const tasa = await cambioUSDaCOP();
 
         if (!productoId) {
             precioInput.value = "";
+            actualizarReferenciaPrecio(tasa);
             return;
         }
 
@@ -285,26 +692,29 @@ if (!usuario) {
             if (!response.ok) {
                 console.error("Error al obtener el producto:", response.status);
                 precioInput.value = "";
+                actualizarReferenciaPrecio(tasa);
                 return;
             }
 
             const producto = await response.json();
 
             if (typeof producto.venta === "number") {
-                precioInput.value = producto.venta.toFixed(2); // Formato profesional
+                precioInput.value = producto.venta.toFixed(2);
+                actualizarReferenciaPrecio(tasa);
             } else {
                 precioInput.value = "";
+                actualizarReferenciaPrecio(tasa);
             }
 
         } catch (error) {
             console.error("Error de red o parsing:", error);
             precioInput.value = "";
+            actualizarReferenciaPrecio(tasa);
         }
     });
 
     const btnagregarProducto = document.getElementById("agregarProducto") as HTMLButtonElement;
 
-    // Agregar el producto a la tabla
     btnagregarProducto.addEventListener("click", async (e) => {
 
         e.preventDefault();
@@ -323,7 +733,6 @@ if (!usuario) {
             }
             const producto = await response.json();
 
-            // Validaciones
             if (!producto || !producto.stock) {
                 mostrarError('Producto no encontrado o sin stock disponible');
                 return;
@@ -341,7 +750,6 @@ if (!usuario) {
                 return;
             }
 
-            //Información necesaria
             let productoSeleccionado = {
                 codigo: producto.codigo,
                 nombre: producto.nombre,
@@ -350,7 +758,6 @@ if (!usuario) {
                 subtotal: (precio * cantidad)
             }
 
-            // Guardar datos del producto en la tabla
             mostrarProductosEnTabla(productoSeleccionado)
             
         } catch (error) {
@@ -362,7 +769,6 @@ if (!usuario) {
     async function mostrarProductosEnTabla(productoSeleccionado : { codigo: string; nombre: string; cantidad: number; precio: number; subtotal: number; }) {
         
         const tbody = document.querySelector('#listaProductos') as HTMLTableSectionElement;
-        const thead = document.querySelector('#headerTablaProductos') as HTMLTableSectionElement;
         const cantidadInput = document.getElementById("cantidad") as HTMLInputElement;
         const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
         const precioInput = document.getElementById("precio") as HTMLInputElement;
@@ -373,48 +779,36 @@ if (!usuario) {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-                        <td data-label="Producto">
-                            ${productoSeleccionado.codigo.toUpperCase()}
-                            <br />
-                            ${productoSeleccionado.nombre.toUpperCase()}
-                        </td>
+            <td data-label="Producto">
+                <strong>${productoSeleccionado.nombre.toUpperCase()}</strong>
+                <br />
+                <span class="monto-cop">${productoSeleccionado.codigo.toUpperCase()}</span>
+            </td>
+            <td data-label="Precio por Unidad">
+                <span class="monto-usd">${productoSeleccionado.precio.toFixed(2)} USD</span>
+                <br />
+                <span class="monto-cop">${precioPesos} COP</span>
+            </td>
+            <td data-label="Cantidad">${productoSeleccionado.cantidad}</td>
+            <td data-label="Subtotal">
+                <span class="subtotal monto-usd">${productoSeleccionado.subtotal.toFixed(2)} USD</span>
+                <br />
+                <span class="monto-cop">${subtotalPesos} COP</span>
+            </td>
+        `;
 
-                        <td data-label="Precio por Unidad">
-                            ${productoSeleccionado.precio.toFixed(2)} USD
-                            <br />
-                            <span style="font-size: .75rem;">${precioPesos} COP</span>
-                        </td>
-
-                        <td data-label="Cantidad">${productoSeleccionado.cantidad}</td>
-
-                        <td data-label="Subtotal">
-                            <span class='subtotal'>${productoSeleccionado.subtotal.toFixed(2)}</span> USD
-                            <br />    
-                            <span style="font-size: .75rem;">${subtotalPesos} COP</span>
-                        </td>
-                    `;
-
-        // Botones de acciones
         const tdAcciones = document.createElement('td');
         tdAcciones.classList.add('acciones');
 
-        // Boton de eliminar
         const btnEliminar = document.createElement('button');
+        btnEliminar.type = 'button';
         btnEliminar.classList.add('btn-eliminar');
         btnEliminar.textContent = 'DEL';
         btnEliminar.addEventListener('click', () => {
             tr.remove();
             totalizar();
-            // Si se eliminan todos los registros se desaparece el thead y los btns
             if (tbody && tbody.querySelectorAll('tr').length <= 0) {
-                thead.style.opacity = "0";
-
-                const btnsContainer = document.querySelector('#btns') as HTMLDivElement;
-                btnsContainer.style.opacity = "0";
-                const btnImprimir = document.querySelector('#imprimir') as HTMLButtonElement;
-                const btnCancelar = document.querySelector('#reiniciar') as HTMLButtonElement;
-                btnImprimir.disabled = true;
-                btnCancelar.disabled = true ;
+                togglePresupuestoActivo(false);
             }
         });
 
@@ -422,37 +816,28 @@ if (!usuario) {
         tr.appendChild(tdAcciones);
         tbody.appendChild(tr);
 
-        // Aparecer el header de la tabla y los btns
         if (tbody && tbody.querySelectorAll('tr').length > 0) {
-            thead.style.opacity = "1";
-
-            const btnsContainer = document.querySelector('#btns') as HTMLDivElement;
-            btnsContainer.style.opacity = "1";
-            const btnImprimir = document.querySelector('#imprimir') as HTMLButtonElement;
-            const btnCancelar = document.querySelector('#reiniciar') as HTMLButtonElement;
-            btnImprimir.disabled = false;
-            btnCancelar.disabled = false;
+            togglePresupuestoActivo(true);
         }
 
-        // Resetear el formulario
         productoSelect.value = "";
         cantidadInput.value = "";
         precioInput.value = "";
+        precioReferencia.textContent = 'Referencia: 0 COP';
         
-        //Manejo del total
         totalizar();
     }
 
     async function totalizar(){
         const elementosSubtotal = document.querySelectorAll('.subtotal') as NodeListOf<HTMLSpanElement>;
-        const total = document.querySelector('#total') as HTMLSpanElement;
-
-        total.innerHTML = '';
+        const totalResumen = document.querySelector('#totalResumen') as HTMLElement;
+        const totalUSDNode = document.querySelector('#totalUSD') as HTMLElement;
+        const totalCOPNode = document.querySelector('#totalCOP') as HTMLElement;
 
         const valoresSubtotal = Array.from(elementosSubtotal)
             .map(el => {
                 const texto = el.textContent.trim();
-                const match = texto.match(/[\d,.]+/); // Extrae el primer número
+                const match = texto.match(/[\d,.]+/);
                 return match ? parseFloat(match[0].replace(',', '')) : 0;
             });
 
@@ -463,10 +848,14 @@ if (!usuario) {
         valoresSubtotal.forEach(subtotal => {
             totalUSD += subtotal;
         });
-        
-        total.textContent =  `Total: ${totalUSD.toFixed(2)} USD o ${Math.ceil(tasa * totalUSD)} COP`;      
+
+        const totalCOP = Math.ceil(tasa * totalUSD);
+
+        totalResumen.classList.toggle('is-empty', totalUSD <= 0);
+        totalUSDNode.textContent = totalUSD.toFixed(2);
+        totalCOPNode.textContent = totalCOP.toString();
+
+        actualizarResumen(elementosSubtotal.length, totalUSD, totalCOP);
     }
-
-
 
 </script>

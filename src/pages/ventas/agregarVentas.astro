@@ -14,166 +14,446 @@ const fechaVenezuela = new Intl.DateTimeFormat('es-VE', {
         day: '2-digit'
     }).format(new Date());
 
-// Convertir de formato DD/MM/YYYY a YYYY-MM-DD
 const [dia, mes, ano] = fechaVenezuela.split('/');
 const fechaCompleta = `${ano}-${mes}-${dia}`;
 ---
 
 <Layout>
-    <h1>AGREGAR VENTA</h1>
+    <header class="page-header">
+        <p class="eyebrow">Gestión comercial</p>
+        <h1>Nueva venta</h1>
+        <p class="page-intro">Agrega productos al carrito, confirma el detalle y completa la venta con el cliente y el tipo de pago.</p>
+    </header>
 
     <div class="btn-add_container">
         <a class="btn-add" href="/ventas">Regresar</a>
     </div>
 
-    <section class="form-container">
-        <form>
-            <div>
-                <input type="date" name="fecha" id="fecha" value={fechaCompleta}/>
-            </div>
-            
-            <div id="productos-container" class="modulo-agregar-producto">
-                <input type="text" id="busquedaProductos" placeholder="Buscar producto por nombre o código" />
-                <select name="producto" id="productoSelect"></select>
-
-                <label for="cantidad">Cantidad:</label>
-                <input type="text" id="cantidad" placeholder="Ingrese la cantidad"/>
-
-                <label for="precio">Precio por Unidad:</label>
-                <input type="text" id="precio"/>
-                <span id="precioPesos"></span>
-
-                <div class="btns-container">
-                    <button id="agregarProducto">Agregar</button>
+    <main class="venta-flow">
+        <section class="venta-panel">
+            <div class="panel-heading">
+                <span class="step-badge">1</span>
+                <div>
+                    <p class="eyebrow">Productos</p>
+                    <h2>Agregar al carrito</h2>
                 </div>
             </div>
-        </form>
-    </section>
 
-    <table>
-        <thead id="headerTablaProductos" style="opacity: 0;">
-            <tr>
-                <th>Producto</th>
-                <th>Precio por Unidad</th>
-                <th>Cantidad Seleccionada</th>
-                <th>Subtotal</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="listaProductos">
-        </tbody>
-    </table> 
+            <section class="form-container page-form venta-form">
+                <form>
+                    <div class="form-field">
+                        <label for="fecha">Fecha de venta</label>
+                        <input type="date" name="fecha" id="fecha" value={fechaCompleta}/>
+                    </div>
 
-    <div class="btns-container">
-        <button id="btnConfirmacion" disabled style="display: none;">Presione para Concretar la Venta</button>
-    </div>  
-            
-    <section class="form-container" id="moduloDatosCompletar" style="display: none;">
-        <form>
-            <input type="text" id="busquedaClientes" placeholder="Buscar cliente por cédula" />
-            <div class="select-container password-container">
-                <select name="cliente" id="cliente"></select>
-                <span class="btn-cliente" id="abrirMenuClienteNuevo">+</span>
+                    <div id="productos-container" class="producto-module">
+                        <div class="form-field producto-module_search">
+                            <label for="busquedaProductos">Buscar producto</label>
+                            <input type="text" id="busquedaProductos" placeholder="Nombre o código del producto" />
+                        </div>
+
+                        <div class="form-field producto-module_select">
+                            <label for="productoSelect">Producto</label>
+                            <select name="producto" id="productoSelect"></select>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="cantidad">Cantidad</label>
+                            <input type="text" id="cantidad" placeholder="Ej. 2"/>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="precio">Precio por unidad (USD)</label>
+                            <input type="text" id="precio" placeholder="0.00"/>
+                            <span id="precioPesos" class="precio-referencia"></span>
+                        </div>
+
+                        <div class="form-actions producto-module_actions">
+                            <button type="button" id="agregarProducto">Agregar producto</button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+        </section>
+
+        <section class="venta-panel invoice-table-card">
+            <div class="table-heading">
+                <div>
+                    <p class="eyebrow">Detalle</p>
+                    <h2>Productos seleccionados</h2>
+                </div>
+                <p class="table-caption">Revisa cantidades y subtotales antes de continuar.</p>
             </div>
 
-            <div id="moduloAgregarClienteNuevo" class="modulo-agregar-cliente" style="display: none;">
-                <span>Registrar cliente no existente: </span>
-                <input type="text" name="nombre" id="nombre" placeholder="Nombre y Apellido" />
-                <input type="text" name="telefono" id="telefono" placeholder="Número de Teléfono" />
-                <input type="number" name="cedula" id="cedula" placeholder="Cédula del Cliente" min="0"/>
-                <button id="btnAgregarClienteNuevo">Agregar</button>
+            <div class="table-wrap">
+                <table>
+                    <thead id="headerTablaProductos" style="opacity: 0;">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio por unidad</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaProductos">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="confirm-step">
+            <button id="btnConfirmacion" class="btn-confirmar" disabled style="display: none;">
+                Continuar con la venta
+            </button>
+        </div>
+
+        <section class="form-container page-form venta-panel checkout-panel" id="moduloDatosCompletar" style="display: none;">
+            <div class="panel-heading">
+                <span class="step-badge">2</span>
+                <div>
+                    <p class="eyebrow">Finalizar</p>
+                    <h2>Datos de la venta</h2>
+                </div>
             </div>
 
-            <div class="select-container" id="tipoPago-container">
-                <select name="tipoPago" id="tipoPago">
-                    <option value="">Selecciona el Tipo de Pago</option>
-                    <option value="contado">De Contado</option>
-                    <option value="credito">A Crédito</option>
-                </select>
-            </div>
+            <form class="checkout-form">
+                <div class="form-field">
+                    <label for="busquedaClientes">Buscar cliente</label>
+                    <input type="text" id="busquedaClientes" placeholder="Buscar por cédula" />
+                </div>
 
-            <p id="totalDeVenta"></p>
+                <div class="form-field select-container password-container">
+                    <label for="cliente">Cliente</label>
+                    <select name="cliente" id="cliente"></select>
+                    <span class="btn-cliente" id="abrirMenuClienteNuevo" title="Registrar nuevo cliente">+</span>
+                </div>
 
-            <div class="btns-container">
-                <button id="btnFinalizar" type="button">Confirmar Venta</button>
-            </div>
-        </form>
-    </section>
-        
+                <div id="moduloAgregarClienteNuevo" class="cliente-nuevo-panel" style="display: none;">
+                    <p class="cliente-nuevo_title">Registrar cliente no existente</p>
+                    <div class="form-field">
+                        <label for="nombre">Nombre y apellido</label>
+                        <input type="text" name="nombre" id="nombre" placeholder="Ej. Carlos Pérez" />
+                    </div>
+                    <div class="form-field">
+                        <label for="telefono">Teléfono</label>
+                        <input type="text" name="telefono" id="telefono" placeholder="Ej. 3001234567" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cedula">Cédula</label>
+                        <input type="number" name="cedula" id="cedula" placeholder="Ej. 1234567890" min="0"/>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="btnAgregarClienteNuevo">Registrar cliente</button>
+                    </div>
+                </div>
+
+                <div class="form-field" id="tipoPago-container">
+                    <label for="tipoPago">Tipo de pago</label>
+                    <select name="tipoPago" id="tipoPago">
+                        <option value="">Selecciona el tipo de pago</option>
+                        <option value="contado">De contado</option>
+                        <option value="credito">A crédito</option>
+                    </select>
+                </div>
+
+                <div class="total-box checkout-total">
+                    <p class="total-box_label">Total de la venta</p>
+                    <p id="totalDeVenta" class="total-box_amount">—</p>
+                </div>
+
+                <div class="form-actions checkout-actions">
+                    <button id="btnFinalizar" type="button">Confirmar venta</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
     <div id="overlay" class="overlay oculto"> 
         <div id="modal" class="modal"></div>
     </div>
 </Layout>
 
 <style>
+    .venta-flow {
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+    }
 
-    .btn-cliente {
+    .venta-panel,
+    .invoice-table-card {
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(31, 10, 82, 0.08);
+        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.08);
+    }
+
+    .venta-panel {
+        padding: 1.15rem;
+    }
+
+    .panel-heading {
         display: flex;
         align-items: center;
+        gap: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .step-badge {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: #fff;
+        font-family: "Archivo Black", sans-serif;
+        font-size: 1rem;
+        flex-shrink: 0;
+        box-shadow: 0 10px 20px rgba(15, 5, 41, 0.18);
+    }
+
+    .panel-heading h2 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    .venta-form {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    .producto-module {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem 1rem;
+        padding: 1.1rem;
+        border-radius: var(--radius-md);
+        background: linear-gradient(180deg, rgba(236, 231, 246, 0.5), rgba(255, 255, 255, 0.72));
+        border: 1px solid rgba(31, 10, 82, 0.08);
+    }
+
+    .producto-module_search,
+    .producto-module_select,
+    .producto-module_actions {
+        grid-column: 1 / -1;
+    }
+
+    .precio-referencia {
+        margin-top: 0.35rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+    }
+
+    .invoice-table-card {
+        padding: 1.15rem;
+    }
+
+    .table-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .table-heading h2 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    .table-caption {
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #4f3d78;
+        text-align: right;
+        max-width: 28ch;
+        line-height: 1.5;
+    }
+
+    .confirm-step {
+        display: flex;
         justify-content: center;
-        height: 30px;
-        width: 35px;
+    }
+
+    .btn-confirmar {
+        appearance: none;
+        border: none;
+        border-radius: 999px;
+        padding: 0.75rem 1.4rem;
+        font-size: 0.86rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(15, 5, 41, 0.22);
+        transition:
+            transform 160ms ease,
+            box-shadow 160ms ease,
+            opacity 160ms ease;
+    }
+
+    .btn-confirmar:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 26px rgba(15, 5, 41, 0.22);
+        cursor: pointer;
+    }
+
+    .btn-confirmar:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    .checkout-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+        max-width: none;
+    }
+
+    .checkout-form {
+        align-items: start;
+    }
+
+    .checkout-form .select-container {
+        grid-template-columns: 1fr auto;
+        align-items: end;
+    }
+
+    .checkout-form .select-container label {
+        grid-column: 1 / -1;
+    }
+
+    .btn-cliente {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 44px;
+        width: 44px;
         border-radius: 50%;
         cursor: pointer;
         font-weight: bold;
+        font-size: 1.2rem;
         color: #fff;
-
-        &:hover {
-            background-color: #4b4b8a;
-        }
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        box-shadow: 0 8px 18px rgba(15, 5, 41, 0.18);
+        transition: transform 160ms ease, box-shadow 160ms ease;
+        align-self: end;
     }
 
-    .modulo-agregar-cliente, .modulo-agregar-producto {
-        display: flex;
-        flex-direction: column;
+    .btn-cliente:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 22px rgba(15, 5, 41, 0.22);
+    }
+
+    .cliente-nuevo-panel {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem 1rem;
         padding: 1rem;
-        gap: .5rem;
-        background-color: #ffffff;
-        border-radius: 5px;
-        border: 1px solid #e5e7eb;
+        border-radius: var(--radius-md);
+        background: rgba(236, 231, 246, 0.45);
+        border: 1px dashed rgba(31, 10, 82, 0.18);
     }
 
-    .btns-container {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 1rem;
+    .cliente-nuevo_title {
+        grid-column: 1 / -1;
+        margin: 0 0 0.15rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
     }
 
-    #btnConfirmacion, #imprimirFacturacion, #btnFinalizar {
-        display: block;
-        margin: 1rem auto;
-        background-color: #1f2937;
-        color: #fff;
-        border-radius: 5px;
-        padding: .35rem .75rem;
-        text-align: center;
-        font-size: .9rem;
-        font-weight: 600;
-        border: none;
-        outline: none;
+    .cliente-nuevo-panel .form-actions {
+        grid-column: 1 / -1;
+    }
 
-        &:hover {
-            background: #4b4b8a;
-            cursor: pointer;
+    .checkout-total {
+        grid-column: 1 / -1;
+        width: min(100%, 420px);
+        margin-left: auto;
+        padding: 1rem 1.1rem;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #0f172a;
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        box-shadow: 0 18px 28px rgba(37, 99, 235, 0.14);
+    }
+
+    .checkout-total p {
+        color: inherit;
+    }
+
+    .total-box_label {
+        margin: 0 0 0.5rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #1d4ed8;
+    }
+
+    .total-box_amount {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 800;
+        line-height: 1.2;
+        color: #0f172a;
+    }
+
+    .checkout-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+
+    @media (max-width: 768px) {
+        .producto-module,
+        .cliente-nuevo-panel,
+        .checkout-form {
+            grid-template-columns: 1fr;
+        }
+
+        .table-heading {
+            flex-direction: column;
+        }
+
+        .table-caption {
+            text-align: left;
+            max-width: none;
+        }
+
+        .checkout-total {
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .btn-confirmar {
+            width: 100%;
+            min-height: 44px;
+        }
+
+        .checkout-actions {
+            justify-content: stretch;
+        }
+
+        .checkout-actions button {
+            width: 100%;
         }
     }
-
-    #mensaje {
-        margin-top: 1rem;
-    }
-
-    #totalDeVenta {
-        margin-top: 1rem;
-        font-weight: bold;
-        text-align: center;
-    }
-
-    #precioPesos{
-        margin-top: .25rem;
-        font-weight: bold;
-        font-size: .8rem;
-    }
-
 </style>
 
 <script>
@@ -201,18 +481,14 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         unidad_medida: string;
     }
 
-     // Elementos del DOM
-
     const btnAbrirMenuClienteNuevo = document.getElementById("abrirMenuClienteNuevo") as HTMLSpanElement;
     const btnAgregarClienteNuevo = document.getElementById("btnAgregarClienteNuevo") as HTMLButtonElement;
 
-    // Eventos
     document.addEventListener("DOMContentLoaded", () => {
         rellenarSelectClientes();
         rellenarSelectProductos();
     }); 
     
-    // cargar clientes y productos al iniciar
     async function rellenarSelectClientes() {
 
         const selectClientes = document.getElementById("cliente") as HTMLSelectElement;
@@ -224,13 +500,11 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             const response = await fetch("/api/clientes");
             const data = await response.json();
 
-            clientesListados = data;
+            clientesListados = Array.isArray(data) ? data : [];
 
-            // Función para renderizar opciones
             const renderOpciones = (clientes : Cliente[]) => {
-                selectClientes.innerHTML = ""; // Limpiar opciones previas
+                selectClientes.innerHTML = "";
 
-                // Opción inicial vacía
                 const defaultOption = document.createElement("option");
                 defaultOption.value = "";
                 defaultOption.textContent = "Selecciona un cliente";
@@ -238,7 +512,6 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 defaultOption.selected = true;
                 selectClientes.appendChild(defaultOption);
 
-                // Mensaje si no hay registros para esa busqueda
                 if (clientes.length === 0) {
                     const noResultsOption = document.createElement("option");
                     noResultsOption.value = "";
@@ -256,10 +529,8 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 });
             };
 
-            // Render inicial
             renderOpciones(clientesListados);
 
-            // Listener de búsqueda
             busqueda.addEventListener("input", () => {
                 const filtro = busqueda.value.trim();
 
@@ -292,12 +563,11 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             const response = await fetch("/api/productos");
             const data = await response.json();
 
-            productosListados = data;
+            productosListados = Array.isArray(data) ? data : [];
 
             const renderOpciones = (productos : Producto[]) => {
-                productoSelect.innerHTML = ""; // Limpiar opciones previas
+                productoSelect.innerHTML = "";
 
-                // Opción inicial vacía
                 const defaultOption = document.createElement("option");
                 defaultOption.value = "";
                 defaultOption.textContent = "Selecciona un producto";
@@ -305,7 +575,6 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 defaultOption.selected = true;
                 productoSelect.appendChild(defaultOption);
 
-                // Mensaje si no hay registros para esa busqueda
                 if (productos.length === 0) {
                     const noResultsOption = document.createElement("option");
                     noResultsOption.value = "";
@@ -323,10 +592,8 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 });
             };
 
-            // Render inicial
             renderOpciones(productosListados);
 
-            // Listener de búsqueda
             busqueda.addEventListener("input", () => {
                 const filtro = busqueda.value.trim().toLowerCase();
 
@@ -350,15 +617,16 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         }
     }
 
-    // Seleccionar productos y mostrar input de precio
     const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
     const precioInput = document.getElementById("precio") as HTMLInputElement;
+    const precioPesos = document.getElementById("precioPesos") as HTMLSpanElement;
 
     productoSelect.addEventListener("change", async () => {
         const productoId = productoSelect.value;
 
         if (!productoId) {
             precioInput.value = "";
+            precioPesos.textContent = "";
             return;
         }
 
@@ -368,6 +636,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             if (!response.ok) {
                 console.error("Error al obtener el producto:", response.status);
                 precioInput.value = "";
+                precioPesos.textContent = "";
                 return;
             }
 
@@ -375,17 +644,20 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
             if (typeof producto.venta === "number") {
                 precioInput.value = producto.venta.toFixed(2);
+                const tasa = await cambioUSDaCOP();
+                precioPesos.textContent = `Referencia: ${Math.ceil(producto.venta * tasa)} COP`;
             } else {
                 precioInput.value = "";
+                precioPesos.textContent = "";
             }
 
         } catch (error) {
             console.error("Error de red o parsing:", error);
             precioInput.value = "";
+            precioPesos.textContent = "";
         }
     });
 
-    // Agregar productos a la tabla y mostrar
     const btnagregarProducto = document.getElementById("agregarProducto") as HTMLButtonElement;
     let productosSeleccionados : Producto[] = [];
 
@@ -411,7 +683,6 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 return;
             }
 
-            // Validaciones
             if (isNaN(cantidad) || Number(cantidad) <= 0) {
                 mostrarError("Ingresa una cantidad válida mayor a cero");
                 return;
@@ -422,57 +693,49 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 return;
             }
 
-            // Validacion si la cantidad escogida es mayor al stock
             if (Number(cantidad) > producto.stock) {
                 mostrarError(`Cantidad insuficiente en stock. Stock disponible: ${producto.stock}`);
                 return;
             }
 
-            // Obtener tasa de cambio
             const tasa = await cambioUSDaCOP();
 
-            // Theader
             const theader = document.getElementById("headerTablaProductos") as HTMLTableSectionElement;
 
-            // Btn Confirmacion
             const btnConfirmacion = document.getElementById("btnConfirmacion") as HTMLButtonElement;
 
-            // Agregar producto a la tabla
             const tablaProductos = document.getElementById("listaProductos") as HTMLTableSectionElement;
             const fila = document.createElement("tr");
             fila.innerHTML = `
                                 <td data-label="Producto">
-                                    ${producto.nombre.toUpperCase()}
+                                    <strong>${producto.nombre.toUpperCase()}</strong>
                                     <br />
-                                    ${producto.codigo}
+                                    <span style="font-size: 0.78rem; color: var(--text-muted);">${producto.codigo}</span>
                                 </td>
                                 <td data-label="P. Unitario">
-                                    ${precio.toFixed(2)} USD
+                                    <strong>${precio.toFixed(2)} USD</strong>
                                     <br />
-                                    ${Math.ceil(precio * tasa)} COP
+                                    <span style="font-size: 0.78rem; color: var(--text-muted);">${Math.ceil(precio * tasa)} COP</span>
                                 </td>
                                 <td data-label="Cantidad">${cantidad} U.</td>
-                                <td>
-                                    ${(cantidad * precio).toFixed(2)} USD
+                                <td data-label="Subtotal">
+                                    <strong>${(cantidad * precio).toFixed(2)} USD</strong>
                                     <br />
-                                    ${Math.ceil(cantidad * precio * tasa)} COP
+                                    <span style="font-size: 0.78rem; color: var(--text-muted);">${Math.ceil(cantidad * precio * tasa)} COP</span>
                                 </td>
                             `;
 
-            // Botones de acciones
             const tdAcciones = document.createElement('td');
             tdAcciones.classList.add('acciones');
 
-            // Boton de eliminar
             const btnEliminar = document.createElement('button');
+            btnEliminar.type = 'button';
             btnEliminar.classList.add('btn-eliminar');
             btnEliminar.textContent = 'DEL';
             btnEliminar.addEventListener('click', () => {
 
-                // Eliminar la fila de la tabla
                 fila.remove();
 
-                // Eliminar el producto del array
                 productosSeleccionados = productosSeleccionados.filter(p => p.codigo !== producto.codigo);
                 
                 if(tablaProductos.innerHTML.trim() === "") {
@@ -490,7 +753,6 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             fila.appendChild(tdAcciones);
             tablaProductos.appendChild(fila);
 
-            // Actualizar visibilidad del theader
             if(tablaProductos.innerHTML.trim() === "") {
                 theader.style.opacity = "0";
                 btnConfirmacion.style.display = "none";
@@ -501,12 +763,11 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 btnConfirmacion.disabled = false;
             }
 
-            // Reiniciar los campos y el select
             productoSelect.value = "";
             cantidadInput.value = "";
             precioInput.value = "";
+            precioPesos.textContent = "";
 
-            //Agregar al array de productos seleccionados
             productosSeleccionados.push({
                 id: producto.id,
                 nombre: producto.nombre,
@@ -525,29 +786,26 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         }
     });
 
-    // Boton para concretar la venta que abre el módulo de clientes y tipo de pago
     const btnConfirmacion = document.getElementById("btnConfirmacion") as HTMLButtonElement;
 
     let totalDeVenta = 0;
 
     btnConfirmacion.addEventListener("click", async () => {
         
-        // Abrir modulo de clientes y tipo de pago
         const moduloDatosCompletar = document.getElementById("moduloDatosCompletar") as HTMLDivElement;
         moduloDatosCompletar.style.display = "flex";
 
-        // Bloquear el boton anterior
         btnConfirmacion.disabled = true;
         btnConfirmacion.textContent = "Procesando...";
 
-        // Obtener tasa de cambio
         const tasa = await cambioUSDaCOP();
 
-        // Calcular el total de la venta aqui mismo
         const total = productosSeleccionados.map(p => p.precio * p.cantidad).reduce((a, b) => a + b, 0);
         const totalTexto = document.getElementById("totalDeVenta") as HTMLParagraphElement;
-        totalTexto.textContent = `Total: ${total.toFixed(2)} USD o ${Math.ceil(total * tasa)} COP`;
+        totalTexto.textContent = `${total.toFixed(2)} USD · ${Math.ceil(total * tasa)} COP`;
         totalDeVenta = total;
+
+        moduloDatosCompletar.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     });
 
@@ -556,12 +814,11 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         const moduloAgregarCliente = document.getElementById("moduloAgregarClienteNuevo") as HTMLDivElement;
 
         moduloAgregarCliente.style.display = 
-            moduloAgregarCliente.style.display === "none" ? "flex" : "none";
+            moduloAgregarCliente.style.display === "none" ? "grid" : "none";
         btnAbrirMenuClienteNuevo.textContent = 
-            moduloAgregarCliente.style.display === "flex" ? "-" : "+";
+            moduloAgregarCliente.style.display === "grid" ? "−" : "+";
     }); 
     
-    // abrir el modulo de cliente nuevo
     btnAgregarClienteNuevo.addEventListener("click", agregarClienteNuevo);
 
     async function agregarClienteNuevo(event : Event) {
@@ -572,30 +829,25 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         const telefono = (document.getElementById('telefono') as HTMLInputElement).value;
         const cedulaText = (document.getElementById('cedula') as HTMLInputElement).value;
 
-        // Validar campos vacios
         if (nombre === '' || telefono === '' || cedulaText === '') {
             mostrarError('Todos los campos son obligatorios');
             return;
         }
 
-        // Validar formato de teléfono
         const telefonoRegex = /^\d+$/; 
         if (!telefonoRegex.test(telefono)) {
             mostrarError('El número de teléfono debe contener solo números');
             return;
         }
 
-        // Validar cedula
         const cedulaRegex = /^[1-9]\d*$/;
         if (!cedulaRegex.test(cedulaText)) {
             mostrarError("La cédula debe ser un número entero positivo mayor a cero");
             return;
         }
 
-        // Parsear cedula
         const cedula = parseInt(cedulaText);
 
-        // Enviar datos al servidor
         const response = await fetch("/api/clientes", {
             method: 'POST',
             headers: {
@@ -604,7 +856,6 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             body: JSON.stringify({ nombre, telefono, cedula })
         });
 
-        // Verificar si la respuesta es exitosa
         if (!response.ok) {
             if (response.status === 409) {
                 const mensaje = await response.text();
@@ -618,15 +869,13 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         const data = await response.json();
         const clienteAgregado = data.cliente[0];
         
-        // Agregar el nuevo cliente al select
         const selectClientes = document.getElementById("cliente") as HTMLSelectElement;
         const option = document.createElement("option");
         option.value = clienteAgregado.id;
         option.textContent = `${clienteAgregado.nombre.toUpperCase()} - ${clienteAgregado.cedula}`;
         selectClientes.appendChild(option);
-        option.selected = true; // Seleccionar el nuevo cliente
+        option.selected = true;
 
-        // cerrar el módulo de agregar cliente y limpiar campos
         (document.getElementById('nombre') as HTMLInputElement).value = '';
         (document.getElementById('telefono') as HTMLInputElement).value = '';
         (document.getElementById('cedula') as HTMLInputElement).value = '';
@@ -637,19 +886,16 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         mostrarMensaje('Cliente agregado exitosamente.');
     }
 
-    // Enviar datos al servidor y concretar venta
     const btnFinalizar = document.getElementById("btnFinalizar") as HTMLButtonElement;
 
     btnFinalizar.addEventListener("click", async e => {
 
         e.preventDefault();
 
-        // Traer informacion necesaria
         const fecha = (document.getElementById('fecha') as HTMLInputElement).value;
         const tipoPago = (document.getElementById('tipoPago') as HTMLSelectElement).value;
         const clienteId = (document.getElementById('cliente') as HTMLSelectElement).value;
 
-        // Validaciones
         if (!fecha || !tipoPago || !clienteId) {
             mostrarError("Todos los campos son obligatorios");
             return;
@@ -670,10 +916,9 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             return;
         }
 
-        // Crear venta y se guarda
         try  {
 
-            const response = await fetch("/api/ventas", {
+            const response = await fetch("/api/ventas/completa", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -682,71 +927,28 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                     fecha,
                     tipoPago,
                     clienteId,
-                    totalDeVenta
+                    totalDeVenta,
+                    productos: productosSeleccionados.map(({ codigo, nombre, precio, cantidad, id }) => ({
+                        idProducto: id,
+                        codigo,
+                        nombre,
+                        precio,
+                        cantidad
+                    }))
                 })
             });
 
-            if (!response.ok) {
-                throw new Error("Error al crear la venta");
-            }
-
             const data = await response.json();
 
-            // Recuperamos el id
-            const ventaId = data.ventaId;
-
-            // Agregar los productos a detalle
-            for (const producto of productosSeleccionados) {
-
-                const { codigo, nombre, precio, cantidad, id } : Producto = producto;
-                let idProducto = id;
-
-                const esDecimalPositivo: RegExp = /^\d+(\.\d+)?$/;
-
-                const cantidadString: string = cantidad.toString();
-                const precioString: string = precio.toString();
-
-                const cantidadValida: boolean =
-                esDecimalPositivo.test(cantidadString) && Number.isFinite(parseFloat(cantidadString)) && parseFloat(cantidadString) > 0;
-                const precioUnitarioValido: boolean =
-                esDecimalPositivo.test(precioString) && Number.isFinite(parseFloat(precioString)) && parseFloat(precioString) >= 0;
-
-                if (!codigo || !nombre || !precioUnitarioValido || !cantidadValida) {
-                    mostrarError("Faltan datos válidos del producto");
-                    continue;
-                }
-
-                try {
-                    const responseDetalles = await fetch("/api/detalleVentas", {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            ventaId,
-                            idProducto,
-                            codigo,
-                            nombre,
-                            precio,
-                            cantidad
-                        })
-                    });
-
-                    if (!responseDetalles.ok) {
-                        throw new Error("Error al guardar detalle");
-                    }
-
-                } catch (error) {
-                    console.error("Error en detalle:", error);
-                    mostrarError(`Error al guardar producto ${codigo}`);
-                }
+            if (!response.ok) {
+                mostrarError(data.error || 'Error al crear la venta');
+                return;
             }
 
-            // mostrar mensaje de exito, bloquear btnFinalizar y mostrar btnImprimirFacturacion
             mostrarMensaje('¡Venta finalizada correctamente!');
 
             setTimeout(() => {
-                window.location.href = `/ventas/${ventaId}`; 
+                window.location.href = `/ventas/${data.ventaId}`;
             }, 1750);
 
         } catch (error) {

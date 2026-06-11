@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Logo SAVI Demo">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f0529"/>
+      <stop offset="55%" stop-color="#1f0a52"/>
+      <stop offset="100%" stop-color="#4d2ea3"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="48" fill="url(#bg)"/>
+  <circle cx="120" cy="92" r="34" fill="none" stroke="#cbb9ff" stroke-width="8"/>
+  <path fill="#ffffff" d="M72 176c8-28 24-42 48-42s40 14 48 42h-18c-5-12-14-18-30-18s-25 6-30 18H72z"/>
+  <text x="120" y="108" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700">SAVI</text>
+</svg>

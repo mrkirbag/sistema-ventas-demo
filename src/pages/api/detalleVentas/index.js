@@ -1,5 +1,14 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
+import { withTransaction } from '@/utils/dbTransaction';
+import {
+    parsearItemVenta,
+    verificarProductoDisponible,
+    descontarStock,
+    insertarDetalleVenta,
+} from '@/utils/ventaValidaciones';
+
+const jsonHeaders = { 'Content-Type': 'application/json' };
 
 export async function GET({ request }) {
 
@@ -15,18 +24,16 @@ export async function GET({ request }) {
 
         const productosSeleccionados = await db.execute('SELECT * FROM detalle_venta WHERE id_venta = ?', [ventaId]);
 
-        // Si no hay clientes, retornar un mensaje de error
         if (!productosSeleccionados || !productosSeleccionados.rows || productosSeleccionados.rows.length === 0) {
             return new Response(JSON.stringify({ message: 'No hay productos registrados para esa venta' }), {
-                headers: { 'Content-Type': 'application/json' },
+                headers: jsonHeaders,
                 status: 204
             });
         }
         
-        // Retornar los clientes en formato JSON
         return new Response(JSON.stringify(productosSeleccionados.rows), {
-            headers: { 'Content-Type': 'application/json' },
-            });
+            headers: jsonHeaders,
+        });
 
     } catch (error) {
         console.error('Error fetching products:', error);
@@ -38,7 +45,7 @@ export async function POST({ request }) {
 
     const usuario = verificarToken(request);
     if (!usuario) {
-        return new Response('Unauthorized', { status: 401 });
+        return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: jsonHeaders });
     }
 
     try {
@@ -46,36 +53,53 @@ export async function POST({ request }) {
         const body = await request.json();
         const { ventaId, idProducto, codigo, nombre, precio, cantidad } = body;
 
-        // Validaciones
-        const esDecimalPositivo = /^\d+(\.\d+)?$/;
-
-        const cantidadValida = esDecimalPositivo.test(cantidad) && parseFloat(cantidad) > 0;
-        const precioUnitarioValido = esDecimalPositivo.test(precio) && parseFloat(precio) >= 0;
-        
-
-        if (!ventaId || !idProducto || !codigo || !nombre || !precioUnitarioValido || !cantidadValida) {
-            return new Response('Faltan datos válidos del producto', { status: 400 });
+        const parsed = parsearItemVenta({ idProducto, codigo, nombre, precio, cantidad });
+        if (!parsed.ok) {
+            return new Response(JSON.stringify({ error: parsed.error }), { status: 400, headers: jsonHeaders });
         }
 
-        // Parseo
-        const cantidadFinal = parseFloat(cantidad).toFixed(2);
-        const precioUnitarioFinal = parseFloat(precio).toFixed(2);
+        if (!ventaId) {
+            return new Response(JSON.stringify({ error: 'Falta el ID de la venta' }), { status: 400, headers: jsonHeaders });
+        }
 
-        const result = await db.execute(`INSERT INTO detalle_venta (id_venta, producto_id, codigo_producto, nombre_producto, precio_unitario, cantidad) VALUES (?, ?, ?, ?, ?, ?)`,
-        [ventaId, idProducto, codigo, nombre, precioUnitarioFinal, cantidadFinal]
-        );
+        const item = parsed.item;
 
-        // Descontar del stock
-        await db.execute(`UPDATE productos SET stock = (stock - ?) WHERE codigo = ?`,
-        [cantidadFinal, codigo]
-        );
+        await withTransaction(db, async (tx) => {
+            const venta = await tx.execute(
+                'SELECT id, estado FROM ventas WHERE id = ?',
+                [ventaId]
+            );
 
-        return new Response(JSON.stringify({ message: "Producto registrada exitosamente en la venta" }),
-        { status: 201 });
+            if (!venta.rows?.length) {
+                throw Object.assign(new Error('Venta no encontrada'), { status: 404 });
+            }
+
+            if (venta.rows[0].estado === 'anulado') {
+                throw Object.assign(new Error('No se pueden agregar productos a una venta anulada'), { status: 409 });
+            }
+
+            const disponible = await verificarProductoDisponible(tx, item.codigo, item.cantidad);
+            if (!disponible.ok) {
+                throw Object.assign(new Error(disponible.error), { status: 409 });
+            }
+
+            await insertarDetalleVenta(tx, ventaId, item);
+            await descontarStock(tx, item.codigo, item.cantidad);
+        });
+
+        return new Response(JSON.stringify({ message: 'Producto registrado exitosamente en la venta' }), {
+            status: 201,
+            headers: jsonHeaders,
+        });
 
     } catch (error) {
-        console.error('Error inserting product:', error);
-        return new Response('Error inserting product', { status: 500 });
+        const status = error.status ?? 500;
+        const message = status === 500 ? 'Error al registrar el producto en la venta' : error.message;
+
+        if (status === 500) {
+            console.error('Error inserting product:', error);
+        }
+
+        return new Response(JSON.stringify({ error: message }), { status, headers: jsonHeaders });
     }
 }
-

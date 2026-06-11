@@ -41,7 +41,7 @@ if (usuario.rol !== 'admin') {
 
 <script>
 
-    import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
+    import { mostrarError, mostrarMensaje, confirmarAccion } from '@/utils/helpers/mensajes.js';
 
     // Rellenar campos con los datos existentes
     const params = new URLSearchParams(window.location.search);
@@ -91,7 +91,10 @@ if (usuario.rol !== 'admin') {
         }
 
         // Confirmacion
-        const confirmar = confirm(`¿Desea agregar ${stockNuevo} unidades?`);
+        const confirmar = await confirmarAccion(`¿Deseas agregar ${stockNuevo} unidades al inventario?`, {
+            titulo: 'Actualizar stock',
+            textoAceptar: 'Actualizar',
+        });
         if (!confirmar) return;
 
 

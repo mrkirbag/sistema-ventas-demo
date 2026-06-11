@@ -1,70 +1,183 @@
-<html>
+<html lang="es">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="icon" href="/favicon.ico"  />
-        <link rel="shortcut icon" href="/favicon.webp" />
-        <title>Iniciar Sesión</title>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+        <title>Iniciar Sesión · SAVI Demo</title>
     </head>
     <body>
-    <section class="login-section">
-        <h1>INICIAR SESIÓN</h1>
-        <form id="loginForm" autocomplete="off">
-            <div>
-                <input type="text" name="usuario" id="usuario" placeholder="Usuario" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
-            </div>
-            <div>
-                <input type="password" name="clave" id="clave" placeholder="Contraseña" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
-            </div>
-            <div>
-                <button type="submit">Ingresar</button>
-            </div>
-        </form>
+        <main class="login-shell">
+            <section class="login-brand" aria-hidden="false">
+                <div class="brand-top">
+                    <img src="/logo.svg" alt="Logo SAVI Demo" class="brand-logo" width="72" height="72" />
+                    <p class="eyebrow">Sistema comercial</p>
+                </div>
+                <h1>SAVI Demo</h1>
+                <p class="brand-text">Controla inventario, ventas, créditos y reportes desde una interfaz clara, rápida y lista para presentar a clientes.</p>
 
-        <div id="overlay" class="overlay oculto"> 
-            <div id="modal" class="modal"></div>
-        </div>
+                <div class="feature-list">
+                    <article>
+                        <span class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18M3 12h18M3 17h18"/><circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="7" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg>
+                        </span>
+                        <div>
+                            <strong>Operación centralizada</strong>
+                            <span>Productos, clientes y caja conectados en un solo flujo.</span>
+                        </div>
+                    </article>
+                    <article>
+                        <span class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6"/></svg>
+                        </span>
+                        <div>
+                            <strong>Información accionable</strong>
+                            <span>Reportes y alertas de stock con lectura inmediata.</span>
+                        </div>
+                    </article>
+                    <article>
+                        <span class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/></svg>
+                        </span>
+                        <div>
+                            <strong>Diseño comercial</strong>
+                            <span>Presentación sólida para demos, ventas y adopción interna.</span>
+                        </div>
+                    </article>
+                </div>
+            </section>
 
-    </section>
+            <section class="login-section">
+                <div class="login-card">
+                    <div class="login-copy">
+                        <p class="eyebrow">Acceso seguro</p>
+                        <h2>Iniciar sesión</h2>
+                        <p>Ingresa con tus credenciales para continuar al panel operativo.</p>
+                    </div>
 
+                    <form id="loginForm" autocomplete="off" novalidate>
+                        <div class="field">
+                            <label for="usuario">Usuario</label>
+                            <div class="input-wrap">
+                                <span class="input-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                                </span>
+                                <input
+                                    type="text"
+                                    name="usuario"
+                                    id="usuario"
+                                    placeholder="Ingresa tu usuario"
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    autocapitalize="none"
+                                    spellcheck="false"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="clave">Contraseña</label>
+                            <div class="input-wrap">
+                                <span class="input-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                                </span>
+                                <input
+                                    type="password"
+                                    name="clave"
+                                    id="clave"
+                                    placeholder="Ingresa tu contraseña"
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    autocapitalize="none"
+                                    spellcheck="false"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    id="toggleClave"
+                                    class="toggle-password"
+                                    aria-label="Mostrar contraseña"
+                                    aria-pressed="false"
+                                    title="Mostrar contraseña"
+                                >
+                                    <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                    <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                        <path d="M3 3l18 18"/>
+                                        <path d="M10.6 10.6A3 3 0 0 0 12 15a3 3 0 0 0 2.4-1.2"/>
+                                        <path d="M6.7 6.7C4.6 8.1 3 10.2 2 12s3.5 7 10 7c1.8 0 3.4-.4 4.8-1.1"/>
+                                        <path d="M14.1 9.9C13.4 9.3 12.7 9 12 9a3 3 0 0 0-2.1.9"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="submit-row">
+                            <button type="submit" id="submitBtn">
+                                <span class="btn-label">Entrar al sistema</span>
+                                <span class="btn-spinner" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <p class="login-footer">SAVI Demo · Gestión de inventario y ventas</p>
+                </div>
+            </section>
+        </main>
     </body>
 </html>
 
 <script>
-    
     import { mostrarError, mostrarMensaje } from "@/utils/helpers/mensajes.js";
 
     window.addEventListener('DOMContentLoaded', () => {
-
         const form = document.getElementById('loginForm');
+        const claveInput = document.getElementById('clave') as HTMLInputElement;
+        const toggleClave = document.getElementById('toggleClave');
+        const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
+
+        toggleClave?.addEventListener('click', () => {
+            const visible = claveInput.type === 'text';
+            claveInput.type = visible ? 'password' : 'text';
+            toggleClave.setAttribute('aria-pressed', String(!visible));
+            toggleClave.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+            toggleClave.setAttribute('title', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+            toggleClave.classList.toggle('is-visible', !visible);
+        });
 
         form?.addEventListener('submit', async (e: Event) => {
-            
             e.preventDefault();
 
             const usuario = (document.getElementById('usuario') as HTMLInputElement).value.trim();
-            const clave = (document.getElementById('clave') as HTMLInputElement).value;
+            const clave = claveInput.value;
 
             if (!usuario || !clave) {
                 mostrarError('Por favor, completa todos los campos');
                 return;
             }
-            
-            try {
 
+            submitBtn.disabled = true;
+            submitBtn.classList.add('is-loading');
+
+            try {
                 const res = await fetch('/api/usuarios/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ usuario, clave })
-                    });
+                });
 
                 const data = await res.json();
 
-                if(res.status === 500){
+                if (res.status === 500) {
                     mostrarError('Error del servidor. Inténtalo de nuevo más tarde');
                 }
 
-                if(res.status === 401){
+                if (res.status === 401) {
                     mostrarError(data.error || 'Usuario o clave incorrectos');
                 }
 
@@ -73,172 +186,474 @@
                     setTimeout(() => {
                         window.location.href = '/';
                     }, 1000);
-                } 
-            } catch (err) {
-                mostrarError('Error de Conexión. Inténtalo de nuevo más tarde');
+                    return;
+                }
+            } catch {
+                mostrarError('Error de conexión. Inténtalo de nuevo más tarde');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('is-loading');
             }
         });
     });
 </script>
 
 <style>
-
     *, *::before, *::after {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
     }
 
-	:root {
-		--primary-color: #0F0529;
-		--secondary-color: #1F0A52;
-		--gray-color: #cccccc;
-		--table-header-color: #DADADA;
-		--danger-color: #ff4d4d;
-		--danger-hover-color: #a51515;
-		--success-color: #008000;
-		--success-hover-color: #006600;
-	}
+    :root {
+        --primary-color: #0f0529;
+        --primary-strong: #090218;
+        --secondary-color: #1f0a52;
+        --accent-glow: #5d45aa;
+        --surface-base: #f2eff8;
+        --surface-card: rgba(255, 255, 255, 0.9);
+        --text-color: #1d1430;
+        --text-muted: #675e7c;
+        --danger-color: #ff4d4d;
+        --success-color: #008000;
+    }
 
-	@font-face {
-		font-family: 'Archivo Black';
-		src: url('/fonts/ArchivoBlack-Regular.woff2') format('woff2');
-		font-weight: normal;
-		font-style: normal;
-	}
+    @keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(18px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-	@font-face {
-		font-family: 'Roboto';
-		src: url('/fonts/Roboto-Regular.woff2') format('woff2');
-		font-weight: normal;
-		font-style: normal;	
-	}
+    @keyframes floatOrb {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        50% { transform: translate(12px, -8px) scale(1.04); }
+    }
 
-    body {
-        margin: 0;
-        padding: 0;
-        background-color: var(--gray-color);
-        height: 100dvh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    html {
+        height: 100%;
         overflow: hidden;
     }
 
-    .login-section {
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 2px 16px rgb(15, 5, 41, .3);
-        padding: 2rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-width: 320px;
-        max-width: 400px;
-        width: 100%;
+    body {
+        height: 100dvh;
+        max-height: 100dvh;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 12% 18%, rgba(93, 69, 170, 0.24), transparent 32%),
+            radial-gradient(circle at 88% 82%, rgba(31, 10, 82, 0.22), transparent 30%),
+            linear-gradient(180deg, #f8f5fc 0%, #ebe4f5 100%);
+        color: var(--text-color);
+        font-family: 'Roboto', sans-serif;
+        padding: clamp(0.5rem, 1.5dvh, 1rem);
+    }
+
+    body::before,
+    body::after {
+        content: '';
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(28px);
+        pointer-events: none;
+        animation: floatOrb 9s ease-in-out infinite;
+    }
+
+    body::before {
+        width: 320px;
+        height: 320px;
+        left: -80px;
+        top: -60px;
+        background: rgba(93, 69, 170, 0.18);
+    }
+
+    body::after {
+        width: 400px;
         height: 400px;
+        right: -140px;
+        bottom: -140px;
+        background: rgba(31, 10, 82, 0.16);
+        animation-delay: -4s;
     }
 
-    .login-section h1 {
-        text-align: center;
-        font-size: 2rem;
-        margin-bottom: 2rem;
-        color: var(--primary-color);
-        font-family: 'Archivo Black', sans-serif;
-        letter-spacing: 1px;
+    .login-shell {
+        position: relative;
+        z-index: 1;
+        width: min(1100px, 100%);
+        height: calc(100dvh - 2 * clamp(0.5rem, 1.5dvh, 1rem));
+        max-height: calc(100dvh - 2 * clamp(0.5rem, 1.5dvh, 1rem));
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        background: rgba(255, 255, 255, 0.68);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: clamp(18px, 3dvh, 32px);
+        overflow: hidden;
+        box-shadow:
+            0 32px 64px rgba(15, 5, 41, 0.16),
+            0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+        backdrop-filter: blur(20px);
+        animation: fadeUp 0.7s ease both;
     }
 
-    form {
-        width: 100%;
+    .login-brand {
+        position: relative;
+        padding: clamp(1.25rem, 3.5dvh, 3rem) clamp(1.25rem, 3vw, 3rem);
+        background:
+            radial-gradient(circle at 80% 20%, rgba(93, 69, 170, 0.35), transparent 45%),
+            linear-gradient(155deg, rgba(9, 2, 24, 0.97), rgba(31, 10, 82, 0.94));
+        color: #f7f4ff;
         display: flex;
         flex-direction: column;
+        justify-content: center;
+        gap: clamp(0.5rem, 1.8dvh, 1.25rem);
+        overflow: hidden;
+        min-height: 0;
+    }
+
+    .login-brand::after {
+        content: '';
+        position: absolute;
+        width: 220px;
+        height: 220px;
+        right: -60px;
+        bottom: -60px;
+        border-radius: 50%;
+        background: rgba(203, 185, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        pointer-events: none;
+    }
+
+    .brand-top {
+        display: flex;
+        align-items: center;
         gap: 1rem;
     }
 
-    form div {
-        width: 100%;
+    .brand-logo {
+        width: clamp(48px, 8dvh, 72px);
+        height: clamp(48px, 8dvh, 72px);
+        border-radius: clamp(14px, 2.5dvh, 20px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+        flex-shrink: 0;
+    }
+
+    .eyebrow {
+        font-size: 0.75rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(239, 233, 255, 0.7);
+        font-weight: 500;
+    }
+
+    .login-brand h1 {
+        font-size: clamp(1.8rem, 5.5dvh, 3.6rem);
+        line-height: 0.95;
+        font-family: 'Archivo Black', sans-serif;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #ffffff;
+    }
+
+    .brand-text {
+        max-width: 36ch;
+        font-size: clamp(0.82rem, 1.8dvh, 1rem);
+        line-height: 1.55;
+        color: rgba(239, 233, 255, 0.8);
+    }
+
+    .feature-list {
+        display: grid;
+        gap: clamp(0.45rem, 1.2dvh, 0.85rem);
+        margin-top: clamp(0.15rem, 0.8dvh, 0.5rem);
+        flex-shrink: 1;
+        min-height: 0;
+    }
+
+    .feature-list article {
+        padding: clamp(0.55rem, 1.4dvh, 0.95rem) clamp(0.7rem, 1.5vw, 1rem);
+        border-radius: clamp(12px, 2dvh, 18px);
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
-        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.85rem;
+        transition: background 200ms ease, transform 200ms ease;
+    }
+
+    .feature-list article:hover {
+        background: rgba(255, 255, 255, 0.11);
+        transform: translateX(4px);
+    }
+
+    .feature-icon {
+        width: clamp(30px, 5dvh, 38px);
+        height: clamp(30px, 5dvh, 38px);
+        border-radius: 12px;
+        background: rgba(203, 185, 255, 0.14);
+        color: #e8ddff;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+    }
+
+    .feature-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .feature-list strong {
+        display: block;
+        font-size: clamp(0.8rem, 1.7dvh, 0.95rem);
+        color: #fff7ea;
+        margin-bottom: 0.15rem;
+    }
+
+    .feature-list span {
+        font-size: clamp(0.75rem, 1.5dvh, 0.88rem);
+        line-height: 1.45;
+        color: rgba(239, 233, 255, 0.72);
+    }
+
+    .login-section {
+        padding: clamp(1rem, 3dvh, 2.5rem) clamp(1.25rem, 3vw, 3rem);
+        display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(245, 241, 252, 0.96));
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .login-card {
+        width: 100%;
+        max-width: 400px;
+        animation: fadeUp 0.7s ease 0.15s both;
+    }
+
+    .login-copy {
+        display: grid;
+        gap: clamp(0.35rem, 1dvh, 0.6rem);
+        margin-bottom: clamp(0.85rem, 2.5dvh, 1.75rem);
+    }
+
+    .login-copy .eyebrow {
+        color: var(--accent-glow);
+    }
+
+    .login-copy h2 {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: clamp(1.35rem, 3.5dvh, 2rem);
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: var(--primary-strong);
+    }
+
+    .login-copy p {
+        line-height: 1.5;
+        color: var(--text-muted);
+        font-size: clamp(0.82rem, 1.8dvh, 0.95rem);
+    }
+
+    form {
+        display: grid;
+        gap: clamp(0.65rem, 1.8dvh, 1.1rem);
+    }
+
+    .field {
+        display: grid;
+        gap: 0.45rem;
+    }
+
+    label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--primary-color);
+    }
+
+    .input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 1rem;
+        width: 20px;
+        height: 20px;
+        color: var(--text-muted);
+        pointer-events: none;
+        transition: color 160ms ease;
+    }
+
+    .input-icon svg {
+        width: 100%;
+        height: 100%;
     }
 
     input {
-        width: 300px;
-        padding: 0.5rem;
-        border: 1px solid var(--gray-color);
-        border-radius: 7px;
-        font-size: 0.9rem;
-        background: #f7f7f7;
+        width: 100%;
+        padding: clamp(0.7rem, 1.8dvh, 0.95rem) 1rem clamp(0.7rem, 1.8dvh, 0.95rem) 2.85rem;
+        border: 1.5px solid rgba(31, 10, 82, 0.1);
+        border-radius: 14px;
+        font-size: clamp(0.85rem, 1.8dvh, 0.95rem);
+        font-family: inherit;
+        background: rgba(255, 255, 255, 0.88);
+        color: var(--text-color);
+        transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .field:has(#clave) input {
+        padding-right: 3rem;
+    }
+
+    input::placeholder {
+        color: #9a92ad;
     }
 
     input:focus {
         outline: none;
-        border: 1.5px solid var(--primary-color);
+        border-color: rgba(93, 69, 170, 0.5);
+        box-shadow: 0 0 0 4px rgba(93, 69, 170, 0.12);
         background: #fff;
     }
 
-    button[type='submit'] {
-        width: 150px;
-        background-color: var(--primary-color);
-        color: #fff;
-        border-radius: 5px;
-        padding: 0.5rem 1rem;
-        text-align: center;
-        font-size: 1rem;
-        font-weight: 600;
+    .input-wrap:focus-within .input-icon {
+        color: var(--accent-glow);
+    }
+
+    .toggle-password {
+        position: absolute;
+        right: 0.65rem;
+        width: 36px;
+        height: 36px;
         border: none;
-        outline: none;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text-muted);
         cursor: pointer;
-        transition: background 0.2s;
-        margin-top: 1rem;
-        align-self: center;
+        display: grid;
+        place-items: center;
+        transition: color 160ms ease, background 160ms ease;
     }
 
-    button[type='submit']:hover {
-        background: var(--secondary-color);
-        scale: 1.05;
+    .toggle-password:hover {
+        color: var(--secondary-color);
+        background: rgba(31, 10, 82, 0.06);
+    }
+
+    .toggle-password:focus-visible {
+        outline: 2px solid rgba(93, 69, 170, 0.5);
+        outline-offset: 2px;
+    }
+
+    .toggle-password svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .toggle-password .icon-eye-off {
+        display: none;
+    }
+
+    .toggle-password.is-visible .icon-eye {
+        display: none;
+    }
+
+    .toggle-password.is-visible .icon-eye-off {
+        display: block;
+    }
+
+    .submit-row {
+        margin-top: 0.35rem;
+    }
+
+    button[type='submit'] {
+        width: 100%;
+        position: relative;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 55%, #3d2280 100%);
+        color: #fff;
+        border-radius: 999px;
+        padding: clamp(0.75rem, 1.8dvh, 1rem) 1.2rem;
+        text-align: center;
+        font-size: clamp(0.85rem, 1.8dvh, 0.95rem);
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        font-family: inherit;
+        border: none;
         cursor: pointer;
-    }
-
-    button[type='submit']:active {
-        scale: 0.95;
-    }
-
-    .modal {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: clamp(200px, 80vw, 400px); 
-        max-height: 80vh;
-        background: #FFF;
-        color: #000;
-        font-size: 1.2rem;
-        font-family: "Roboto", sans-serif; 
-        padding: 1.5rem;
-        border-radius: 15px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); 
+        box-shadow: 0 14px 28px rgba(15, 5, 41, 0.24);
+        transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
         display: flex;
-        flex-direction: column; 
         align-items: center;
         justify-content: center;
-        text-align: center;
-        z-index: 1000;
-        transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        gap: 0.5rem;
+        min-height: clamp(42px, 6.5dvh, 52px);
     }
 
+    button[type='submit']:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.28);
+    }
+
+    button[type='submit']:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    button[type='submit']:disabled {
+        opacity: 0.75;
+        cursor: not-allowed;
+    }
+
+    .btn-spinner {
+        display: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+    }
+
+    button[type='submit'].is-loading .btn-label {
+        opacity: 0.7;
+    }
+
+    button[type='submit'].is-loading .btn-spinner {
+        display: block;
+    }
+
+    .login-footer {
+        margin-top: clamp(0.75rem, 2dvh, 1.75rem);
+        text-align: center;
+        font-size: clamp(0.68rem, 1.4dvh, 0.78rem);
+        letter-spacing: 0.04em;
+        color: #9a92ad;
+    }
+
+    /* Modales (mensajes.js) */
     .overlay {
         position: fixed;
-        top: 0; 
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        z-index: 999;
-        transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: rgba(15, 5, 41, 0.54);
+        backdrop-filter: blur(8px);
+        z-index: 1200;
+        transition: opacity 180ms ease, visibility 180ms ease;
     }
 
     .visible {
@@ -253,12 +668,158 @@
         pointer-events: none;
     }
 
-    .mensaje-exito {
-        border: 6px solid var(--success-color);
+    .modal {
+        width: min(100%, 460px);
+        padding: 1.6rem;
+        border-radius: 28px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 241, 252, 0.98));
+        box-shadow: 0 24px 48px rgba(15, 5, 41, 0.24);
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
     }
 
-    .mensaje-error {
-        border: 6px solid var(--danger-color);
+    .modal-icon {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 1.4rem;
+        color: #fff;
     }
 
+    .modal[data-variant='success'] .modal-icon {
+        background: linear-gradient(135deg, var(--success-color), #53ae83);
+    }
+
+    .modal[data-variant='error'] .modal-icon {
+        background: linear-gradient(135deg, var(--danger-color), #dd7269);
+    }
+
+    .modal[data-variant='confirm'] .modal-icon {
+        background: linear-gradient(135deg, var(--secondary-color), #4d2ea3);
+    }
+
+    .modal-title {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 1.45rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--primary-strong);
+    }
+
+    .modal-message {
+        font-size: 1rem;
+        line-height: 1.65;
+        color: var(--text-muted);
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .modal-action {
+        appearance: none;
+        border: none;
+        border-radius: 999px;
+        padding: 0.9rem 1.35rem;
+        font-size: 0.92rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    }
+
+    .modal-action--primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(15, 5, 41, 0.22);
+    }
+
+    .modal-action--secondary {
+        background: rgba(31, 10, 82, 0.08);
+        color: var(--primary-strong);
+        border: 1px solid rgba(31, 10, 82, 0.12);
+    }
+
+    @media (max-width: 900px) {
+        .login-shell {
+            grid-template-columns: 1fr;
+            grid-template-rows: minmax(0, auto) minmax(0, 1fr);
+        }
+
+        .login-brand {
+            padding: clamp(1rem, 2.5dvh, 1.75rem) clamp(1.25rem, 4vw, 2rem);
+        }
+
+        .brand-text {
+            display: none;
+        }
+
+        .feature-list {
+            display: none;
+        }
+
+        .login-section {
+            padding: clamp(1rem, 2.5dvh, 1.75rem) clamp(1.25rem, 4vw, 2rem);
+        }
+
+        .brand-top {
+            gap: 0.75rem;
+        }
+
+        .login-brand h1 {
+            font-size: clamp(1.5rem, 4dvh, 2.2rem);
+        }
+    }
+
+    @media (max-width: 560px) {
+        .brand-top {
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .feature-list article:hover {
+            transform: none;
+        }
+    }
+
+    @media (max-height: 680px) and (min-width: 901px) {
+        .brand-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .feature-list span {
+            display: none;
+        }
+    }
+
+    @media (max-height: 560px) {
+        .brand-text,
+        .login-footer {
+            display: none;
+        }
+
+        .login-copy p {
+            display: none;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
 </style>

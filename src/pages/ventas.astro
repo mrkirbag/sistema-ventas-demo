@@ -7,6 +7,8 @@ if (!usuario) {
     return Astro.redirect('/login');
 }
 
+const esAdmin = usuario.rol === 'admin';
+
 const fechaActual = new Date().toLocaleDateString("es-VE", {
     timeZone: "America/Caracas",
     year: "numeric",
@@ -16,60 +18,257 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
 ---
 
 <Layout>
-    <h1>VENTAS</h1>
+    <header class="page-header">
+        <p class="eyebrow">Gestión comercial</p>
+        <h1>Ventas</h1>
+        <p class="page-intro">Consulta las ventas del día, revisa el detalle de cada operación e imprime el reporte diario.</p>
+    </header>
 
-    <div class="btn-add_container">
-        <a class="btn-add" href="/ventas/agregarVentas">Agregar Venta</a>
+    <div class="page-toolbar ventas-toolbar">
+        <div class="toolbar-actions">
+            <div class="btn-add_container">
+                <a class="btn-add" href="/ventas/agregarVentas">Agregar venta</a>
+            </div>
+
+            <div class="btn-add_container imprimir-container" id="imprimirContainer" style="display: none;">
+                <a class="btn-add" id="imprimir">Imprimir reporte</a>
+            </div>
+        </div>
+
+        <div class="filtro-fecha">
+            <label class="filtro-fecha_label" for="inputBusqueda">Fecha de consulta</label>
+            <div class="input-busqueda_container fecha-filtro">
+                <input type="date" id="inputBusqueda" value={fechaActual} />
+            </div>
+        </div>
     </div>
 
+    <section class="ventas-summary-card" data-es-admin={esAdmin} aria-live="polite">
+        <div class="summary-icon" aria-hidden="true">$</div>
+        <div>
+            <p class="summary-eyebrow">Ventas del día</p>
+            <p class="summary-text" id="resumenVentas">Selecciona una fecha para ver las ventas registradas.</p>
+        </div>
+    </section>
 
-    <p>Selecciona una fecha para ver las ventas de ese día</p>
-    <div class="input-busqueda_container">
-        <input type="date" id="inputBusqueda" value={fechaActual} />
+    <div class="table-wrap">
+        <table id="tabla">
+            <thead id="tablaVentasHead" style="display: none;">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Total</th>
+                    <th>Tipo pago</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="listaVentas">
+            </tbody>
+        </table>
     </div>
-
-    <div class="btn-add_container">
-        <a class="btn-add" id="imprimir" style="display: none;">Imprimir</a>
-    </div>
-    <table id="tabla">
-        <thead id="tablaVentasHead" style="display: none;">
-            <tr>
-                <th>Fecha</th>
-                <th>Cliente</th>
-                <th>Total</th>
-                <th>Tipo Pago</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="listaVentas">
-        </tbody>
-    </table>
 
     <div id="mensaje"></div>
     <div id="overlay" class="overlay oculto"> 
         <div id="modal" class="modal"></div>
     </div>
-
 </Layout>
 
 <style>
-
-    p {
-        font-size: 1rem;
-        margin-bottom: 1rem;
-        text-align: center;
-        font-weight: 700;
+    .filtro-fecha {
+        display: grid;
+        gap: 0.35rem;
+        flex: 0 0 auto;
+        min-width: min(100%, 220px);
+        justify-items: end;
+        margin-left: auto;
+        align-self: center;
     }
 
+    .filtro-fecha_label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
+    }
+
+    .fecha-filtro {
+        margin: 0;
+        padding: 0;
+        justify-content: flex-end;
+        height: auto;
+        min-height: 0;
+        align-items: stretch;
+    }
+
+    .fecha-filtro input {
+        max-width: 220px;
+        margin: 0;
+    }
+
+    .imprimir-container {
+        min-width: 0;
+    }
+
+    .ventas-summary-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.15rem;
+        border-radius: var(--radius-lg);
+        background: linear-gradient(135deg, rgba(31, 10, 82, 0.06), rgba(217, 209, 236, 0.42));
+        border: 1px solid rgba(31, 10, 82, 0.1);
+        box-shadow: var(--shadow-card);
+    }
+
+    .summary-icon {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: #fff;
+        font-family: "Archivo Black", sans-serif;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+        box-shadow: 0 10px 22px rgba(15, 5, 41, 0.2);
+    }
+
+    .summary-eyebrow {
+        margin: 0 0 0.2rem;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
+    }
+
+    .summary-text {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--primary-strong);
+        line-height: 1.5;
+    }
+
+    :global(.status-badge) {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.32rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+    }
+
+    :global(.status-badge--activa) {
+        background: rgba(0, 128, 0, 0.12);
+        color: #0b5f2b;
+        border-color: rgba(0, 128, 0, 0.2);
+    }
+
+    :global(.status-badge--anulada) {
+        background: rgba(255, 77, 77, 0.12);
+        color: #9f1f1f;
+        border-color: rgba(255, 77, 77, 0.22);
+    }
+
+    :global(.pago-badge) {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.32rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: rgba(31, 10, 82, 0.08);
+        color: var(--primary-strong);
+        border: 1px solid rgba(31, 10, 82, 0.12);
+    }
+
+    :global(.monto-usd) {
+        font-weight: 700;
+        color: var(--primary-strong);
+    }
+
+    :global(.monto-cop) {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+    }
+
+    @media (max-width: 768px) {
+        .page-header {
+            margin-bottom: 0.15rem;
+        }
+
+        .ventas-toolbar {
+            gap: 0.65rem;
+            padding-bottom: 0.15rem;
+        }
+
+        .ventas-toolbar .toolbar-actions {
+            gap: 0.55rem;
+        }
+
+        .ventas-toolbar .filtro-fecha {
+            order: -1;
+            width: 100%;
+            margin-left: 0;
+            align-self: stretch;
+            justify-items: stretch;
+            gap: 0.4rem;
+            padding-bottom: 0.2rem;
+        }
+
+        .ventas-toolbar .fecha-filtro {
+            justify-content: stretch;
+        }
+
+        .ventas-toolbar .fecha-filtro input {
+            display: block;
+            width: 100%;
+            max-width: none;
+            height: 36px;
+            min-height: 36px;
+            max-height: 36px;
+            padding: 0 0.7rem;
+            font-size: 16px;
+            line-height: normal;
+            box-sizing: border-box;
+        }
+
+        .ventas-toolbar + .ventas-summary-card {
+            margin-top: 0.35rem;
+        }
+
+        .ventas-summary-card {
+            align-items: flex-start;
+            padding: 0.9rem 1rem;
+        }
+
+        .ventas-summary-card + .table-wrap {
+            margin-top: 0.45rem;
+        }
+
+        .table-wrap + #mensaje:not(:empty) {
+            margin-top: 0.5rem;
+        }
+    }
 </style>
 
 <script>
 
-    import { noRegistros } from "@/utils/helpers/mensajes.js";
-    import { mostrarMensaje, mostrarError } from "@/utils/helpers/mensajes.js";
+    import { noRegistros, mostrarMensaje, mostrarError, confirmarAccion } from "@/utils/helpers/mensajes.js";
     import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
     import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
+    import { imprimir } from '@/utils/helpers/imprimir.js';
+
+    const esAdmin = document.querySelector('.ventas-summary-card')?.getAttribute('data-es-admin') === 'true';
 
     interface Venta {
         id: number;
@@ -81,7 +280,24 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
         estado: string;
     }
 
-    // Disparar el evento input al cargar la página para mostrar las ventas del día actual
+    function obtenerClaseEstado(estado: string) {
+        const normalizado = estado.toLowerCase();
+        return normalizado.includes('anul') ? 'status-badge--anulada' : 'status-badge--activa';
+    }
+
+    function actualizarResumen(cantidad: number, fecha: string) {
+        const resumen = document.getElementById('resumenVentas') as HTMLParagraphElement;
+        if (!resumen) return;
+
+        if (cantidad === 0) {
+            resumen.textContent = `No hay ventas registradas para el ${fecha}.`;
+            return;
+        }
+
+        const texto = cantidad === 1 ? '1 venta registrada' : `${cantidad} ventas registradas`;
+        resumen.textContent = `${texto} para el ${fecha}.`;
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const inputBusqueda = document.getElementById("inputBusqueda") as HTMLInputElement;
         inputBusqueda.dispatchEvent(new Event('input'));
@@ -90,21 +306,22 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
     const inputBusqueda = document.getElementById("inputBusqueda") as HTMLInputElement;
     inputBusqueda.addEventListener('input', async () => {
 
-        // Elementos del DOM
         const tablaVentasHead = document.getElementById('tablaVentasHead') as HTMLTableSectionElement;
         const tbody = document.getElementById('listaVentas') as HTMLTableSectionElement;
-        const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
 
         tbody.innerHTML = "";
+
+        const fechaFormateadaResumen = formatearFecha(inputBusqueda.value);
 
         try {
             const res = await fetch(`/api/ventas?fecha=${inputBusqueda.value}`);
             const ventas : Venta[] = await res.json();
 
-            // Validar que no haya ventas
             if (res.status === 202) {
-                btnImprimir.style.display = 'none';
+                const imprimirContainer = document.getElementById('imprimirContainer') as HTMLDivElement;
+                imprimirContainer.style.display = 'none';
                 tablaVentasHead.style.display = 'none';
+                actualizarResumen(0, fechaFormateadaResumen);
                 noRegistros("No hay ventas registradas para esa fecha");
                 return;
             } else {
@@ -113,77 +330,85 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
             }
 
             tablaVentasHead.style.display = 'table-header-group';
-            btnImprimir.style.display = 'block'
+            const imprimirContainer = document.getElementById('imprimirContainer') as HTMLDivElement;
+            imprimirContainer.style.display = 'inline-flex';
+            actualizarResumen(ventas.length, fechaFormateadaResumen);
 
-            // Obtener tasa de cambio
             const tasa = await cambioUSDaCOP();
 
             ventas.forEach(ventas => {
 
                 const fechaFormateada = formatearFecha(ventas.fecha);
                 const totalCOP = Math.ceil(ventas.total * tasa);
+                const estadoClase = obtenerClaseEstado(ventas.estado);
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `    
                                     <td data-label="Fecha">${fechaFormateada}</td>
                                     <td data-label="Cliente">
-                                        ${ventas.cliente.toUpperCase()}<br />
-                                        C.I. ${ventas.cedula_cliente}
+                                        <strong>${ventas.cliente.toUpperCase()}</strong><br />
+                                        <span class="monto-cop">C.I. ${ventas.cedula_cliente}</span>
                                     </td>
                                     <td data-label="Monto Total">
-                                        ${ventas.total} USD
+                                        <span class="monto-usd">${ventas.total.toFixed(2)} USD</span>
                                         <br />
-                                        ${totalCOP} COP
+                                        <span class="monto-cop">${totalCOP} COP</span>
                                     </td>
-                                    <td data-label="Tipo Pago">${ventas.tipo_pago.toUpperCase()}</td>
-                                    <td data-label="Estado">${ventas.estado.toUpperCase()}</td>
+                                    <td data-label="Tipo Pago">
+                                        <span class="pago-badge">${ventas.tipo_pago.toUpperCase()}</span>
+                                    </td>
+                                    <td data-label="Estado">
+                                        <span class="status-badge ${estadoClase}">${ventas.estado.toUpperCase()}</span>
+                                    </td>
                                 `;
 
-                // Botones de acciones
                 const tdAcciones = document.createElement('td');
                 tdAcciones.classList.add('acciones');
 
-                // Boton de eliminar
-                const btnEliminar = document.createElement('button');
-                btnEliminar.classList.add('btn-eliminar');
-                btnEliminar.textContent = 'ANULAR';
+                if (esAdmin && ventas.estado.toLowerCase() !== 'anulado') {
+                    const btnEliminar = document.createElement('button');
+                    btnEliminar.type = 'button';
+                    btnEliminar.classList.add('btn-eliminar');
+                    btnEliminar.textContent = 'ANULAR';
 
-                btnEliminar.onclick = async () => {
+                    btnEliminar.onclick = async () => {
 
-                    // Confirmación antes de eliminar
-                    const confirmar = confirm(`¿Estás seguro de ANULAR la venta del cliente ${ventas.cliente.toUpperCase()} C.I. ${ventas.cedula_cliente} con fecha de ${fechaFormateada}?`);
-                    if (!confirmar) return;
-
-                    // Enviar solicitud de eliminación al servidor
-                    try {
-                        const res = await fetch(`/api/ventas/anularVenta`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: ventas.id })
+                        const confirmar = await confirmarAccion(`¿Deseas anular la venta del cliente ${ventas.cliente.toUpperCase()} C.I. ${ventas.cedula_cliente} con fecha ${fechaFormateada}?`, {
+                            titulo: 'Anular venta',
+                            textoAceptar: 'Anular',
                         });
+                        if (!confirmar) return;
 
-                        // Validar
-                        if(res.status === 409 || res.status === 404){
+                        try {
+                            const res = await fetch(`/api/ventas/anularVenta`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: ventas.id })
+                            });
+
                             const data = await res.json();
-                            mostrarError(data.message);
-                            return; 
+
+                            if (!res.ok) {
+                                mostrarError(data.error || data.message || 'No se pudo anular la venta');
+                                return;
+                            }
+
+                            mostrarMensaje(data.message);
+
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+
+                        } catch(error) {
+                            mostrarError('Error anulando venta');
+                            console.error("Error anulando ventas:", error);
                         }
-
-                        const data = await res.json();
-                        mostrarMensaje(data.message); 
-
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
-
-                    } catch(error) {
-                        console.error("Error anulando ventas:", error);
-                    }    
+                    }
+                    tdAcciones.appendChild(btnEliminar);
                 }
-                tdAcciones.appendChild(btnEliminar);
 
-                // Boton de ver informacion
                 const btnVerInfo = document.createElement('button');
+                btnVerInfo.type = 'button';
                 btnVerInfo.classList.add('btn-editar');
                 btnVerInfo.textContent = 'VER INFO';
 
@@ -193,54 +418,34 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
 
                 tdAcciones.appendChild(btnVerInfo);
 
-                // Adjuntar acciones al tr
                 tr.appendChild(tdAcciones);
                 tbody.appendChild(tr);
 
             });
         } catch (err) {
-            console.error('Error al cargar usuarios:', err);
+            console.error('Error al cargar ventas:', err);
         }
     });
 
     const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
 
     btnImprimir.addEventListener('click', () => {
-        
         const tabla = document.getElementById('tabla');
         if (!tabla) return;
 
         const tablaClon : any = tabla.cloneNode(true);
 
-        // Eliminamos la última celda de cada fila
         for (const fila of tablaClon.rows) {
             if (fila.cells.length > 0) {
-            fila.deleteCell(fila.cells.length - 1);
+                fila.deleteCell(fila.cells.length - 1);
             }
         }
 
-        // Creamos una ventana temporal para imprimir
-        const ventana = window.open('', '', 'width=800,height=600') as Window;
-        ventana.document.write(`
-                                <html>
-                                    <head>
-                                        <title>Impresión de ventas</title>
-                                        <style>
-                                            body { font-family: sans-serif; padding: 20px; }
-                                            table { border-collapse: collapse; width: 100%; }
-                                            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-                                        </style>
-                                    </head>
-                                    <body>
-                                        <h1>REPORTE DE VENTAS DEL DIA</h1>
-                                        ${tablaClon.outerHTML}
-                                    </body>
-                                </html>
-                            `);
-        ventana.document.close();
-        ventana.focus();
-        ventana.print();
-        ventana.close();
+        imprimir({
+            titulo: 'Impresión de ventas',
+            tituloDocumento: 'REPORTE DE VENTAS DEL DIA',
+            contenido: tablaClon.outerHTML,
+        });
     });
 
 

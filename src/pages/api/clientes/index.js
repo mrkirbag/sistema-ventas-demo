@@ -120,9 +120,38 @@ export async function DELETE({ request }) {
             return new Response(JSON.stringify({ error: 'Falta el ID del cliente' }), { status: 400 });
         }
 
+        const clienteActivo = await db.execute(
+            'SELECT id FROM clientes WHERE id = ? AND estatus = "activo"',
+            [id]
+        );
+
+        if (!clienteActivo.rows?.length) {
+            return new Response(JSON.stringify({ error: 'Cliente no encontrado o ya inactivo' }), { status: 404 });
+        }
+
+        const creditosPendientes = await db.execute(
+            `SELECT COUNT(*) AS total
+             FROM creditos c
+             JOIN ventas v ON c.id_venta = v.id
+             WHERE v.cliente_id = ?
+             AND v.estado != 'anulado'
+             AND c.saldo_pendiente > 0`,
+            [id]
+        );
+
+        if (Number(creditosPendientes.rows[0]?.total ?? 0) > 0) {
+            return new Response(JSON.stringify({
+                error: 'No se puede inactivar el cliente porque tiene créditos pendientes'
+            }), { status: 409 });
+        }
+
         const result = await db.execute('UPDATE clientes SET estatus = "inactivo" WHERE id = ?', [id]);
 
-        return new Response(JSON.stringify({ message: 'Cliente eliminado exitosamente' }), { status: 200 });
+        if ((result.rowsAffected ?? result.affectedRows ?? 0) === 0) {
+            return new Response(JSON.stringify({ error: 'Cliente no encontrado' }), { status: 404 });
+        }
+
+        return new Response(JSON.stringify({ message: 'Cliente inactivado exitosamente' }), { status: 200 });
 
 
     } catch (error) {
@@ -157,9 +186,12 @@ export async function PUT({ request }) {
             !Number.isInteger(valor) ||
             valor <= 0
         ) {
-            return res.status(400).json({
+            return new Response(JSON.stringify({
                 error: "La cédula debe ser un número entero positivo mayor a cero.",
                 campo: "cedula"
+            }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
             });
         }
 

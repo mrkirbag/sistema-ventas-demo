@@ -12,31 +12,47 @@ if (usuario.rol !== 'admin') {
 ---
 
 <Layout>
-    <h1>USUARIOS</h1>
+    <header class="page-header">
+        <p class="eyebrow">Administración</p>
+        <h1>Usuarios</h1>
+        <p class="page-intro">Gestiona las cuentas del sistema, sus roles y permisos de acceso.</p>
+    </header>
 
-    <div class="btn-add_container">
-        <a class="btn-add" href="/usuarios/agregarUsuarios">Agregar Usuario</a>
+    <div class="page-toolbar">
+        <div class="btn-add_container">
+            <a class="btn-add" href="/usuarios/agregarUsuarios">Agregar usuario</a>
+        </div>
+
+        <div class="input-busqueda_container">
+            <input
+                type="text"
+                id="inputBusqueda"
+                placeholder="Buscar por nombre, usuario o rol..."
+            />
+        </div>
     </div>
 
-    <table>
-        <thead id="thead">
-            <tr>
-                <th>Nombre</th>
-                <th>Usuario</th>
-                <th>Rol</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="listaUsuarios">
-        </tbody>
-    </table>
+    <div class="table-wrap" data-usuario-activo-id={usuario.id}>
+        <table>
+            <thead id="thead">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="listaUsuarios">
+            </tbody>
+        </table>
+    </div>
 
     <div id="mensaje"></div>
 </Layout>
 
 <script >
 
-    import { noRegistros } from "@/utils/helpers/mensajes.js";
+    import { noRegistros, confirmarAccion, mostrarError, mostrarMensaje } from "@/utils/helpers/mensajes.js";
 
     interface Usuario {
         id: number;
@@ -45,73 +61,167 @@ if (usuario.rol !== 'admin') {
         rol: string;
     }
 
+    function etiquetaRol(rol: string): string {
+        const normalizado = rol?.toLowerCase() || '';
+        const texto = normalizado === 'admin' ? 'Administrador' : 'Empleado';
+        const clase = normalizado === 'admin' ? 'rol-badge rol-badge--admin' : 'rol-badge rol-badge--empleado';
+        return `<span class="${clase}">${texto}</span>`;
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
 
-        // Elementos del DOM
         const tbody = document.getElementById('listaUsuarios') as HTMLTableSectionElement;
         const thead = document.getElementById('thead') as HTMLTableSectionElement;
+        const busqueda = document.getElementById('inputBusqueda') as HTMLInputElement;
+        const tableWrap = document.querySelector('.table-wrap') as HTMLDivElement;
+        const idUsuarioActivo = Number(tableWrap?.dataset.usuarioActivoId);
 
-        try {
-            const res = await fetch('/api/usuarios');
-            const usuarios : Usuario[] = await res.json();
+        let todosLosUsuarios: Usuario[] = [];
 
-            // Validar que no haya usuarios
-            if (res.status === 204) {
-                tbody.innerHTML = "";
+        function renderUsuarios(usuarios: Usuario[]) {
+            tbody.innerHTML = '';
+
+            if (usuarios.length === 0) {
                 thead.style.display = 'none';
-                noRegistros("No hay usuarios registrados")
+                noRegistros('No se encontraron usuarios con ese criterio');
                 return;
             }
 
             thead.style.display = 'table-header-group';
-            usuarios.forEach(usuario => {
 
+            usuarios.forEach(usuario => {
                 const tr = document.createElement('tr');
 
-                tr.innerHTML = `    
-                                    <td data-label="Nombre">${usuario.nombre ? usuario.nombre.toUpperCase() : ''}</td>
-                                    <td data-label="Usuario">${usuario.usuario}</td>
-                                    <td data-label="Rol">${usuario.rol ? usuario.rol.toUpperCase() : ''}</td>
-                                `;
+                tr.innerHTML = `
+                    <td data-label="Nombre">${usuario.nombre ? usuario.nombre.toUpperCase() : ''}</td>
+                    <td data-label="Usuario">${usuario.usuario}</td>
+                    <td data-label="Rol">${etiquetaRol(usuario.rol)}</td>
+                `;
 
-                // Botones de acciones
                 const tdAcciones = document.createElement('td');
                 tdAcciones.classList.add('acciones');
 
-                // Boton de eliminar
-                const btnEliminar = document.createElement('button');   
+                const btnEliminar = document.createElement('button');
+                btnEliminar.type = 'button';
                 btnEliminar.classList.add('btn-eliminar');
                 btnEliminar.textContent = 'DEL';
 
-                btnEliminar.onclick = async () => {
+                const esUsuarioActivo = usuario.id === idUsuarioActivo;
 
-                    // Confirmación antes de eliminar
-                    const confirmar = confirm(`¿Estás seguro de eliminar al usuario ${usuario.nombre}?`);
-                    if (!confirmar) return;
-
-                    // Enviar solicitud de eliminación al servidor
-                    try {
-                        const res = await fetch('/api/usuarios/', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: usuario.id })
+                if (esUsuarioActivo) {
+                    btnEliminar.disabled = true;
+                    btnEliminar.title = 'No puedes eliminar tu propia cuenta';
+                } else {
+                    btnEliminar.onclick = async () => {
+                        const confirmar = await confirmarAccion(`¿Deseas eliminar al usuario ${usuario.nombre}?`, {
+                            titulo: 'Eliminar usuario',
+                            textoAceptar: 'Eliminar',
                         });
+                        if (!confirmar) return;
 
-                        window.location.reload();
-                    } catch(error) {
-                        console.error("Error eliminando usuario:", error);
-                    }    
+                        try {
+                            const res = await fetch('/api/usuarios/', {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: usuario.id })
+                            });
+
+                            if (!res.ok) {
+                                const data = await res.json().catch(() => ({}));
+                                mostrarError(data.message || 'No se pudo eliminar el usuario');
+                                return;
+                            }
+
+                            mostrarMensaje('Usuario eliminado correctamente');
+                            window.location.reload();
+                        } catch (error) {
+                            mostrarError('Error eliminando usuario');
+                            console.error("Error eliminando usuario:", error);
+                        }
+                    };
                 }
-                tdAcciones.appendChild(btnEliminar);
 
-                // Adjuntar acciones al tr
+                tdAcciones.appendChild(btnEliminar);
                 tr.appendChild(tdAcciones);
                 tbody.appendChild(tr);
-
             });
+        }
+
+        function filtrarUsuarios() {
+            const termino = busqueda.value.trim().toLowerCase();
+
+            if (!termino) {
+                renderUsuarios(todosLosUsuarios);
+                return;
+            }
+
+            const filtrados = todosLosUsuarios.filter((usuario) => {
+                const nombre = usuario.nombre?.toLowerCase() || '';
+                const login = usuario.usuario?.toLowerCase() || '';
+                const rol = usuario.rol?.toLowerCase() || '';
+                return nombre.includes(termino) || login.includes(termino) || rol.includes(termino);
+            });
+
+            renderUsuarios(filtrados);
+        }
+
+        busqueda.addEventListener('input', filtrarUsuarios);
+
+        try {
+            const res = await fetch('/api/usuarios');
+            const usuarios: Usuario[] = await res.json();
+
+            if (res.status === 204 || usuarios.length === 0) {
+                thead.style.display = 'none';
+                noRegistros("No hay usuarios registrados");
+                return;
+            }
+
+            todosLosUsuarios = usuarios;
+            renderUsuarios(todosLosUsuarios);
         } catch (err) {
             console.error('Error al cargar usuarios:', err);
+            mostrarError('No se pudieron cargar los usuarios');
         }
     });
 
 </script>
+
+<style>
+
+    :global(.rol-badge) {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    :global(.rol-badge--admin) {
+        background: linear-gradient(135deg, rgba(31, 10, 82, 0.14), rgba(93, 69, 170, 0.22));
+        color: var(--primary-strong);
+        border: 1px solid rgba(31, 10, 82, 0.16);
+    }
+
+    :global(.rol-badge--empleado) {
+        background: linear-gradient(135deg, rgba(47, 143, 99, 0.12), rgba(83, 174, 131, 0.2));
+        color: #1f5f45;
+        border: 1px solid rgba(47, 143, 99, 0.2);
+    }
+
+    :global(.acciones .btn-eliminar:disabled) {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    :global(.acciones .btn-eliminar:disabled:hover) {
+        transform: none;
+        cursor: not-allowed;
+    }
+
+</style>

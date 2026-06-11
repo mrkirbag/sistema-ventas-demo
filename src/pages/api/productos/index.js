@@ -123,19 +123,41 @@ export async function DELETE({ request }) {
         const body = await request.json();
         const { id } = body;
 
-        // Validar que se haya proporcionado un ID
         if (!id) {
-            return new Response('Falta el ID del producto', { status: 400 });
+            return new Response(JSON.stringify({ error: 'Falta el ID del producto' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // Eliminar el cliente de la base de datos
+        const productoActivo = await db.execute(
+            "SELECT id FROM productos WHERE id = ? AND estatus = 'activo'",
+            [id]
+        );
+
+        if (!productoActivo.rows?.length) {
+            return new Response(JSON.stringify({ error: 'Producto no encontrado o ya inactivo' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const ventasPendientes = await db.execute(
+            `SELECT COUNT(*) AS total
+             FROM detalle_venta dv
+             JOIN ventas v ON dv.id_venta = v.id
+             WHERE dv.producto_id = ?
+             AND v.estado = 'pendiente'`,
+            [id]
+        );
+
+        if (Number(ventasPendientes.rows[0]?.total ?? 0) > 0) {
+            return new Response(JSON.stringify({
+                error: 'No se puede inactivar el producto porque está en ventas a crédito pendientes'
+            }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+        }
+
         const result = await db.execute('UPDATE productos SET estatus = "inactivo" WHERE id = ?', [id]);
 
-        if (result.affectedRows === 0) {
-            return new Response('Producto no encontrado', { status: 404 });
+        if ((result.rowsAffected ?? result.affectedRows ?? 0) === 0) {
+            return new Response(JSON.stringify({ error: 'Producto no encontrado' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
 
-        return new Response(JSON.stringify({ message: "Producto eliminado exitosamente" }), { status: 200 });
+        return new Response(JSON.stringify({ message: 'Producto inactivado exitosamente' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
         console.error('Error deleting product:', error);

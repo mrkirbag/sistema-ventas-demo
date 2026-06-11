@@ -12,27 +12,31 @@ if (usuario.rol !== 'admin') {
 ---
 
 <Layout>
-    <h1>INVENTARIO DE PRODUCTOS</h1>
+    <header class="page-header">
+        <p class="eyebrow">Inventario</p>
+        <h1>Productos</h1>
+        <p class="page-intro">Consulta el catálogo, precios, stock y acciones rápidas de cada producto.</p>
+    </header>
 
-    <div class="btn-add_container">
-        <a class="btn-add" href="/productos/agregarProductos">Agregar Producto</a>
-    </div>
-
-    <div class="buttons">
-        <div class="btn-add_container">
-            <a class="btn-add" href="/productos/cargaMasiva">Cargar de Excel</a>
+    <div class="page-toolbar">
+        <div class="toolbar-actions">
+            <div class="btn-add_container">
+                <a class="btn-add" href="/productos/agregarProductos">Agregar producto</a>
+            </div>
+            <div class="btn-add_container">
+                <a class="btn-add" href="/productos/cargaMasiva">Cargar de Excel</a>
+            </div>
+            <div class="btn-add_container">
+                <a class="btn-add" id="exportarBtn">Exportar a Excel</a>
+            </div>
         </div>
 
-        <div class="btn-add_container">
-            <a class="btn-add" id="exportarBtn">Exportar a Excel</a>
+        <div class="input-busqueda_container">
+            <input type="text" id="inputBusqueda" placeholder="Buscar por nombre o código..." />
         </div>
     </div>
 
-
-    <div class="input-busqueda_container">
-        <input type="text" id="inputBusqueda" placeholder="Buscar producto..." />
-    </div>
-
+    <div class="table-wrap">
     <table>
         <thead id="thead">
             <tr>
@@ -50,6 +54,7 @@ if (usuario.rol !== 'admin') {
         <tbody id="listaProductos">
         </tbody>
     </table>
+    </div>
 
     <div class="btn-vermas_container">
         <button id="btnVerAnterior" class="btn-vermas">Anterior</button>
@@ -61,7 +66,7 @@ if (usuario.rol !== 'admin') {
 
 <script>
 
-    import { noRegistros } from "@/utils/helpers/mensajes.js";
+    import { noRegistros, confirmarAccion, mostrarError, mostrarMensaje } from "@/utils/helpers/mensajes.js";
     import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -123,12 +128,12 @@ if (usuario.rol !== 'admin') {
                                     <td data-label="Precio de Costo">
                                         ${producto.costo.toFixed(2)} USD
                                         <br />
-                                        <span style="font-size: .75rem;">${Math.ceil(costoPesos)} COP
+                                        <span style="font-size: .75rem;">${Math.ceil(costoPesos)} COP</span>
                                     </td>
                                     <td data-label="Precio de Venta">
                                         ${producto.venta.toFixed(2)} USD
                                         <br />
-                                        <span style="font-size: .75rem;">${Math.ceil(ventaPesos)} COP
+                                        <span style="font-size: .75rem;">${Math.ceil(ventaPesos)} COP</span>
                                     </td>
                                 `;
 
@@ -138,8 +143,9 @@ if (usuario.rol !== 'admin') {
 
                 // Boton de agregar a stock
                 const btnStock = document.createElement('button');
+                btnStock.type = 'button';
                 btnStock.classList.add('btn-stock');
-                btnStock.textContent = '+UNIDADES';
+                btnStock.textContent = 'AGREGAR STOCK';
 
                 btnStock.onclick = async () => {
                     window.location.href = `/productos/agregarStock?id=${producto.id}`;
@@ -149,12 +155,16 @@ if (usuario.rol !== 'admin') {
 
                 // Boton de eliminar
                 const btnEliminar = document.createElement('button');
+                btnEliminar.type = 'button';
                 btnEliminar.classList.add('btn-eliminar');
                 btnEliminar.textContent = 'DEL';
 
                 btnEliminar.onclick = async () => {
                     // Confirmación antes de eliminar
-                    const confirmar = confirm(`¿Estás seguro de eliminar al producto ${producto.codigo} - ${producto.nombre}?`);
+                    const confirmar = await confirmarAccion(`¿Deseas eliminar el producto ${producto.codigo} - ${producto.nombre}?`, {
+                        titulo: 'Eliminar producto',
+                        textoAceptar: 'Eliminar',
+                    });
                     if (!confirmar) return;
 
                     // Enviar solicitud de eliminación al servidor
@@ -165,11 +175,20 @@ if (usuario.rol !== 'admin') {
                         body: JSON.stringify({ id: producto.id })
                         });
 
+                        if (!res.ok) {
+                            const data = await res.json().catch(() => ({}));
+                            mostrarError(data.error || data.message || 'No se pudo inactivar el producto');
+                            return;
+                        }
+
+                        mostrarMensaje('Producto eliminado correctamente');
+
                         // Actualiza el array local y repinta
                         productosListados = productosListados.filter(c => c.id !== producto.id);
                         productosFiltrados = aplicarFiltro(busqueda.value);
                         mostrarPagina(1);
                     } catch (error) {
+                        mostrarError('Error eliminando producto');
                         console.error("Error eliminando producto:", error);
                     }
                 };
@@ -177,6 +196,7 @@ if (usuario.rol !== 'admin') {
 
                 // Boton de editar
                 const btnEditar = document.createElement('button');
+                btnEditar.type = 'button';
                 btnEditar.classList.add('btn-editar');
                 btnEditar.textContent = 'EDIT';
                 btnEditar.onclick = () => {
@@ -276,13 +296,3 @@ if (usuario.rol !== 'admin') {
     });
 
 </script>
-
-<style>
-
-    .buttons {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-
-</style>

@@ -1,8 +1,6 @@
 ---
 import { verificarToken } from '../utils/auth.js';
 
-const usuario = verificarToken(Astro.request);
-
 import Inicio from '../assets/icons/inicio.svg';
 import Tasa from '../assets/icons/tasa.svg';
 import Clientes from '../assets/icons/clientes.svg';
@@ -14,138 +12,332 @@ import Productos from '../assets/icons/productos.svg';
 import Reportes from '../assets/icons/reportes.svg';
 import Usuarios from '../assets/icons/usuarios.svg';
 
+const usuario = verificarToken(Astro.request);
+const pathname = Astro.url.pathname;
+
+const linksBase = [
+    { href: '/', label: 'Inicio', Icon: Inicio },
+    { href: '/tasa', label: 'Tasa del Día', Icon: Tasa },
+    { href: '/clientes', label: 'Clientes', Icon: Clientes },
+    { href: '/ventas', label: 'Ventas', Icon: Ventas },
+    { href: '/creditos', label: 'Créditos', Icon: Creditos },
+    { href: '/presupuestos', label: 'Presupuestos', Icon: Presupuestos },
+];
+
+const linksAdmin = [
+    { href: '/productos', label: 'Productos', Icon: Productos },
+    { href: '/cargas', label: 'Cargas', Icon: Cargas },
+    { href: '/reportes', label: 'Reportes', Icon: Reportes },
+    { href: '/usuarios', label: 'Usuarios', Icon: Usuarios },
+];
 ---
 
 <div class="navbar-wrapper">
-    <button class="toggle-btn" id="toggleMenu">☰</button>
+    <button class="toggle-btn" id="toggleMenu" type="button" aria-label="Abrir menú" aria-expanded="false">☰</button>
+    <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="Cerrar menú"></button>
+
     <nav class="sidebar" id="sidebar">
-        <a href="/"><Inicio />Inicio</a>
-        <a href="/tasa"><Tasa />Tasa del Día</a>
-        <a href="/clientes"><Clientes />Clientes</a>
-        <a href="/ventas"><Ventas />Ventas</a>
-        <a href="/creditos"><Creditos />Créditos</a>
-        <a href="/presupuestos"><Presupuestos />Presupuestos</a>
-        {usuario?.rol === 'admin' && (
-            <>
-                <a href="/productos"><Productos /> Productos</a>
-                <a href="/cargas"><Cargas /> Cargas</a>
-                <a href="/reportes"><Reportes /> Reportes</a>
-                <a href="/usuarios"><Usuarios /> Usuarios</a>
-            </>
-        )}
-        <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
+        <div class="sidebar-panel">
+            <div class="brand-block">
+                <p class="eyebrow">Sistema comercial</p>
+                <h2>SAVI Demo</h2>
+                <p class="brand-copy">Inventario, ventas, clientes y reportes en una sola operación.</p>
+            </div>
+
+            <div class="sidebar-body">
+                <div class="sidebar-section">
+                    <p class="sidebar-title">Panel</p>
+                    <div class="sidebar-links">
+                        {linksBase.map(({ href, label, Icon }) => (
+                            <a href={href} class={pathname === href || (href !== '/' && pathname.startsWith(href)) ? 'active' : ''}>
+                                <Icon />
+                                <span>{label}</span>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+
+                {usuario?.rol === 'admin' && (
+                    <div class="sidebar-section">
+                        <p class="sidebar-title">Gestión</p>
+                        <div class="sidebar-links">
+                            {linksAdmin.map(({ href, label, Icon }) => (
+                                <a href={href} class={pathname === href || pathname.startsWith(`${href}/`) ? 'active' : ''}>
+                                    <Icon />
+                                    <span>{label}</span>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="logout-btn" type="button">Cerrar sesión</button>
+            </div>
+        </div>
     </nav>
 </div>
 
 <style>
-    
     .navbar-wrapper {
-        display: flex;
-        flex-direction: column;
+        height: 100%;
+        min-height: 100vh;
     }
 
     .toggle-btn {
-        display: none; 
-        color: var(--primary-color);
-        background: transparent;
-        font-size: 3rem;
-        padding: .5rem;
-        border: none;
-        cursor: pointer;
+        display: none;
         position: fixed;
-        top: 0;
-        right: 0;
-        z-index: 1000;
-        border-radius: 8px;
+        top: 1rem;
+        right: 1rem;
+        z-index: 1002;
+        width: 52px;
+        height: 52px;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(15, 5, 41, 0.96), rgba(31, 10, 82, 0.92));
+        color: #fff;
+        font-size: 1.8rem;
+        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.24);
+        backdrop-filter: blur(12px);
+        cursor: pointer;
+    }
+
+    .sidebar-backdrop {
+        display: none;
     }
 
     .sidebar {
-        width: 180px;
-        min-height: 100vh;
-        background-color: var(--primary-color);
-        color: white;
-        padding: 2rem 1rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: .7rem;
-        transition: transform 0.3s ease;
+        width: 100%;
+        height: 100vh;
+        padding: 0;
+    }
+
+    .sidebar-panel {
+        height: 100%;
+        max-height: 100vh;
+        padding: 1.2rem;
+        border-radius: 0 28px 28px 0;
+        background:
+            radial-gradient(circle at top, rgba(111, 81, 197, 0.2), transparent 32%),
+            linear-gradient(180deg, #0f0529 0%, #1f0a52 54%, #2f1277 100%);
+        color: #f7f4ff;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: 1rem;
+        box-shadow: 18px 0 34px rgba(15, 5, 41, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .sidebar-body {
+        min-height: 0;
+        display: grid;
+        align-content: start;
+        gap: 1rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 0.2rem;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(203, 185, 255, 0.5) transparent;
+    }
+
+    .sidebar-body::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .sidebar-body::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-body::-webkit-scrollbar-thumb {
+        background: rgba(203, 185, 255, 0.4);
+        border-radius: 999px;
+    }
+
+    .brand-block {
+        padding: 0.4rem 0.15rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .eyebrow,
+    .sidebar-title,
+    .sidebar-user small {
+        font-size: 0.73rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: rgba(239, 233, 255, 0.64);
+    }
+
+    .brand-block h2 {
+        margin: 0.35rem 0 0.45rem;
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 1.85rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #ffffff;
+    }
+
+    .brand-copy {
+        color: rgba(239, 233, 255, 0.74);
+        font-size: 0.88rem;
+        line-height: 1.55;
+    }
+
+    .sidebar-section {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .sidebar-links {
+        display: grid;
+        gap: 0.35rem;
     }
 
     .sidebar a {
-        color: white;
         text-decoration: none;
-        font-weight: 500;
-        font-size: .85rem;
-        padding: 0.4rem 1rem;
-        border-radius: 6px;
-        transition: background-color 0.2s ease;
         display: flex;
-        gap: .5rem;
-        justify-content: flex-start;
         align-items: center;
+        gap: 0.8rem;
+        min-height: 46px;
+        padding: 0.82rem 0.95rem;
+        border-radius: 16px;
+        color: rgba(247, 244, 255, 0.82);
+        font-size: 0.88rem;
+        font-weight: 600;
+        transition: transform 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
     }
 
-    .sidebar a:hover {
-        background-color: #374151;
+    .sidebar a :global(svg) {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(112, 83, 197, 0.22));
+        color: #ffffff;
+        transform: translateX(2px);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .sidebar a.active {
+        position: relative;
+    }
+
+    .sidebar a.active::before {
+        content: '';
+        position: absolute;
+        left: 0.35rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 5px;
+        height: 22px;
+        border-radius: 999px;
+        background: #cbb9ff;
+    }
+
+    .sidebar-footer {
+        padding-top: 0.2rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .logout-btn {
+        justify-content: center;
+        width: 100%;
+        background: linear-gradient(135deg, var(--danger-color), var(--danger-hover-color));
+        color: #fff8f7;
+        box-shadow: 0 12px 24px rgba(165, 21, 21, 0.24);
     }
 
     @media (max-width: 768px) {
+        .navbar-wrapper {
+            min-height: 0;
+            height: auto;
+            pointer-events: none;
+        }
+
         .toggle-btn {
+            display: grid;
+            place-items: center;
+            pointer-events: auto;
+        }
+
+        .sidebar-backdrop {
             display: block;
+            position: fixed;
+            inset: 0;
+            border: none;
+            background: rgba(15, 5, 41, 0.48);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 180ms ease, visibility 180ms ease;
+            z-index: 1000;
         }
 
         .sidebar {
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
             position: fixed;
             top: 0;
             left: 0;
-            width: 220px;
+            width: min(86vw, 310px);
             height: 100vh;
-            z-index: 999;
-            background-color: var(--primary-color);
-            gap: .7rem;
+            transform: translateX(-100%);
+            transition: transform 200ms ease;
+            z-index: 1001;
+            padding: 0;
+            pointer-events: auto;
+        }
+
+        .sidebar-panel {
+            border-radius: 0 24px 24px 0;
+            max-height: 100vh;
         }
 
         .sidebar.active {
             transform: translateX(0);
         }
-    }
 
-    .logout-btn {
-        margin-top: .3rem;
-        background: var(--danger-color);
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        padding: .5rem 1rem;
-        font-size: .75;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.1s;
+        .sidebar-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
     }
-
-    .logout-btn:hover {
-        background: var(--danger-hover-color);
-        scale: 1.05;
-    }
-
-    .logout-btn:active {
-        scale: 0.95;
-    }
-
 </style>
 
 <script type="module" is:inline>
     const toggleBtn = document.getElementById('toggleMenu');
     const sidebar = document.getElementById('sidebar');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const mobileLinks = sidebar?.querySelectorAll('a');
 
-    toggleBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
+    const syncMenuState = (isOpen) => {
+        sidebar?.classList.toggle('active', isOpen);
+        sidebarBackdrop?.classList.toggle('active', isOpen);
+        toggleBtn?.setAttribute('aria-expanded', String(isOpen));
+    };
+
+    toggleBtn?.addEventListener('click', () => {
+        const isOpen = !sidebar?.classList.contains('active');
+        syncMenuState(isOpen);
     });
 
-    logoutBtn.addEventListener('click', async () => {
+    sidebarBackdrop?.addEventListener('click', () => {
+        syncMenuState(false);
+    });
+
+    mobileLinks?.forEach((link) => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                syncMenuState(false);
+            }
+        });
+    });
+
+    logoutBtn?.addEventListener('click', async () => {
         try {
             const res = await fetch('/api/logout', { method: 'POST' });
             if (res.ok) {

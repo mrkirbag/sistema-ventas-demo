@@ -55,6 +55,13 @@ export async function DELETE({ request }) {
             });
         }
 
+        if (Number(id) === Number(usuario.id)) {
+            return new Response(JSON.stringify({ message: 'No puedes eliminar tu propia cuenta' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         const result = await db.execute('DELETE FROM usuarios WHERE id = ?', [id]);
 
         if (result.rowsAffected === 0) {

@@ -1,0 +1,123 @@
+---
+import empresa from '../data/empresa.json';
+
+interface Props {
+    eyebrow?: string;
+    documento?: string;
+    canal?: string;
+    id?: string;
+}
+
+const {
+    eyebrow = 'Detalle de venta',
+    documento = 'VENTA',
+    canal = empresa.sistema,
+    id = '',
+} = Astro.props;
+---
+
+<header class="invoice-hero" id={id}>
+    <div class="invoice-hero_copy">
+        <p class="eyebrow">{eyebrow}</p>
+        <h1>{empresa.nombre}</h1>
+        <p class="invoice-subtitle">{empresa.subtitulo}</p>
+        <p class="invoice-contacto">RIF: {empresa.rif} | Tel: {empresa.telefono}</p>
+    </div>
+    <div class="invoice-hero_meta">
+        <div>
+            <span>Documento</span>
+            <strong>{documento}</strong>
+        </div>
+        <div>
+            <span>Canal</span>
+            <strong>{canal}</strong>
+        </div>
+    </div>
+</header>
+
+<style>
+    .invoice-hero {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.35rem 1.45rem;
+        border-radius: 28px;
+        background: linear-gradient(135deg, rgba(15, 5, 41, 0.96), rgba(31, 10, 82, 0.92));
+        color: #f7f4ff;
+        box-shadow: 0 18px 30px rgba(15, 5, 41, 0.18);
+    }
+
+    .invoice-hero p,
+    .invoice-hero span,
+    .invoice-hero strong {
+        color: inherit;
+    }
+
+    .invoice-hero_copy {
+        display: grid;
+        gap: 0.45rem;
+    }
+
+    .invoice-hero h1 {
+        color: #ffffff;
+        max-width: none;
+        font-size: clamp(2rem, 4vw, 2.9rem);
+        margin: 0;
+    }
+
+    .eyebrow {
+        margin: 0;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.88);
+    }
+
+    .invoice-subtitle,
+    .invoice-contacto {
+        max-width: 54ch;
+        color: #f7f4ff;
+        margin: 0;
+    }
+
+    .invoice-contacto {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .invoice-hero_meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+        gap: 0.75rem;
+        min-width: min(100%, 280px);
+    }
+
+    .invoice-hero_meta div {
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(31, 10, 82, 0.08);
+        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.08);
+        padding: 0.85rem 1rem;
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .invoice-hero_meta span {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #4f3d78;
+    }
+
+    .invoice-hero_meta strong {
+        color: var(--secondary-color);
+        font-size: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .invoice-hero {
+            flex-direction: column;
+        }
+    }
+</style>

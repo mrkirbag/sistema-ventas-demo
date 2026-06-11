@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import EmpresaInfo from '../components/EmpresaInfo.astro';
 import { verificarToken } from '../utils/auth.js';
 
 const usuario = verificarToken(Astro.request);
@@ -11,173 +12,243 @@ const usuarioNombre = usuario.nombre;
 ---
 
 <Layout>
-    <main>
-        <section class="empresa">
-            <img src="/logo.png" alt="Logo de la Empresa" />
-            <div>
-                <h2 class="title">Nombre Empresa</h2>
-                <h3>Rif / Tlf</h3>
+    <main class="dashboard">
+        <section class="hero-panel">
+            <div class="hero-copy">
+                <p class="eyebrow">Centro operativo</p>
+                <h1>Bienvenido, {usuarioNombre.toUpperCase()}</h1>
+                <p>Revisa el pulso del negocio desde un panel más claro, visual y preparado para demos comerciales.</p>
+            </div>
+
+            <div class="quick-actions">
+                <a href="/ventas/agregarVentas" class="quick-link">Registrar venta</a>
+                <a href="/clientes/agregarClientes" class="quick-link secondary">Nuevo cliente</a>
             </div>
         </section>
 
+        <EmpresaInfo />
+
         <section class="usuario">
-            <h1>Bienvenido, {usuarioNombre.toUpperCase()}</h1>
+            <p class="eyebrow">Vista general</p>
+            <h2>Resumen del día</h2>
+            <p>Productos críticos, ventas recientes y alertas de inventario en una sola pantalla.</p>
         </section>
 
         <section class="agotados">
-            <h2>Productos Agotados</h2>
+            <div class="section-heading">
+                <p class="eyebrow">Alerta</p>
+                <h2>Productos Agotados</h2>
+            </div>
             <div id="tablaAgotados" class="noResponsive"></div>
         </section>
 
         <section class="ventas">
-            <h2>Ultimas Ventas del Día</h2>
+            <div class="section-heading">
+                <p class="eyebrow">Actividad</p>
+                <h2>Últimas Ventas del Día</h2>
+            </div>
             <div id="ventasDia" class="noResponsive"></div>
         </section>
 
         <section class="stock-bajo">
-            <h2>Productos Bajos en Stock</h2>
-            <div id="reportes"></div>
+            <div class="section-heading">
+                <p class="eyebrow">Seguimiento</p>
+                <h2>Productos Bajos en Stock</h2>
+            </div>
+            <div id="reportes" class="chart-panel"></div>
+            <a href="/reportes" class="section-link">Ver reporte completo</a>
         </section>
     </main>
 </Layout>
 
 <style>
 
-    :global(main) {
+    :global(main.dashboard) {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: auto auto;
+        grid-template-rows: auto auto auto;
         gap: 2rem;
-        padding: 2rem;
-        background: linear-gradient(to bottom, #f4f4f4, #fff);
-        border-radius: 30px;
         width: 100%;
-        height: 93dvh;
+        min-height: calc(100dvh - 4rem);
     }
 
     @media (max-width: 768px) {
-
-        :global(main) {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;              
-        }
-
-        section {
-            width: 100%;
-        }
-
-        :global(.empresa),
-        :global(.stock-bajo) {
-            display: none !important;
-        }
-
-        :global(.noResponsive table) {
-            display: table !important;
-            width: auto !important;
-        }
-
-        :global(.noResponsive thead) {
-            display: table-header-group !important;
-        }
-
-        :global(.noResponsive tbody) {
-            display: table-row-group !important;
-        }
-
-        :global(.noResponsive tr) {
-            display: table-row !important;
-            margin: 0 !important;
-            border: none !important;
-            border-radius: 0 !important;
-            padding: 0 !important;
-            background: transparent !important;
-        }
-
-        :global(.noResponsive th),
-        :global(.noResponsive td) {
-            display: table-cell !important;
-            width: auto !important;
-            text-align: inherit !important;
-            position: static !important;
-        }
-
-        :global(.noResponsive td)::before {
-            content: none !important;
-        }
-    }
-
-
-    /* Secciones */
-    section {
-        background: #fff;
-        border-radius: 12px;
-        padding: 1rem;
-        box-shadow:
-            0 2px 4px rgba(0, 0, 0, 0.1),
-            0 8px 16px rgba(0, 0, 0, 0.15);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-    }
-
-    .empresa {
-        grid-column: 1 / 2;
-        grid-row: 1 / 2;
-        padding: 1.5rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1.5rem;
-
-        & img {
-            max-width: 150px;
-            height: auto;
-        }
-
-        & div {
+        :global(main.dashboard) {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 1rem;
         }
+
+        section {
+            width: 100%;
+        }
+    }
+
+
+    section {
+        background: rgba(255, 255, 255, 0.86);
+        border: 1px solid rgba(31, 10, 82, 0.08);
+        border-radius: 28px;
+        padding: 1.35rem;
+        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .hero-panel {
+        grid-column: 1 / 4;
+        grid-row: 1 / 2;
+        position: relative;
+        display: grid;
+        grid-template-columns: 1.4fr 0.8fr;
+        align-items: end;
+        gap: 1rem;
+        background: linear-gradient(135deg, rgba(15, 5, 41, 0.96), rgba(31, 10, 82, 0.92));
+        color: #f8f5ff;
+        overflow: hidden;
+    }
+
+    .hero-panel::after {
+        content: '';
+        position: absolute;
+        width: 220px;
+        height: 220px;
+        right: -50px;
+        top: -70px;
+        border-radius: 50%;
+        background: rgba(133, 111, 204, 0.16);
+        filter: blur(4px);
+    }
+
+    .hero-copy,
+    .quick-actions,
+    .section-heading {
+        position: relative;
+        z-index: 1;
+    }
+
+    .hero-copy {
+        display: grid;
+        gap: 0.85rem;
+    }
+
+    .eyebrow {
+        font-size: 0.74rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(239, 233, 255, 0.68);
+    }
+
+    .hero-panel h1 {
+        max-width: none;
+        color: #f8f5ff;
+    }
+
+    .usuario h2,
+    .section-heading h2 {
+        color: inherit;
+    }
+
+    .hero-panel p:not(.eyebrow),
+    .usuario p:not(.eyebrow) {
+        color: rgba(239, 233, 255, 0.82);
+        max-width: 56ch;
+    }
+
+    .quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+
+    .quick-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 180px;
+        padding: 0.95rem 1.2rem;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #1f0a52, #4d2ea3);
+        color: #fffaff;
+        text-decoration: none;
+        font-weight: 700;
+        box-shadow: 0 14px 28px rgba(15, 5, 41, 0.2);
+    }
+
+    .quick-link.secondary {
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    :global(section.empresa) {
+        grid-column: 1 / 2;
+        grid-row: 2 / 3;
     }
 
     .usuario {
         grid-column: 2 / 4;
-        grid-row: 1 / 2;
-        display: flex;
-        align-items: center;
+        grid-row: 2 / 3;
         justify-content: center;
-        background-color: var(--secondary-color);
-        color: #fff;
+        background: linear-gradient(135deg, rgba(31, 10, 82, 0.94), rgba(77, 46, 163, 0.92));
+        color: #f8f5ff;
     }
 
     .agotados {
-        padding: .5rem;
         grid-column: 1 / 2;
-        grid-row: 2 / 3;
+        grid-row: 3 / 4;
         color: var(--primary-color);
     }
 
     .ventas {
         grid-column: 2 / 3;
-        grid-row: 2 / 3;
+        grid-row: 3 / 4;
     }
 
     .stock-bajo {
         grid-column: 3 / 4;
-        grid-row: 2 / 3;
+        grid-row: 3 / 4;
     }
 
-    .title {
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 1.5rem;
-        text-align: center;
+    .chart-panel {
+        width: 100%;
+        flex: 1;
+    }
+
+    :global(.stock-bajo .chart-widget) {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+    }
+
+    :global(.stock-bajo .chart-container--compact) {
+        min-height: 0;
+    }
+
+    .section-link {
+        align-self: flex-start;
+        font-size: 0.82rem;
+        font-weight: 700;
         color: var(--secondary-color);
+        text-decoration: none;
+        opacity: 0.85;
+    }
+
+    .section-link:hover {
+        opacity: 1;
+        text-decoration: underline;
+    }
+
+    .section-link.hidden {
+        display: none;
+    }
+
+    .empty-state {
+        color: var(--text-muted);
+        font-size: 0.9rem;
     }
 
     h3, h2 {
@@ -186,10 +257,48 @@ const usuarioNombre = usuario.nombre;
         font-size: 1.25rem;
     }
 
+    .section-heading {
+        display: grid;
+        gap: 0.2rem;
+    }
+
+    .section-heading .eyebrow {
+        color: var(--secondary-color);
+    }
+
+    .noResponsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+
     :global(table) {
         width: 100%;
         border-collapse: collapse;
         font-size: .8rem;
+    }
+
+    @media (max-width: 900px) {
+        :global(main.dashboard) {
+            grid-template-columns: 1fr;
+        }
+
+        .hero-panel,
+        :global(section.empresa),
+        .usuario,
+        .agotados,
+        .ventas,
+        .stock-bajo {
+            grid-column: auto;
+            grid-row: auto;
+        }
+
+        .hero-panel {
+            grid-template-columns: 1fr;
+        }
+
+        .quick-actions {
+            justify-content: flex-start;
+        }
     }
 
 </style>
@@ -227,10 +336,18 @@ const usuarioNombre = usuario.nombre;
 
         if(response.status === 200){
 
-            let tablaHTML = `<table><tbody>`;
+            let tablaHTML = `
+                <table class="tabla-reportes">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
 
             productos.forEach(producto => {
-                tablaHTML += `<tr><td>${producto.nombre}<br/>${producto.codigo}</td><td>${producto.stock} ${producto.unidad_medida}.</td></tr>`;
+                tablaHTML += `<tr><td data-label="Producto">${producto.nombre}<br/>${producto.codigo}</td><td data-label="Stock">${producto.stock} ${producto.unidad_medida}.</td></tr>`;
             });
 
             tablaHTML += '</tbody></table>';
@@ -247,12 +364,18 @@ const usuarioNombre = usuario.nombre;
 
         if(ventasResponse.status === 200){
 
-            let ventasHTML = `<table><tbody>`;
+            let ventasHTML = `
+                <table class="tabla-reportes">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
 
             ventasData.forEach(venta => {
-
-                const fechaFormateada = formatearFecha(venta.fecha);
-                ventasHTML += `<tr><td>${venta.cliente.toUpperCase()}</td><td>${venta.total.toFixed(2)} USD <br/> ${Math.ceil(venta.total * tasa)} COP</td></tr>`;
+                ventasHTML += `<tr><td data-label="Cliente">${venta.cliente.toUpperCase()}</td><td data-label="Total">${venta.total.toFixed(2)} USD <br/> ${Math.ceil(venta.total * tasa)} COP</td></tr>`;
             });
 
             ventasHTML += '</tbody></table>';
@@ -264,20 +387,23 @@ const usuarioNombre = usuario.nombre;
 
         // Grafica de productos bajos en stock
         const stokBajo = document.getElementById('reportes') as HTMLDivElement;
+        const stockLink = document.querySelector('.stock-bajo .section-link') as HTMLAnchorElement | null;
 
         const stockResponse = await fetch('/api/index/stockBajo');
         const stockData :Producto[] = await stockResponse.json();
 
-        if(stockResponse.status === 200){
+        if(stockResponse.status === 200 && stockData.length > 0){
 
             renderChart(
                 'Productos Bajos en Stock', 
                 stockData.map(producto => producto.nombre), 
-                stockData.map(producto => producto.stock)
+                stockData.map(producto => producto.stock),
+                { valueLabel: 'Stock', compact: true, hideTitle: true }
             );
 
         } else {
-            stokBajo.innerHTML = '<p>No hay productos bajos en stock</p>';
+            stokBajo.innerHTML = '<p class="empty-state">No hay productos bajos en stock</p>';
+            stockLink?.classList.add('hidden');
         }
 
     });

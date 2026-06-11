@@ -1,5 +1,7 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
+import { withTransaction } from '@/utils/dbTransaction';
+import { normalizarId } from '@/utils/ventaValidaciones';
 
 export async function GET({ request }) {
 
@@ -66,31 +68,44 @@ export async function POST({ request }) {
             return new Response('El total de la venta debe ser mayor a cero', { status: 400 });
         }
 
+        const cliente = await db.execute(
+            'SELECT id FROM clientes WHERE id = ? AND estatus = "activo"',
+            [clienteId]
+        );
+
+        if (!cliente.rows?.length) {
+            return new Response(JSON.stringify({ error: 'Cliente no encontrado o inactivo' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        }
+
         let estado;
 
         if (tipoPago === 'credito') {
             estado = 'pendiente';
-        }
-        if (tipoPago === 'contado') {
+        } else if (tipoPago === 'contado') {
             estado = 'completado';
+        } else {
+            return new Response(JSON.stringify({ error: 'Tipo de pago inválido' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // Insertar el nuevo cliente en la base de datos
-        const result = await db.execute(`INSERT INTO ventas (fecha, cliente_id, total, estado, tipo_pago) VALUES (?, ?, ?, ?, ?)`,
-        [fecha, clienteId, totalDeVenta, estado, tipoPago]
-        );
+        const ventaIdSafe = await withTransaction(db, async (tx) => {
+            const result = await tx.execute(
+                'INSERT INTO ventas (fecha, cliente_id, total, estado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
+                [fecha, clienteId, totalDeVenta, estado, tipoPago]
+            );
 
-        // Obtener el ID generado
-        const ventaId = result.lastInsertRowid;
-        const ventaIdSafe = typeof ventaId === 'bigint' ? ventaId.toString() : ventaId;
+            const ventaId = normalizarId(result.lastInsertRowid);
 
-        // Agregar la venta a creditos si el tipo de pago es credito
-        if (tipoPago === 'credito'){
-            await db.execute(`INSERT INTO creditos (id_venta, saldo_pendiente) VALUES (?, ?)`,[ventaIdSafe, totalDeVenta]);
-        }
+            if (tipoPago === 'credito') {
+                await tx.execute(
+                    'INSERT INTO creditos (id_venta, saldo_pendiente) VALUES (?, ?)',
+                    [ventaId, totalDeVenta]
+                );
+            }
 
-        return new Response(JSON.stringify({ message: "Venta registrada exitosamente", ventaId: ventaIdSafe }),
-        { status: 201 });
+            return ventaId;
+        });
+
+        return new Response(JSON.stringify({ message: 'Venta registrada exitosamente', ventaId: ventaIdSafe }), { status: 201, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
         console.error('Error inserting product:', error);
