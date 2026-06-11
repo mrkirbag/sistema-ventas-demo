@@ -106,13 +106,20 @@ function mostrarModal(mensaje, variante, opciones = {}) {
         mensaje,
         titulo: opciones.titulo ?? titulos[variante],
         variante,
+        acciones: opciones.acciones ?? [],
     });
+
+    if (opciones.acciones?.length) {
+        return { overlay, modal };
+    }
 
     const duracion = opciones.duracion ?? 1600;
 
     activeTimer = window.setTimeout(() => {
         resetModal(modal, overlay);
     }, duracion);
+
+    return { overlay, modal };
 }
 
 export function mostrarMensaje(mensaje, opciones = {}) {
@@ -120,7 +127,27 @@ export function mostrarMensaje(mensaje, opciones = {}) {
 }
 
 export function mostrarError(mensaje, opciones = {}) {
-    mostrarModal(mensaje, 'error', opciones);
+    const { overlay, modal } = renderModal({
+        mensaje,
+        titulo: opciones.titulo ?? 'Atención',
+        variante: 'error',
+        acciones: [
+            {
+                label: opciones.textoCerrar ?? 'Entendido',
+                primary: true,
+                onClick: () => resetModal(modal, overlay),
+            },
+        ],
+    });
+
+    const onOverlayClick = (event) => {
+        if (event.target === overlay) {
+            resetModal(modal, overlay);
+            overlay.removeEventListener('click', onOverlayClick);
+        }
+    };
+
+    overlay.addEventListener('click', onOverlayClick);
 }
 
 export function confirmarAccion(mensaje, opciones = {}) {

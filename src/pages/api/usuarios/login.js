@@ -12,12 +12,18 @@ export async function POST({ request }) {
     const user = result?.rows?.[0];
 
     if (!user) {
-        return new Response(JSON.stringify({ error: 'Usuario o clave incorrectos' }), { status: 401 });
+        return new Response(JSON.stringify({ error: 'Usuario o clave incorrectos' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
 
     const claveValida = await bcrypt.compare(clave, user.clave);
-    if (!claveValida) { 
-        return new Response(JSON.stringify({ error: 'Usuario o clave incorrectos' }), { status: 401 });
+    if (!claveValida) {
+        return new Response(JSON.stringify({ error: 'Usuario o clave incorrectos' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
 
     // Genera el JWT

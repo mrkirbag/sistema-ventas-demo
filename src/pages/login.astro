@@ -669,116 +669,6 @@
         color: #9a92ad;
     }
 
-    /* Modales (mensajes.js) */
-    .overlay {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1.5rem;
-        background: rgba(15, 5, 41, 0.54);
-        backdrop-filter: blur(8px);
-        z-index: 1200;
-        transition: opacity 180ms ease, visibility 180ms ease;
-    }
-
-    .visible {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-    }
-
-    .oculto {
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-    }
-
-    .modal {
-        width: min(100%, 460px);
-        padding: 1.6rem;
-        border-radius: 28px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 241, 252, 0.98));
-        box-shadow: 0 24px 48px rgba(15, 5, 41, 0.24);
-        border: 1px solid rgba(255, 255, 255, 0.72);
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-
-    .modal-icon {
-        width: 60px;
-        height: 60px;
-        margin: 0 auto;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        color: #fff;
-    }
-
-    .modal-icon svg {
-        width: 28px;
-        height: 28px;
-    }
-
-    .modal[data-variant='success'] .modal-icon {
-        background: linear-gradient(135deg, var(--success-color), #53ae83);
-    }
-
-    .modal[data-variant='error'] .modal-icon {
-        background: linear-gradient(135deg, var(--danger-color), #dd7269);
-    }
-
-    .modal[data-variant='confirm'] .modal-icon {
-        background: linear-gradient(135deg, var(--secondary-color), #4d2ea3);
-    }
-
-    .modal-title {
-        font-family: 'Archivo Black', sans-serif;
-        font-size: 1.45rem;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: var(--primary-strong);
-    }
-
-    .modal-message {
-        font-size: 1rem;
-        line-height: 1.65;
-        color: var(--text-muted);
-    }
-
-    .modal-actions {
-        display: flex;
-        justify-content: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-    }
-
-    .modal-action {
-        appearance: none;
-        border: none;
-        border-radius: 999px;
-        padding: 0.9rem 1.35rem;
-        font-size: 0.92rem;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-        transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
-    }
-
-    .modal-action--primary {
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: #fff;
-        box-shadow: 0 10px 24px rgba(15, 5, 41, 0.22);
-    }
-
-    .modal-action--secondary {
-        background: rgba(31, 10, 82, 0.08);
-        color: var(--primary-strong);
-        border: 1px solid rgba(31, 10, 82, 0.12);
-    }
-
     @media (max-width: 900px) {
         .login-shell {
             grid-template-columns: 1fr;
@@ -851,5 +741,123 @@
             animation-iteration-count: 1 !important;
             transition-duration: 0.01ms !important;
         }
+    }
+</style>
+
+<style is:global>
+    /* Modales dinámicos (mensajes.js) — global porque se inyectan fuera del template */
+    .overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: rgba(15, 5, 41, 0.54);
+        backdrop-filter: blur(8px);
+        z-index: 9999;
+        transition: opacity 180ms ease, visibility 180ms ease;
+    }
+
+    .overlay.visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .overlay.oculto {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    .modal {
+        width: min(100%, 460px);
+        padding: 1.6rem;
+        border-radius: 28px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 241, 252, 0.98));
+        box-shadow: 0 24px 48px rgba(15, 5, 41, 0.24);
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .modal-icon {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: #fff;
+    }
+
+    .modal-icon svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .modal[data-variant='success'] .modal-icon {
+        background: linear-gradient(135deg, #008000, #53ae83);
+    }
+
+    .modal[data-variant='error'] .modal-icon {
+        background: linear-gradient(135deg, #ff4d4d, #dd7269);
+    }
+
+    .modal[data-variant='confirm'] .modal-icon {
+        background: linear-gradient(135deg, #1f0a52, #4d2ea3);
+    }
+
+    .modal-title {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 1.45rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #090218;
+    }
+
+    .modal-message {
+        font-size: 1rem;
+        line-height: 1.65;
+        color: #675e7c;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .modal-action {
+        appearance: none;
+        border: none;
+        border-radius: 999px;
+        padding: 0.9rem 1.35rem;
+        font-size: 0.92rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        font-family: 'Roboto', sans-serif;
+        transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    }
+
+    .modal-action--primary {
+        background: linear-gradient(135deg, #0f0529, #1f0a52);
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(15, 5, 41, 0.22);
+    }
+
+    .modal-action--secondary {
+        background: rgba(31, 10, 82, 0.08);
+        color: #090218;
+        border: 1px solid rgba(31, 10, 82, 0.12);
+    }
+
+    .modal-action:hover {
+        transform: translateY(-1px);
     }
 </style>
