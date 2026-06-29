@@ -26,11 +26,27 @@ if (!usuario) {
             </div>
 
             <section class="form-container page-form presupuesto-form">
-                <form>
+                <form onsubmit="return false;">
                     <div id="productos-container" class="producto-module">
                         <div class="form-field producto-module_search">
+                            <label for="codigoBarras">Codigo de barras</label>
+                            <input
+                                type="text"
+                                id="codigoBarras"
+                                placeholder="Escanea aqui"
+                                autocomplete="off"
+                                autofocus
+                            />
+                        </div>
+
+                        <div class="form-field producto-module_search">
                             <label for="busquedaProductos">Buscar producto</label>
-                            <input type="text" id="busquedaProductos" placeholder="Nombre o código del producto" />
+                            <input
+                                type="text"
+                                id="busquedaProductos"
+                                placeholder="Nombre o codigo del producto"
+                                autocomplete="off"
+                            />
                         </div>
 
                         <div class="form-field producto-module_select">
@@ -449,6 +465,67 @@ if (!usuario) {
     import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda";
     import { imprimir } from '@/utils/helpers/imprimir.js';
     import { mostrarError } from "@/utils/helpers/mensajes";
+    import {
+        crearModuloProductos,
+        enfocarLectorCodigoBarras,
+        reiniciarBusquedaProductos,
+    } from '@/utils/helpers/seleccionProducto.js';
+
+    let moduloProductos: ReturnType<typeof crearModuloProductos> | null = null;
+
+    const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
+    const precioInput = document.getElementById("precio") as HTMLInputElement;
+    const precioReferencia = document.getElementById("precioReferencia") as HTMLSpanElement;
+
+    function actualizarReferenciaPrecio(tasa: number) {
+        const precio = parseFloat(precioInput.value);
+
+        if (isNaN(precio) || precio <= 0) {
+            precioReferencia.textContent = 'Referencia: 0 COP';
+            return;
+        }
+
+        precioReferencia.textContent = `Referencia: ${Math.ceil(precio * tasa)} COP`;
+    }
+
+    async function aplicarPrecioProducto(producto: Producto) {
+        const venta = parseFloat(String(producto.venta ?? ''));
+
+        if (!Number.isNaN(venta) && venta > 0) {
+            precioInput.value = venta.toFixed(2);
+            const tasa = await cambioUSDaCOP();
+            actualizarReferenciaPrecio(tasa);
+        } else {
+            precioInput.value = "";
+            actualizarReferenciaPrecio(await cambioUSDaCOP());
+        }
+    }
+
+    function iniciarModuloProductos() {
+        if (moduloProductos) return;
+
+        const cantidadInput = document.getElementById("cantidad") as HTMLInputElement;
+
+        moduloProductos = crearModuloProductos({
+            productoSelect,
+            cantidadInput,
+            onNoEncontrado: mostrarError,
+            onProductoSeleccionado: (producto) => {
+                aplicarPrecioProducto(producto);
+            },
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciarModuloProductos);
+    } else {
+        iniciarModuloProductos();
+    }
+
+    precioInput.addEventListener('input', async () => {
+        const tasa = await cambioUSDaCOP();
+        actualizarReferenciaPrecio(tasa);
+    });
 
     interface Producto {
         codigo: string;
@@ -583,96 +660,9 @@ if (!usuario) {
         });
     });
 
-    document.addEventListener('DOMContentLoaded', rellenarSelectProductos);
-    async function rellenarSelectProductos() {
-
-        const busqueda = document.getElementById("busquedaProductos") as HTMLInputElement;
-        const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
-
-        let productosListados: Producto[] = [];
-
-        try {
-
-            const response = await fetch("/api/productos");
-            const data = await response.json();
-
-            productosListados = Array.isArray(data) ? data : [];
-
-            const renderOpciones = (productos: Producto[]) => {
-                productoSelect.innerHTML = "";
-
-                const defaultOption = document.createElement("option");
-                defaultOption.value = "";
-                defaultOption.textContent = "Selecciona un producto";
-                defaultOption.disabled = true;
-                defaultOption.selected = true;
-                productoSelect.appendChild(defaultOption);
-
-                if (productos.length === 0) {
-                    const noResultsOption = document.createElement("option");
-                    noResultsOption.value = "";
-                    noResultsOption.textContent = "— Sin coincidencias para la búsqueda —";
-                    noResultsOption.disabled = true;
-                    productoSelect.appendChild(noResultsOption);
-                    return;
-                }
-
-                productos.forEach(producto => {
-                    const option = document.createElement("option");
-                    option.value = producto.id.toString();
-                    option.textContent = `${producto.codigo.toUpperCase()} - ${producto.nombre} - ${producto.stock} ${producto.unidad_medida} - ${producto.venta}USD`;
-                    productoSelect.appendChild(option);
-                });
-            };
-
-            renderOpciones(productosListados);
-
-            busqueda.addEventListener("input", () => {
-                const filtro = busqueda.value.trim().toLowerCase();
-
-                if (!filtro) {
-                    renderOpciones(productosListados);
-                    return;
-                }
-
-                const productosFiltrados = productosListados.filter(producto => {
-                    const nombre = String(producto.nombre || "").toLowerCase();
-                    const codigo = String(producto.codigo || "").toLowerCase();
-                    return nombre.includes(filtro) || codigo.includes(filtro);
-                });
-
-                renderOpciones(productosFiltrados);
-            });
-
-
-        } catch (error) {
-            console.error("Error al cargar los productos:", error);
-        }
-    }
-
     const btnReiniciar = document.querySelector('#reiniciar') as HTMLButtonElement;
     btnReiniciar.addEventListener('click', () => {
         window.location.reload();
-    });
-
-    const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
-    const precioInput = document.getElementById("precio") as HTMLInputElement;
-    const precioReferencia = document.getElementById("precioReferencia") as HTMLSpanElement;
-
-    function actualizarReferenciaPrecio(tasa: number) {
-        const precio = parseFloat(precioInput.value);
-
-        if (isNaN(precio) || precio <= 0) {
-            precioReferencia.textContent = 'Referencia: 0 COP';
-            return;
-        }
-
-        precioReferencia.textContent = `Referencia: ${Math.ceil(precio * tasa)} COP`;
-    }
-
-    precioInput.addEventListener('input', async () => {
-        const tasa = await cambioUSDaCOP();
-        actualizarReferenciaPrecio(tasa);
     });
 
     productoSelect.addEventListener("change", async () => {
@@ -700,6 +690,9 @@ if (!usuario) {
 
             if (typeof producto.venta === "number") {
                 precioInput.value = producto.venta.toFixed(2);
+                actualizarReferenciaPrecio(tasa);
+            } else if (producto.venta != null && producto.venta !== '') {
+                precioInput.value = parseFloat(String(producto.venta)).toFixed(2);
                 actualizarReferenciaPrecio(tasa);
             } else {
                 precioInput.value = "";
@@ -824,7 +817,9 @@ if (!usuario) {
         cantidadInput.value = "";
         precioInput.value = "";
         precioReferencia.textContent = 'Referencia: 0 COP';
-        
+        reiniciarBusquedaProductos();
+        enfocarLectorCodigoBarras();
+
         totalizar();
     }
 

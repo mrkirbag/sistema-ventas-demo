@@ -228,7 +228,7 @@ if (usuario.rol !== 'admin') {
         // Cargar desde el backend una sola vez
         async function cargarProductos() {
             try {
-                const res = await fetch('/api/productos');
+                const res = await fetch('/api/productos?limit=500');
                 const data = await res.json();
 
                 if (data.message) {

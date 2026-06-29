@@ -40,7 +40,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             </div>
 
             <section class="form-container page-form venta-form">
-                <form>
+                <form onsubmit="return false;">
                     <div class="form-field">
                         <label for="fecha">Fecha de venta</label>
                         <input type="date" name="fecha" id="fecha" value={fechaCompleta}/>
@@ -48,8 +48,24 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
                     <div id="productos-container" class="producto-module">
                         <div class="form-field producto-module_search">
+                            <label for="codigoBarras">Codigo de barras</label>
+                            <input
+                                type="text"
+                                id="codigoBarras"
+                                placeholder="Escanea aqui"
+                                autocomplete="off"
+                                autofocus
+                            />
+                        </div>
+
+                        <div class="form-field producto-module_search">
                             <label for="busquedaProductos">Buscar producto</label>
-                            <input type="text" id="busquedaProductos" placeholder="Nombre o código del producto" />
+                            <input
+                                type="text"
+                                id="busquedaProductos"
+                                placeholder="Nombre o codigo del producto"
+                                autocomplete="off"
+                            />
                         </div>
 
                         <div class="form-field producto-module_select">
@@ -460,6 +476,56 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
     import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
     import { cambioUSDaCOP } from '@/utils/helpers/cambioMoneda.js';
+    import {
+        crearModuloProductos,
+        enfocarLectorCodigoBarras,
+        reiniciarBusquedaProductos,
+    } from '@/utils/helpers/seleccionProducto.js';
+
+    let moduloProductos: ReturnType<typeof crearModuloProductos> | null = null;
+
+    const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
+    const precioInput = document.getElementById("precio") as HTMLInputElement;
+    const precioPesos = document.getElementById("precioPesos") as HTMLSpanElement;
+
+    async function aplicarPrecioProducto(producto: Producto) {
+        const venta = parseFloat(String(producto.venta ?? ''));
+
+        if (!Number.isNaN(venta) && venta > 0) {
+            precioInput.value = venta.toFixed(2);
+            const tasa = await cambioUSDaCOP();
+            precioPesos.textContent = `Referencia: ${Math.ceil(venta * tasa)} COP`;
+        } else {
+            precioInput.value = "";
+            precioPesos.textContent = "";
+        }
+    }
+
+    function iniciarModuloProductos() {
+        if (moduloProductos) return;
+
+        const cantidadInput = document.getElementById("cantidad") as HTMLInputElement;
+
+        moduloProductos = crearModuloProductos({
+            productoSelect,
+            cantidadInput,
+            onNoEncontrado: mostrarError,
+            onProductoSeleccionado: (producto) => {
+                aplicarPrecioProducto(producto);
+            },
+        });
+    }
+
+    function iniciarPagina() {
+        rellenarSelectClientes();
+        iniciarModuloProductos();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciarPagina);
+    } else {
+        iniciarPagina();
+    }
 
     interface Cliente {
         id: number;
@@ -484,11 +550,6 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
     const btnAbrirMenuClienteNuevo = document.getElementById("abrirMenuClienteNuevo") as HTMLSpanElement;
     const btnAgregarClienteNuevo = document.getElementById("btnAgregarClienteNuevo") as HTMLButtonElement;
 
-    document.addEventListener("DOMContentLoaded", () => {
-        rellenarSelectClientes();
-        rellenarSelectProductos();
-    }); 
-    
     async function rellenarSelectClientes() {
 
         const selectClientes = document.getElementById("cliente") as HTMLSelectElement;
@@ -551,76 +612,6 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         }
     }
 
-    async function rellenarSelectProductos() {
-
-        const busqueda = document.getElementById("busquedaProductos") as HTMLInputElement;
-        const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
-
-        let productosListados : Producto[] = [];
-
-        try {
-
-            const response = await fetch("/api/productos");
-            const data = await response.json();
-
-            productosListados = Array.isArray(data) ? data : [];
-
-            const renderOpciones = (productos : Producto[]) => {
-                productoSelect.innerHTML = "";
-
-                const defaultOption = document.createElement("option");
-                defaultOption.value = "";
-                defaultOption.textContent = "Selecciona un producto";
-                defaultOption.disabled = true;
-                defaultOption.selected = true;
-                productoSelect.appendChild(defaultOption);
-
-                if (productos.length === 0) {
-                    const noResultsOption = document.createElement("option");
-                    noResultsOption.value = "";
-                    noResultsOption.textContent = "— Sin coincidencias para la búsqueda —";
-                    noResultsOption.disabled = true;
-                    productoSelect.appendChild(noResultsOption);
-                    return;
-                }
-
-                productos.forEach(producto => {
-                    const option = document.createElement("option");
-                    option.value = producto.id.toString();
-                    option.textContent = `${producto.codigo.toUpperCase()} - ${producto.nombre} - ${producto.stock} ${producto.unidad_medida} - ${producto.venta}USD`;
-                    productoSelect.appendChild(option);
-                });
-            };
-
-            renderOpciones(productosListados);
-
-            busqueda.addEventListener("input", () => {
-                const filtro = busqueda.value.trim().toLowerCase();
-
-                if (!filtro) {
-                    renderOpciones(productosListados);
-                    return;
-                }
-
-                const productosFiltrados = productosListados.filter(producto => {
-                    const nombre = String(producto.nombre || "").toLowerCase();
-                    const codigo = String(producto.codigo || "").toLowerCase();
-                    return nombre.includes(filtro) || codigo.includes(filtro);
-                });
-
-                renderOpciones(productosFiltrados);
-            });
-
-
-        } catch (error) {
-            console.error("Error al cargar los productos:", error);
-        }
-    }
-
-    const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
-    const precioInput = document.getElementById("precio") as HTMLInputElement;
-    const precioPesos = document.getElementById("precioPesos") as HTMLSpanElement;
-
     productoSelect.addEventListener("change", async () => {
         const productoId = productoSelect.value;
 
@@ -642,10 +633,12 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
             const producto = await response.json();
 
-            if (typeof producto.venta === "number") {
-                precioInput.value = producto.venta.toFixed(2);
+            const venta = parseFloat(String(producto.venta ?? ''));
+
+            if (!Number.isNaN(venta) && venta > 0) {
+                precioInput.value = venta.toFixed(2);
                 const tasa = await cambioUSDaCOP();
-                precioPesos.textContent = `Referencia: ${Math.ceil(producto.venta * tasa)} COP`;
+                precioPesos.textContent = `Referencia: ${Math.ceil(venta * tasa)} COP`;
             } else {
                 precioInput.value = "";
                 precioPesos.textContent = "";
@@ -767,6 +760,8 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             cantidadInput.value = "";
             precioInput.value = "";
             precioPesos.textContent = "";
+            reiniciarBusquedaProductos();
+            enfocarLectorCodigoBarras();
 
             productosSeleccionados.push({
                 id: producto.id,

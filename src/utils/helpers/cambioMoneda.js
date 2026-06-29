@@ -1,4 +1,12 @@
+let tasaCache = null;
+let tasaCacheExpira = 0;
+const CACHE_MS = 60_000;
+
 export async function cambioUSDaCOP({ strict = false } = {}) {
+    if (tasaCache !== null && Date.now() < tasaCacheExpira) {
+        return tasaCache;
+    }
+
     try {
         const response = await fetch('/api/tasa');
 
@@ -17,6 +25,9 @@ export async function cambioUSDaCOP({ strict = false } = {}) {
             throw new Error('La tasa del día no es válida. Actualízala en Tasa del Día.');
         }
 
+        tasaCache = tasa;
+        tasaCacheExpira = Date.now() + CACHE_MS;
+
         return tasa;
     } catch (error) {
         console.error('Error fetching tasa:', error);
@@ -25,6 +36,11 @@ export async function cambioUSDaCOP({ strict = false } = {}) {
             throw error;
         }
 
-        return 1;
+        return tasaCache ?? 1;
     }
-}   
+}
+
+export function invalidarCacheTasa() {
+    tasaCache = null;
+    tasaCacheExpira = 0;
+}

@@ -1,6 +1,10 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
 
+const LIMITE_BUSQUEDA = 50;
+const LIMITE_LISTA = 80;
+const LIMITE_MAXIMO = 500;
+
 export async function GET({ request }) {
 
     // Verificar autenticación
@@ -14,25 +18,59 @@ export async function GET({ request }) {
         const url = new URL(request.url);
         const page = parseInt(url.searchParams.get('page')) || 1;
         const search = url.searchParams.get('search') || '';
+        const codigo = url.searchParams.get('codigo')?.trim() || '';
 
-        const limit = 100000;
+        if (codigo) {
+            const columnas = 'id, codigo, nombre, stock, costo, venta, unidad_medida';
+            let result = await db.execute(
+                `SELECT ${columnas} FROM productos WHERE estatus = 'activo' AND codigo = ? LIMIT 1`,
+                [codigo]
+            );
+
+            if (!result.rows?.length) {
+                const sinCeros = codigo.replace(/^0+/, '');
+                if (sinCeros && sinCeros !== codigo) {
+                    result = await db.execute(
+                        `SELECT ${columnas} FROM productos WHERE estatus = 'activo' AND codigo = ? LIMIT 1`,
+                        [sinCeros]
+                    );
+                }
+            }
+
+            if (!result.rows?.length) {
+                return new Response(JSON.stringify({ message: 'Producto no encontrado' }), {
+                    headers: { 'Content-Type': 'application/json' },
+                    status: 404,
+                });
+            }
+
+            return new Response(JSON.stringify(result.rows[0]), {
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        const limit = Math.min(
+            parseInt(url.searchParams.get('limit')) || (search ? LIMITE_BUSQUEDA : LIMITE_LISTA),
+            LIMITE_MAXIMO
+        );
         const offset = (page - 1) * limit;
+        const columnasLista = 'id, codigo, nombre, stock, venta, unidad_medida';
 
         const query = search ? {
                                     sql: `
-                                        SELECT * FROM productos 
+                                        SELECT ${columnasLista} FROM productos 
                                         WHERE (nombre LIKE ? OR codigo LIKE ?)
                                         AND estatus = 'activo' 
-                                        ORDER BY LOWER(REPLACE(nombre, ' ', '')) ASC
+                                        ORDER BY nombre ASC
                                         LIMIT ? OFFSET ?
                                     `,
                                     args: [`%${search}%`, `%${search}%`, limit, offset],
                                 }
                             : {
                                     sql: `
-                                        SELECT * FROM productos 
+                                        SELECT ${columnasLista} FROM productos 
                                         WHERE estatus = 'activo'
-                                        ORDER BY LOWER(REPLACE(nombre, ' ', '')) ASC
+                                        ORDER BY nombre ASC
                                         LIMIT ? OFFSET ?
                                     `,
                                     args: [limit, offset],
