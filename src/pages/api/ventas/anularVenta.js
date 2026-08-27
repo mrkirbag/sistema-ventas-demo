@@ -1,6 +1,7 @@
 import { db } from '../db.js';
 import { verificarToken } from '@/utils/auth';
 import { withTransaction } from '@/utils/dbTransaction';
+import { ACCIONES, registrarBitacoraEnTx } from '@/utils/bitacora.js';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
@@ -87,6 +88,14 @@ export async function POST({ request }) {
                     [cantidad, codigo_producto]
                 );
             }
+
+            await registrarBitacoraEnTx(tx, {
+                usuario,
+                accion: ACCIONES.ANULAR_VENTA,
+                entidad: 'ventas',
+                entidadId: Number(id),
+                detalle: `Venta #${id} anulada · ${validarVenta.tipo_pago}`,
+            });
         });
 
         return new Response(JSON.stringify({ message: 'Venta anulada correctamente' }), {

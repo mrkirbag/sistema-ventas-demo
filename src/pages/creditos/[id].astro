@@ -133,6 +133,7 @@ const {id} = Astro.params;
                     <thead id="abonosThead">
                         <tr>
                             <th>Fecha</th>
+                            <th>Método</th>
                             <th>Monto del abono</th>
                         </tr>
                     </thead>
@@ -170,8 +171,8 @@ const {id} = Astro.params;
     .progress-card {
         border-radius: 22px;
         background: rgba(255, 255, 255, 0.82);
-        border: 1px solid rgba(31, 10, 82, 0.08);
-        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.08);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
+        box-shadow: 0 18px 32px rgba(var(--primary-rgb), 0.08);
     }
 
     .detail-label,
@@ -222,8 +223,8 @@ const {id} = Astro.params;
         gap: 0.45rem;
         padding: 1rem 1.05rem;
         border-radius: 20px;
-        border: 1px solid rgba(31, 10, 82, 0.08);
-        box-shadow: 0 14px 26px rgba(15, 5, 41, 0.06);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
+        box-shadow: 0 14px 26px rgba(var(--primary-rgb), 0.06);
     }
 
     .kpi-card--total {
@@ -295,7 +296,7 @@ const {id} = Astro.params;
     .progress-track {
         height: 12px;
         border-radius: 999px;
-        background: rgba(31, 10, 82, 0.08);
+        background: rgba(var(--secondary-rgb), 0.08);
         overflow: hidden;
     }
 
@@ -373,6 +374,8 @@ const {id} = Astro.params;
     import { noRegistros } from "@/utils/helpers/mensajes.js";
     import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
     import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
+    import { formatearMoneda } from "@/utils/helpers/tasas.js";
+    import { etiquetaPago } from "@/utils/helpers/metodosPago.js";
 
     interface Producto {
         codigo_producto: string;
@@ -385,6 +388,10 @@ const {id} = Astro.params;
         id_abono: number;
         fecha: string;
         monto: number;
+        moneda?: string;
+        metodo?: string;
+        monto_recibido?: number;
+        moneda_base?: string;
     }
 
     function actualizarProgreso(total: number, abonado: number) {
@@ -468,12 +475,20 @@ const {id} = Astro.params;
                     const fechaAbono = formatearFecha(abono.fecha);
                     const montoCop = Math.ceil(tasa * abono.monto);
 
+                    const metodoTexto = abono.moneda && abono.metodo
+                        ? etiquetaPago(abono.moneda, abono.metodo)
+                        : '—';
+                    const recibidoTexto = abono.monto_recibido && abono.moneda
+                        ? formatearMoneda(abono.monto_recibido, abono.moneda)
+                        : `${abono.monto.toFixed(2)} USD`;
+
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td data-label="Fecha">${fechaAbono}</td>
+                        <td data-label="Método">${metodoTexto}</td>
                         <td data-label="Monto">
-                            <span class="monto-usd">${abono.monto.toFixed(2)} USD</span><br />
-                            <span class="monto-cop">${montoCop} COP</span>
+                            <span class="monto-usd">${recibidoTexto}</span><br />
+                            <span class="monto-cop">${abono.monto.toFixed(2)} USD · ${montoCop} COP</span>
                         </td>
                     `;
                     listaAbonosTbody.appendChild(tr);

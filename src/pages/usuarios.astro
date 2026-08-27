@@ -53,6 +53,7 @@ if (usuario.rol !== 'admin') {
 <script >
 
     import { noRegistros, confirmarAccion, mostrarError, mostrarMensaje } from "@/utils/helpers/mensajes.js";
+    import { ponerIcono } from "@/utils/helpers/iconosAccion.js";
 
     interface Usuario {
         id: number;
@@ -104,7 +105,7 @@ if (usuario.rol !== 'admin') {
                 const btnEliminar = document.createElement('button');
                 btnEliminar.type = 'button';
                 btnEliminar.classList.add('btn-eliminar');
-                btnEliminar.textContent = 'DEL';
+                ponerIcono(btnEliminar, 'eliminar');
 
                 const esUsuarioActivo = usuario.id === idUsuarioActivo;
 
@@ -128,7 +129,7 @@ if (usuario.rol !== 'admin') {
 
                             if (!res.ok) {
                                 const data = await res.json().catch(() => ({}));
-                                mostrarError(data.message || 'No se pudo eliminar el usuario');
+                                mostrarError(data.error || data.message || 'No se pudo eliminar el usuario');
                                 return;
                             }
 
@@ -201,9 +202,9 @@ if (usuario.rol !== 'admin') {
     }
 
     :global(.rol-badge--admin) {
-        background: linear-gradient(135deg, rgba(31, 10, 82, 0.14), rgba(93, 69, 170, 0.22));
+        background: linear-gradient(135deg, rgba(var(--secondary-rgb), 0.14), rgba(var(--accent-rgb), 0.22));
         color: var(--primary-strong);
-        border: 1px solid rgba(31, 10, 82, 0.16);
+        border: 1px solid rgba(var(--secondary-rgb), 0.16);
     }
 
     :global(.rol-badge--empleado) {

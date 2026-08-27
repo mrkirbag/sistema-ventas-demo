@@ -1,10 +1,24 @@
-let tasaCache = null;
-let tasaCacheExpira = 0;
+let tasasCache = null;
+let tasasCacheExpira = 0;
 const CACHE_MS = 60_000;
 
-export async function cambioUSDaCOP({ strict = false } = {}) {
-    if (tasaCache !== null && Date.now() < tasaCacheExpira) {
-        return tasaCache;
+function tasasDesdeRespuesta(data) {
+    const cop = Number(data?.cop ?? data?.valor);
+    const bs = Number(data?.bs);
+
+    if (!Number.isFinite(cop) || cop <= 0) {
+        throw new Error('La tasa COP del día no es válida. Actualízala en Tasa del Día.');
+    }
+
+    return {
+        cop,
+        bs: Number.isFinite(bs) && bs > 0 ? bs : 0,
+    };
+}
+
+export async function obtenerTasas({ strict = false } = {}) {
+    if (tasasCache !== null && Date.now() < tasasCacheExpira) {
+        return tasasCache;
     }
 
     try {
@@ -19,16 +33,12 @@ export async function cambioUSDaCOP({ strict = false } = {}) {
         }
 
         const data = await response.json();
-        const tasa = Number(data.valor);
+        const tasas = tasasDesdeRespuesta(data);
 
-        if (!Number.isFinite(tasa) || tasa <= 0) {
-            throw new Error('La tasa del día no es válida. Actualízala en Tasa del Día.');
-        }
+        tasasCache = tasas;
+        tasasCacheExpira = Date.now() + CACHE_MS;
 
-        tasaCache = tasa;
-        tasaCacheExpira = Date.now() + CACHE_MS;
-
-        return tasa;
+        return tasas;
     } catch (error) {
         console.error('Error fetching tasa:', error);
 
@@ -36,11 +46,17 @@ export async function cambioUSDaCOP({ strict = false } = {}) {
             throw error;
         }
 
-        return tasaCache ?? 1;
+        return tasasCache ?? { cop: 1, bs: 0 };
     }
 }
 
+/** @deprecated Usar obtenerTasas(). Se mantiene para pantallas que aún convierten USD → COP a mano. */
+export async function cambioUSDaCOP(opciones = {}) {
+    const { cop } = await obtenerTasas(opciones);
+    return cop;
+}
+
 export function invalidarCacheTasa() {
-    tasaCache = null;
-    tasaCacheExpira = 0;
+    tasasCache = null;
+    tasasCacheExpira = 0;
 }

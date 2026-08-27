@@ -1,0 +1,418 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import EmpresaEncabezado from '../../components/EmpresaEncabezado.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+---
+
+<Layout>
+    <div class="btn-add_container actions-top">
+        <a class="btn-add" href="/cotizaciones">Regresar</a>
+    </div>
+
+    <EmpresaEncabezado id="headerImp" />
+
+    <main class="invoice-page">
+        <section class="datos-cliente" id="datosClienteImp">
+            <article class="detail-card detail-card--wide">
+                <span class="detail-label">Cliente</span>
+                <strong id="clienteNombre"></strong>
+            </article>
+            <article class="detail-card">
+                <span class="detail-label">Cédula / RIF</span>
+                <strong id="clienteCedulaRif"></strong>
+            </article>
+            <article class="detail-card">
+                <span class="detail-label">Teléfono</span>
+                <strong id="clienteTelefono"></strong>
+            </article>
+            <article class="detail-card detail-card--wide">
+                <span class="detail-label">Dirección</span>
+                <strong id="clienteDireccion"></strong>
+            </article>
+            <article class="detail-card">
+                <span class="detail-label">Fecha</span>
+                <strong id="fecha"></strong>
+            </article>
+        </section>
+
+        <section class="invoice-table-card">
+            <div class="table-heading">
+                <div>
+                    <p class="eyebrow">Productos</p>
+                    <h2>Detalle cotizado</h2>
+                </div>
+                <p class="table-caption">Valores expresados en USD y referencia en COP.</p>
+            </div>
+
+            <div class="table-wrap">
+                <table id="table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>P. Unitario</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaProductos"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="total-box" id="totalImp">
+            <p class="total-box_label">Total de la cotización</p>
+            <div class="total-box_values">
+                <div>
+                    <span class="total-box_caption">USD</span>
+                    <strong id="total"></strong>
+                </div>
+                <div>
+                    <span class="total-box_caption">COP</span>
+                    <strong id="totalCOP"></strong>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="btn-add_container actions-bottom">
+        <a class="btn-add" id="imprimir">Imprimir</a>
+    </div>
+
+    <div id="mensaje"></div>
+    <div id="overlay" class="overlay oculto">
+        <div id="modal" class="modal"></div>
+    </div>
+</Layout>
+
+<style>
+    .invoice-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+    }
+
+    .actions-top,
+    .actions-bottom {
+        position: relative;
+        z-index: 1;
+    }
+
+    .actions-bottom {
+        margin-left: auto;
+    }
+
+    .detail-card,
+    .invoice-table-card {
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
+        box-shadow: 0 18px 32px rgba(var(--primary-rgb), 0.08);
+    }
+
+    .detail-label,
+    .table-caption {
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .datos-cliente {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 0.95rem;
+        padding: 0.55rem;
+    }
+
+    .detail-card {
+        grid-column: span 3;
+        display: grid;
+        gap: 0.38rem;
+        padding: 1rem 1.05rem;
+    }
+
+    .detail-card--wide {
+        grid-column: span 4;
+    }
+
+    .detail-label {
+        color: #4f3d78;
+    }
+
+    .detail-card strong {
+        color: #1d1430;
+        font-size: 1rem;
+        word-break: break-word;
+    }
+
+    .invoice-table-card {
+        padding: 1.15rem;
+    }
+
+    .table-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .table-heading h2 {
+        font-size: 1.2rem;
+    }
+
+    .table-caption {
+        color: #4f3d78;
+        text-align: right;
+        max-width: 28ch;
+    }
+
+    .total-box {
+        width: min(100%, 420px);
+        margin-left: auto;
+        margin-top: 0.4rem;
+        padding: 1rem 1.1rem;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #0f172a;
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        box-shadow: 0 18px 28px rgba(37, 99, 235, 0.14);
+    }
+
+    .total-box p,
+    .total-box span,
+    .total-box strong {
+        color: inherit;
+    }
+
+    .total-box_label {
+        margin: 0 0 0.75rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #1d4ed8;
+    }
+
+    .total-box_values {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem;
+    }
+
+    .total-box_values div {
+        display: grid;
+        gap: 0.25rem;
+        padding: 0.85rem 0.9rem;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .total-box_caption {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #2563eb;
+    }
+
+    .total-box strong {
+        font-size: 1.25rem;
+        line-height: 1;
+        color: #0f172a;
+        text-shadow: none;
+    }
+
+    @media (max-width: 768px) {
+        .table-heading {
+            flex-direction: column;
+        }
+
+        .datos-cliente {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-card,
+        .detail-card--wide {
+            grid-column: auto;
+        }
+
+        .total-box {
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .total-box_values {
+            grid-template-columns: 1fr;
+        }
+
+        .actions-bottom {
+            margin-left: 0;
+        }
+
+        .table-caption {
+            text-align: left;
+            max-width: none;
+        }
+    }
+</style>
+
+<script>
+    import { mostrarError } from '@/utils/helpers/mensajes.js';
+    import { cambioUSDaCOP } from '@/utils/helpers/cambioMoneda.js';
+    import { formatearFecha } from '@/utils/helpers/formateoFecha.js';
+    import { imprimir } from '@/utils/helpers/imprimir.js';
+
+    interface Producto {
+        codigo_producto: string;
+        nombre_producto: string;
+        precio_unitario: number;
+        cantidad: number;
+        subtotal: number;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const id = location.pathname.split("/").pop() as string;
+        const clienteNombre = document.querySelector('#clienteNombre') as HTMLElement;
+        const clienteCedulaRif = document.querySelector('#clienteCedulaRif') as HTMLElement;
+        const clienteTelefono = document.querySelector('#clienteTelefono') as HTMLElement;
+        const clienteDireccion = document.querySelector('#clienteDireccion') as HTMLElement;
+        const fecha = document.querySelector('#fecha') as HTMLElement;
+        const total = document.querySelector('#total') as HTMLElement;
+        const totalCOP = document.querySelector('#totalCOP') as HTMLElement;
+        const listaProductos = document.querySelector('#listaProductos') as HTMLElement;
+
+        try {
+            const res = await fetch(`/api/cotizaciones/${id}`);
+
+            if (!res.ok) {
+                mostrarError('Error al obtener los datos de la cotización');
+                const errorText = await res.text();
+                throw new Error(`Status ${res.status} Mensaje ${errorText}`);
+            }
+
+            const data: any = await res.json();
+
+            if (res.status === 202) {
+                mostrarError(data.message || 'Cotización no encontrada');
+                return;
+            }
+
+            const totalUsd = Number(data.cotizacion.monto_total);
+            clienteNombre.textContent = data.cliente.nombre.toUpperCase();
+            clienteCedulaRif.textContent = data.cliente.cedula_rif.toUpperCase();
+            clienteTelefono.textContent = data.cliente.telefono;
+            clienteDireccion.textContent = data.cliente.direccion;
+            fecha.textContent = formatearFecha(data.cotizacion.fecha);
+            total.textContent = totalUsd.toFixed(2);
+
+            const tasa = await cambioUSDaCOP();
+            totalCOP.textContent = Math.ceil(totalUsd * Number(tasa)).toString();
+
+            listaProductos.innerHTML = '';
+            const dataProductos = data.productos as Producto[];
+
+            dataProductos.forEach((p) => {
+                const row = document.createElement('tr');
+                const precioUnitario = Number(p.precio_unitario);
+                const subtotal = Number(p.subtotal);
+                const cantidad = Number(p.cantidad);
+                const pUnitarioPesos = Math.ceil(precioUnitario * tasa);
+                const subtotalPesos = Math.ceil(subtotal * tasa);
+                row.innerHTML = `
+                    <td data-label="Código">${p.codigo_producto.toUpperCase()}</td>
+                    <td data-label="Producto">${p.nombre_producto.toUpperCase()}</td>
+                    <td data-label="P. Unitario">
+                        ${precioUnitario.toFixed(2)} USD
+                        <br />
+                        ${pUnitarioPesos} COP
+                    </td>
+                    <td data-label="Cantidad">${cantidad}</td>
+                    <td data-label="Subtotal">
+                        ${subtotal.toFixed(2)} USD
+                        <br />
+                        ${subtotalPesos} COP
+                    </td>
+                `;
+                listaProductos.appendChild(row);
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    });
+
+    const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+
+    btnImprimir.addEventListener('click', () => {
+        const datosClienteImp = document.querySelector('#datosClienteImp');
+        const table = document.querySelector('#table');
+        const totalImp = document.querySelector('#totalImp');
+
+        imprimir({
+            titulo: 'Impresión de Cotización',
+            tituloDocumento: 'COTIZACIÓN',
+            pageSize: '5.5in 8.5in',
+            estilosExtra: `
+                .datos-cliente {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 8px;
+                    margin-bottom: 12px;
+                }
+                .detail-card {
+                    border: 1px solid #ccc;
+                    border-radius: 8px;
+                    padding: 8px;
+                }
+                .detail-card--wide {
+                    grid-column: 1 / -1;
+                }
+                .detail-label {
+                    font-size: 10px;
+                    text-transform: uppercase;
+                    color: #555;
+                }
+                .total-box {
+                    margin-left: auto;
+                    width: 260px;
+                    border: 1px solid #000;
+                    border-radius: 14px;
+                    padding: 12px;
+                }
+                .total-box_label {
+                    margin: 0 0 8px;
+                    font-size: 10px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                }
+                .total-box_values {
+                    display: table;
+                    width: 100%;
+                }
+                .total-box_values > div {
+                    display: table-row;
+                }
+                .total-box_caption,
+                .total-box_values strong {
+                    display: table-cell;
+                    padding: 4px 0;
+                }
+                .total-box_values strong {
+                    text-align: right;
+                }
+            `,
+            contenido: `
+                ${datosClienteImp?.outerHTML || '<p>Datos del cliente no disponibles</p>'}
+                ${table?.outerHTML || '<p>Tabla no disponible</p>'}
+                ${totalImp?.outerHTML || '<p>Total no disponible</p>'}
+            `,
+        });
+    });
+</script>

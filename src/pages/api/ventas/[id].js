@@ -56,6 +56,18 @@ export async function GET({ request, params }) {
             });
         }
 
+        let pagosResult = { rows: [] };
+        try {
+            pagosResult = await db.execute(`
+                SELECT moneda, metodo, monto, monto_base, moneda_base, tasa_cop, tasa_bs
+                FROM pagos_venta
+                WHERE id_venta = ?
+                ORDER BY id ASC
+            `, [id]);
+        } catch (error) {
+            console.warn('No se pudieron leer los pagos de la venta:', error);
+        }
+
 
         const result = {
                             cliente: {
@@ -69,7 +81,8 @@ export async function GET({ request, params }) {
                                 tipo_pago: ventaData.tipo_pago,
                                 estado: ventaData.estado
                             },
-                            productos: productosResult.rows
+                            productos: productosResult.rows,
+                            pagos: pagosResult.rows || []
                         };
 
         return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' }});

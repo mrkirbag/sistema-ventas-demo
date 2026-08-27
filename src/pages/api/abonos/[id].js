@@ -11,11 +11,20 @@ export async function GET({ request, params }) {
     try {
         const { id } = params;
 
-        const creditoResult = await db.execute(`
-                                                SELECT fecha, monto
-                                                FROM abonos_credito
-                                                WHERE id_credito = ?
-                                                `, [id]);
+        let creditoResult;
+        try {
+            creditoResult = await db.execute(`
+                SELECT fecha, monto, moneda, metodo, monto_recibido, moneda_base
+                FROM abonos_credito
+                WHERE id_credito = ?
+            `, [id]);
+        } catch {
+            creditoResult = await db.execute(`
+                SELECT fecha, monto
+                FROM abonos_credito
+                WHERE id_credito = ?
+            `, [id]);
+        }
 
         if (creditoResult.rows.length === 0) {
             return new Response(JSON.stringify({ message: 'No se han registrado abonos para esta venta a crédito' }), {

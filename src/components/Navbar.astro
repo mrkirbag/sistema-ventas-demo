@@ -1,5 +1,6 @@
 ---
 import { verificarToken } from '../utils/auth.js';
+import empresa from '../data/empresa.json';
 
 import Inicio from '../assets/icons/inicio.svg';
 import Tasa from '../assets/icons/tasa.svg';
@@ -7,10 +8,11 @@ import Clientes from '../assets/icons/clientes.svg';
 import Ventas from '../assets/icons/ventas.svg';
 import Cargas from '../assets/icons/cargas.svg';
 import Creditos from '../assets/icons/creditos.svg';
-import Presupuestos from '../assets/icons/presupuestos.svg';
+import Cotizaciones from '../assets/icons/cotizaciones.svg';
 import Productos from '../assets/icons/productos.svg';
 import Reportes from '../assets/icons/reportes.svg';
 import Usuarios from '../assets/icons/usuarios.svg';
+import Bitacora from '../assets/icons/bitacora.svg';
 
 const usuario = verificarToken(Astro.request);
 const pathname = Astro.url.pathname;
@@ -21,13 +23,14 @@ const linksBase = [
     { href: '/clientes', label: 'Clientes', Icon: Clientes },
     { href: '/ventas', label: 'Ventas', Icon: Ventas },
     { href: '/creditos', label: 'Créditos', Icon: Creditos },
-    { href: '/presupuestos', label: 'Presupuestos', Icon: Presupuestos },
+    { href: '/cotizaciones', label: 'Cotizaciones', Icon: Cotizaciones },
 ];
 
 const linksAdmin = [
     { href: '/productos', label: 'Productos', Icon: Productos },
     { href: '/cargas', label: 'Cargas', Icon: Cargas },
     { href: '/reportes', label: 'Reportes', Icon: Reportes },
+    { href: '/bitacora', label: 'Bitácora', Icon: Bitacora },
     { href: '/usuarios', label: 'Usuarios', Icon: Usuarios },
 ];
 ---
@@ -39,9 +42,9 @@ const linksAdmin = [
     <nav class="sidebar" id="sidebar">
         <div class="sidebar-panel">
             <div class="brand-block">
-                <p class="eyebrow">Sistema comercial</p>
-                <h2>SAVI Demo</h2>
-                <p class="brand-copy">Inventario, ventas, clientes y reportes en una sola operación.</p>
+                <p class="eyebrow">{empresa.etiquetaMarca || 'Sistema comercial'}</p>
+                <h2>{empresa.nombre}</h2>
+                <p class="brand-copy">{empresa.subtitulo}</p>
             </div>
 
             <div class="sidebar-body">
@@ -95,10 +98,10 @@ const linksAdmin = [
         height: 52px;
         border: 1px solid rgba(255, 255, 255, 0.24);
         border-radius: 16px;
-        background: linear-gradient(135deg, rgba(15, 5, 41, 0.96), rgba(31, 10, 82, 0.92));
+        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.96), rgba(var(--secondary-rgb), 0.92));
         color: #fff;
         font-size: 1.8rem;
-        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.24);
+        box-shadow: 0 18px 32px rgba(var(--primary-rgb), 0.24);
         backdrop-filter: blur(12px);
         cursor: pointer;
     }
@@ -119,13 +122,13 @@ const linksAdmin = [
         padding: 1.2rem;
         border-radius: 0 28px 28px 0;
         background:
-            radial-gradient(circle at top, rgba(111, 81, 197, 0.2), transparent 32%),
-            linear-gradient(180deg, #0f0529 0%, #1f0a52 54%, #2f1277 100%);
-        color: #f7f4ff;
+            radial-gradient(circle at top, rgba(var(--accent-rgb), 0.2), transparent 32%),
+            linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 54%, var(--accent-brand) 100%);
+        color: #fff;
         display: grid;
         grid-template-rows: auto minmax(0, 1fr) auto;
         gap: 1rem;
-        box-shadow: 18px 0 34px rgba(15, 5, 41, 0.16);
+        box-shadow: 18px 0 34px rgba(var(--primary-rgb), 0.16);
         border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
@@ -138,7 +141,7 @@ const linksAdmin = [
         overflow-x: hidden;
         padding-right: 0.2rem;
         scrollbar-width: thin;
-        scrollbar-color: rgba(203, 185, 255, 0.5) transparent;
+        scrollbar-color: rgba(var(--accent-rgb), 0.55) transparent;
     }
 
     .sidebar-body::-webkit-scrollbar {
@@ -150,7 +153,7 @@ const linksAdmin = [
     }
 
     .sidebar-body::-webkit-scrollbar-thumb {
-        background: rgba(203, 185, 255, 0.4);
+        background: rgba(var(--accent-rgb), 0.5);
         border-radius: 999px;
     }
 
@@ -165,7 +168,7 @@ const linksAdmin = [
         font-size: 0.73rem;
         text-transform: uppercase;
         letter-spacing: 0.12em;
-        color: rgba(239, 233, 255, 0.64);
+        color: rgba(255, 255, 255, 0.64);
     }
 
     .brand-block h2 {
@@ -178,7 +181,7 @@ const linksAdmin = [
     }
 
     .brand-copy {
-        color: rgba(239, 233, 255, 0.74);
+        color: rgba(255, 255, 255, 0.74);
         font-size: 0.88rem;
         line-height: 1.55;
     }
@@ -201,7 +204,7 @@ const linksAdmin = [
         min-height: 46px;
         padding: 0.82rem 0.95rem;
         border-radius: 16px;
-        color: rgba(247, 244, 255, 0.82);
+        color: rgba(255, 255, 255, 0.86);
         font-size: 0.88rem;
         font-weight: 600;
         transition: transform 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
@@ -211,11 +214,17 @@ const linksAdmin = [
         width: 20px;
         height: 20px;
         flex-shrink: 0;
+        color: inherit;
+    }
+
+    .sidebar a :global(svg path),
+    .sidebar a :global(svg [fill]:not([fill='none'])) {
+        fill: currentColor;
     }
 
     .sidebar a:hover,
     .sidebar a.active {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(112, 83, 197, 0.22));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(var(--accent-rgb), 0.28));
         color: #ffffff;
         transform: translateX(2px);
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -234,7 +243,7 @@ const linksAdmin = [
         width: 5px;
         height: 22px;
         border-radius: 999px;
-        background: #cbb9ff;
+        background: color-mix(in srgb, var(--accent-brand) 42%, white);
     }
 
     .sidebar-footer {
@@ -268,7 +277,7 @@ const linksAdmin = [
             position: fixed;
             inset: 0;
             border: none;
-            background: rgba(15, 5, 41, 0.48);
+            background: rgba(var(--primary-rgb), 0.48);
             backdrop-filter: blur(4px);
             opacity: 0;
             visibility: hidden;

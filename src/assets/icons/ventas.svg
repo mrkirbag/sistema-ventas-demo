@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
 	<svg version="1.1" id="Uploaded to svgrepo.com" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="20px" height="20px" viewBox="0 0 32 32" xml:space="preserve">
 <style type="text/css">
-    .stone_een{fill:#9485ED;}
-    .st0{fill:#9485ED;}
+    .stone_een{fill:currentColor;}
+    .st0{fill:currentColor;}
 </style>
 <path class="stone_een" d="M27.882,23L26.312,9.649C26.134,8.139,24.854,7,23.332,7H22v2h0.5C22.776,9,23,9.224,23,9.5
 	S22.776,10,22.5,10h-11C11.224,10,11,9.776,11,9.5S11.224,9,11.5,9H12V7h-1.332C9.146,7,7.866,8.139,7.688,9.649L6.118,23H27.882z

@@ -42,9 +42,9 @@ const {
         gap: 1rem;
         padding: 1.35rem 1.45rem;
         border-radius: 28px;
-        background: linear-gradient(135deg, rgba(15, 5, 41, 0.96), rgba(31, 10, 82, 0.92));
-        color: #f7f4ff;
-        box-shadow: 0 18px 30px rgba(15, 5, 41, 0.18);
+        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.96), rgba(var(--secondary-rgb), 0.92));
+        color: #fff;
+        box-shadow: 0 18px 30px rgba(var(--primary-rgb), 0.18);
     }
 
     .invoice-hero p,
@@ -77,7 +77,7 @@ const {
     .invoice-subtitle,
     .invoice-contacto {
         max-width: 54ch;
-        color: #f7f4ff;
+        color: #fff;
         margin: 0;
     }
 
@@ -96,8 +96,8 @@ const {
     .invoice-hero_meta div {
         border-radius: 22px;
         background: rgba(255, 255, 255, 0.82);
-        border: 1px solid rgba(31, 10, 82, 0.08);
-        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.08);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
+        box-shadow: 0 18px 32px rgba(var(--primary-rgb), 0.08);
         padding: 0.85rem 1rem;
         display: grid;
         gap: 0.35rem;

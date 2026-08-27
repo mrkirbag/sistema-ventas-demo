@@ -8,16 +8,26 @@ if (!usuario) {
     return Astro.redirect('/login');
 }
 
-const usuarioNombre = usuario.nombre;
+const usuarioNombre = String(usuario.nombre || usuario.usuario || 'Usuario');
+const primerNombre = usuarioNombre.split(/\s+/)[0];
+const rolEtiqueta = usuario.rol === 'admin' ? 'Administrador' : 'Empleado';
+const fechaHoy = new Intl.DateTimeFormat('es-VE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'America/Caracas',
+}).format(new Date());
 ---
 
 <Layout>
     <main class="dashboard">
         <section class="hero-panel">
             <div class="hero-copy">
-                <p class="eyebrow">Centro operativo</p>
-                <h1>Bienvenido, {usuarioNombre.toUpperCase()}</h1>
-                <p>Revisa el pulso del negocio desde un panel más claro, visual y preparado para demos comerciales.</p>
+                <p class="eyebrow">{fechaHoy}</p>
+                <h1>Hola, {primerNombre}</h1>
+                <p class="hero-lead">Ventas, inventario y alertas del día en un solo vistazo.</p>
+                <p class="hero-meta">{usuarioNombre} · {rolEtiqueta}</p>
+                <EmpresaInfo />
             </div>
 
             <div class="quick-actions">
@@ -26,100 +36,99 @@ const usuarioNombre = usuario.nombre;
             </div>
         </section>
 
-        <EmpresaInfo />
+        <div class="kpi-grid">
+            <article class="kpi-card" data-kpi="ventas">
+                <p class="kpi-label">Ventas de hoy</p>
+                <p class="kpi-value" id="kpiVentas">—</p>
+                <p class="kpi-hint" id="kpiVentasHint">Cargando…</p>
+            </article>
+            <article class="kpi-card kpi-card--alert" data-kpi="agotados">
+                <p class="kpi-label">Agotados</p>
+                <p class="kpi-value" id="kpiAgotados">—</p>
+                <p class="kpi-hint">Productos sin stock</p>
+            </article>
+            <article class="kpi-card kpi-card--warn" data-kpi="stock">
+                <p class="kpi-label">Stock bajo</p>
+                <p class="kpi-value" id="kpiStock">—</p>
+                <p class="kpi-hint">5 unidades o menos</p>
+            </article>
+        </div>
 
-        <section class="usuario">
-            <p class="eyebrow">Vista general</p>
-            <h2>Resumen del día</h2>
-            <p>Productos críticos, ventas recientes y alertas de inventario en una sola pantalla.</p>
-        </section>
-
-        <section class="agotados">
+        <section class="agotados insight-card">
             <div class="section-heading">
                 <p class="eyebrow">Alerta</p>
-                <h2>Productos Agotados</h2>
+                <h2>Estado del inventario</h2>
             </div>
-            <div id="tablaAgotados" class="noResponsive"></div>
+            <div id="chartAgotados" class="chart-panel"></div>
+            {usuario.rol === 'admin' && (
+                <a href="/productos" class="section-link">Ver inventario</a>
+            )}
         </section>
 
-        <section class="ventas">
+        <section class="ventas insight-card">
             <div class="section-heading">
                 <p class="eyebrow">Actividad</p>
-                <h2>Últimas Ventas del Día</h2>
+                <h2>Ventas de hoy</h2>
             </div>
-            <div id="ventasDia" class="noResponsive"></div>
+            <div id="chartVentas" class="chart-panel"></div>
+            <a href="/ventas" class="section-link">Ver ventas</a>
         </section>
 
-        <section class="stock-bajo">
+        <section class="stock-bajo insight-card">
             <div class="section-heading">
                 <p class="eyebrow">Seguimiento</p>
-                <h2>Productos Bajos en Stock</h2>
+                <h2>Stock más bajo</h2>
             </div>
-            <div id="reportes" class="chart-panel"></div>
-            <a href="/reportes" class="section-link">Ver reporte completo</a>
+            <div id="chartStock" class="chart-panel"></div>
+            <a href="/reportes" class="section-link">Ver reportes</a>
         </section>
     </main>
 </Layout>
 
 <style>
+    :global(.content:has(.dashboard)) {
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: clip;
+    }
 
     :global(main.dashboard) {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: auto auto auto;
-        gap: 2rem;
-        width: 100%;
-        min-height: calc(100dvh - 4rem);
-    }
-
-    @media (max-width: 768px) {
-        :global(main.dashboard) {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        section {
-            width: 100%;
-        }
-    }
-
-
-    section {
-        background: rgba(255, 255, 255, 0.86);
-        border: 1px solid rgba(31, 10, 82, 0.08);
-        border-radius: 28px;
-        padding: 1.35rem;
-        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.08);
-        display: flex;
-        flex-direction: column;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
         gap: 1rem;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    :global(main.dashboard) > * {
+        min-width: 0;
+        max-width: 100%;
     }
 
     .hero-panel {
-        grid-column: 1 / 4;
-        grid-row: 1 / 2;
+        grid-column: 1 / -1;
         position: relative;
         display: grid;
-        grid-template-columns: 1.4fr 0.8fr;
+        grid-template-columns: minmax(0, 1.35fr) minmax(0, auto);
         align-items: end;
-        gap: 1rem;
-        background: linear-gradient(135deg, rgba(15, 5, 41, 0.96), rgba(31, 10, 82, 0.92));
-        color: #f8f5ff;
+        gap: 1.25rem;
+        padding: 1.35rem 1.4rem 1.3rem;
+        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.96), rgba(var(--secondary-rgb), 0.9) 58%, rgba(var(--accent-rgb), 0.88));
+        color: #fff;
         overflow: hidden;
     }
 
     .hero-panel::after {
         content: '';
         position: absolute;
-        width: 220px;
-        height: 220px;
-        right: -50px;
-        top: -70px;
+        width: 280px;
+        height: 280px;
+        right: -80px;
+        top: -110px;
         border-radius: 50%;
-        background: rgba(133, 111, 204, 0.16);
-        filter: blur(4px);
+        background: rgba(255, 255, 255, 0.1);
+        pointer-events: none;
     }
 
     .hero-copy,
@@ -127,118 +136,196 @@ const usuarioNombre = usuario.nombre;
     .section-heading {
         position: relative;
         z-index: 1;
+        min-width: 0;
     }
 
     .hero-copy {
         display: grid;
-        gap: 0.85rem;
+        gap: 0.55rem;
+        justify-items: start;
     }
 
     .eyebrow {
-        font-size: 0.74rem;
+        font-size: 0.72rem;
         letter-spacing: 0.14em;
         text-transform: uppercase;
-        color: rgba(239, 233, 255, 0.68);
+        color: rgba(255, 255, 255, 0.68);
     }
 
     .hero-panel h1 {
-        max-width: none;
-        color: #f8f5ff;
+        max-width: 100%;
+        margin: 0;
+        color: #fff;
+        font-size: clamp(1.7rem, 3.2vw, 2.55rem);
+        line-height: 1.1;
+        overflow-wrap: anywhere;
     }
 
-    .usuario h2,
-    .section-heading h2 {
-        color: inherit;
+    .hero-lead,
+    .hero-meta {
+        margin: 0;
+        max-width: 46ch;
     }
 
-    .hero-panel p:not(.eyebrow),
-    .usuario p:not(.eyebrow) {
-        color: rgba(239, 233, 255, 0.82);
-        max-width: 56ch;
+    .hero-lead {
+        color: rgba(255, 255, 255, 0.86);
+        font-size: 0.98rem;
+        line-height: 1.5;
+    }
+
+    .hero-meta {
+        color: rgba(255, 255, 255, 0.62);
+        font-size: 0.82rem;
+        font-weight: 600;
     }
 
     .quick-actions {
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
-        gap: 0.75rem;
+        gap: 0.65rem;
     }
 
     .quick-link {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 180px;
-        padding: 0.95rem 1.2rem;
+        min-width: 0;
+        padding: 0.82rem 1.15rem;
         border-radius: 999px;
-        background: linear-gradient(135deg, #1f0a52, #4d2ea3);
-        color: #fffaff;
+        background: #fff;
+        color: var(--secondary-color);
         text-decoration: none;
-        font-weight: 700;
-        box-shadow: 0 14px 28px rgba(15, 5, 41, 0.2);
+        font-size: 0.84rem;
+        font-weight: 800;
+        box-shadow: 0 12px 24px rgba(var(--primary-rgb), 0.18);
     }
 
     .quick-link.secondary {
         background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        box-shadow: none;
     }
 
-    :global(section.empresa) {
-        grid-column: 1 / 2;
-        grid-row: 2 / 3;
+    .kpi-grid {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
     }
 
-    .usuario {
-        grid-column: 2 / 4;
-        grid-row: 2 / 3;
-        justify-content: center;
-        background: linear-gradient(135deg, rgba(31, 10, 82, 0.94), rgba(77, 46, 163, 0.92));
-        color: #f8f5ff;
+    .kpi-card {
+        min-width: 0;
+        padding: 1.05rem 1.15rem 1.1rem;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
+        box-shadow: 0 14px 28px rgba(var(--primary-rgb), 0.07);
+        display: grid;
+        gap: 0.28rem;
     }
 
-    .agotados {
-        grid-column: 1 / 2;
-        grid-row: 3 / 4;
-        color: var(--primary-color);
+    .kpi-label {
+        margin: 0;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
     }
 
-    .ventas {
-        grid-column: 2 / 3;
-        grid-row: 3 / 4;
+    .kpi-value {
+        margin: 0;
+        font-family: 'Archivo Black', sans-serif;
+        font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+        line-height: 1.15;
+        color: var(--primary-strong);
+        overflow-wrap: anywhere;
     }
 
-    .stock-bajo {
-        grid-column: 3 / 4;
-        grid-row: 3 / 4;
+    .kpi-hint {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .kpi-card--alert .kpi-value {
+        color: var(--danger-color);
+    }
+
+    .kpi-card--warn .kpi-value {
+        color: #b45309;
+    }
+
+    .insight-card {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
+        border-radius: 22px;
+        padding: 1.1rem 1.15rem 1rem;
+        box-shadow: 0 14px 28px rgba(var(--primary-rgb), 0.07);
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        min-height: 280px;
+    }
+
+    .section-heading {
+        display: grid;
+        gap: 0.15rem;
+    }
+
+    .section-heading .eyebrow {
+        color: var(--secondary-color);
+    }
+
+    .section-heading h2 {
+        margin: 0;
+        color: var(--primary-strong);
+        font-size: 1.05rem;
+        font-weight: 800;
+    }
+
+    .empty-state {
+        margin: 0;
+        padding: 0.85rem 0.2rem;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
     }
 
     .chart-panel {
         width: 100%;
+        min-width: 0;
         flex: 1;
+        overflow: hidden;
     }
 
-    :global(.stock-bajo .chart-widget) {
+    :global(.insight-card .chart-widget) {
         background: transparent;
         border: none;
         box-shadow: none;
         padding: 0;
+        max-width: 100%;
     }
 
-    :global(.stock-bajo .chart-container--compact) {
+    :global(.insight-card .chart-container--compact) {
         min-height: 0;
+        max-width: 100%;
     }
 
     .section-link {
+        margin-top: auto;
         align-self: flex-start;
-        font-size: 0.82rem;
-        font-weight: 700;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
         color: var(--secondary-color);
         text-decoration: none;
-        opacity: 0.85;
     }
 
     .section-link:hover {
-        opacity: 1;
         text-decoration: underline;
     }
 
@@ -246,169 +333,151 @@ const usuarioNombre = usuario.nombre;
         display: none;
     }
 
-    .empty-state {
-        color: var(--text-muted);
-        font-size: 0.9rem;
-    }
-
-    h3, h2 {
-        color: var(--secondary-color);
-        font-weight: 700;
-        font-size: 1.25rem;
-    }
-
-    .section-heading {
-        display: grid;
-        gap: 0.2rem;
-    }
-
-    .section-heading .eyebrow {
-        color: var(--secondary-color);
-    }
-
-    .noResponsive {
-        width: 100%;
-        overflow-x: auto;
-    }
-
-    :global(table) {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: .8rem;
-    }
-
-    @media (max-width: 900px) {
-        :global(main.dashboard) {
-            grid-template-columns: 1fr;
+    @media (max-width: 1024px) {
+        :global(main.dashboard),
+        .kpi-grid {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         }
 
         .hero-panel,
-        :global(section.empresa),
-        .usuario,
+        .kpi-grid {
+            grid-column: 1 / -1;
+        }
+
+        .stock-bajo {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        :global(main.dashboard),
+        .kpi-grid,
+        .hero-panel {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .hero-panel,
+        .kpi-grid,
         .agotados,
         .ventas,
         .stock-bajo {
             grid-column: auto;
-            grid-row: auto;
-        }
-
-        .hero-panel {
-            grid-template-columns: 1fr;
         }
 
         .quick-actions {
-            justify-content: flex-start;
+            justify-content: stretch;
+        }
+
+        .quick-link {
+            flex: 1 1 140px;
+        }
+
+        .insight-card {
+            min-height: 0;
         }
     }
-
 </style>
 
 <script>
-
-    import { formatearFecha } from "@/utils/helpers/formateoFecha";
-    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda";
-    import { renderChart } from "@/utils/helpers/chart.js";
-    
+    import { obtenerTasas } from '@/utils/helpers/cambioMoneda';
+    import { obtenerMonedaBase, textoTotal } from '@/utils/helpers/tasas.js';
+    import { renderChart } from '@/utils/helpers/chart.js';
 
     interface Producto {
         nombre: string;
-        codigo: string;
         stock: number;
-        unidad_medida: string;
     }
 
-    interface Ventas {
-        id: number;
-        fecha: string;
-        total: number;
+    interface Venta {
         cliente: string;
+        total: number;
+    }
+
+    function listaVacia(contenedor: HTMLElement, mensaje: string) {
+        contenedor.innerHTML = `<p class="empty-state">${mensaje}</p>`;
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-
-        const tasa = await cambioUSDaCOP();
-        
-        // agotados
-        const tablaAgotados = document.getElementById('tablaAgotados') as HTMLElement;
-
-        const response = await fetch('/api/index/agotados');
-        const productos: Producto[] = await response.json();
-
-        if(response.status === 200){
-
-            let tablaHTML = `
-                <table class="tabla-reportes">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Stock</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-
-            productos.forEach(producto => {
-                tablaHTML += `<tr><td data-label="Producto">${producto.nombre}<br/>${producto.codigo}</td><td data-label="Stock">${producto.stock} ${producto.unidad_medida}.</td></tr>`;
-            });
-
-            tablaHTML += '</tbody></table>';
-            tablaAgotados.innerHTML = tablaHTML;
-        } else {
-            tablaAgotados.innerHTML = '<p>No hay productos agotados</p>';
-        }
-
-        // ultimas tres ventas del día
-        const ventasDiaDiv = document.getElementById('ventasDia') as HTMLElement;
-
-        const ventasResponse = await fetch('/api/index/ventas');
-        const ventasData :Ventas[] = await ventasResponse.json();
-
-        if(ventasResponse.status === 200){
-
-            let ventasHTML = `
-                <table class="tabla-reportes">
-                    <thead>
-                        <tr>
-                            <th>Cliente</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-
-            ventasData.forEach(venta => {
-                ventasHTML += `<tr><td data-label="Cliente">${venta.cliente.toUpperCase()}</td><td data-label="Total">${venta.total.toFixed(2)} USD <br/> ${Math.ceil(venta.total * tasa)} COP</td></tr>`;
-            });
-
-            ventasHTML += '</tbody></table>';
-            ventasDiaDiv.innerHTML = ventasHTML;
-
-        } else {
-            ventasDiaDiv.innerHTML = '<p>No hay ventas hoy</p>';
-        }
-
-        // Grafica de productos bajos en stock
-        const stokBajo = document.getElementById('reportes') as HTMLDivElement;
+        const chartAgotados = document.getElementById('chartAgotados') as HTMLElement;
+        const chartVentas = document.getElementById('chartVentas') as HTMLElement;
+        const chartStock = document.getElementById('chartStock') as HTMLElement;
         const stockLink = document.querySelector('.stock-bajo .section-link') as HTMLAnchorElement | null;
+        const kpiVentas = document.getElementById('kpiVentas');
+        const kpiVentasHint = document.getElementById('kpiVentasHint');
+        const kpiAgotados = document.getElementById('kpiAgotados');
+        const kpiStock = document.getElementById('kpiStock');
 
-        const stockResponse = await fetch('/api/index/stockBajo');
-        const stockData :Producto[] = await stockResponse.json();
+        const [tasas, resumenRes, ventasRes, stockRes] = await Promise.all([
+            obtenerTasas(),
+            fetch('/api/index/resumen'),
+            fetch('/api/index/ventas'),
+            fetch('/api/index/stockBajo'),
+        ]);
 
-        if(stockResponse.status === 200 && stockData.length > 0){
+        const monedaBase = obtenerMonedaBase();
+        let resumen = {
+            productosActivos: 0,
+            agotados: 0,
+            stockBajo: 0,
+            ventasHoy: 0,
+            totalHoy: 0,
+        };
 
+        if (resumenRes.ok) {
+            resumen = await resumenRes.json();
+            if (kpiAgotados) kpiAgotados.textContent = String(resumen.agotados ?? 0);
+            if (kpiStock) kpiStock.textContent = String(resumen.stockBajo ?? 0);
+            if (kpiVentas) kpiVentas.textContent = String(resumen.ventasHoy ?? 0);
+            if (kpiVentasHint) {
+                kpiVentasHint.textContent = resumen.ventasHoy
+                    ? textoTotal(resumen.totalHoy, monedaBase, tasas)
+                    : 'Sin movimientos registrados';
+            }
+        } else if (kpiVentasHint) {
+            kpiVentasHint.textContent = 'No se pudo cargar el resumen';
+        }
+
+        const enRango = Math.max(0, Number(resumen.productosActivos) - Number(resumen.agotados) - Number(resumen.stockBajo));
+        const inventario = [
+            { label: 'Agotados', value: Number(resumen.agotados) || 0 },
+            { label: 'Stock bajo', value: Number(resumen.stockBajo) || 0 },
+            { label: 'En rango', value: enRango },
+        ].filter((item) => item.value > 0);
+
+        if (inventario.length > 0) {
             renderChart(
-                'Productos Bajos en Stock', 
-                stockData.map(producto => producto.nombre), 
-                stockData.map(producto => producto.stock),
-                { valueLabel: 'Stock', compact: true, hideTitle: true }
+                'Estado del inventario',
+                inventario.map((item) => item.label),
+                inventario.map((item) => item.value),
+                { containerId: 'chartAgotados', type: 'doughnut', compact: true, hideTitle: true, valueLabel: 'Productos' }
             );
-
         } else {
-            stokBajo.innerHTML = '<p class="empty-state">No hay productos bajos en stock</p>';
+            listaVacia(chartAgotados, 'Todavía no hay productos en el inventario.');
+        }
+
+        const ventasData = await ventasRes.json();
+        if (ventasRes.status === 200 && Array.isArray(ventasData) && ventasData.length > 0) {
+            renderChart(
+                'Ventas de hoy',
+                ventasData.map((venta: Venta) => venta.cliente),
+                ventasData.map((venta: Venta) => Number(venta.total) || 0),
+                { containerId: 'chartVentas', compact: true, hideTitle: true, valueLabel: monedaBase }
+            );
+        } else {
+            listaVacia(chartVentas, 'Aún no hay ventas hoy.');
+        }
+
+        const stockData = await stockRes.json();
+        if (stockRes.status === 200 && Array.isArray(stockData) && stockData.length > 0) {
+            renderChart(
+                'Stock más bajo',
+                stockData.map((producto: Producto) => producto.nombre),
+                stockData.map((producto: Producto) => Number(producto.stock) || 0),
+                { containerId: 'chartStock', compact: true, hideTitle: true, valueLabel: 'Stock' }
+            );
+        } else {
+            listaVacia(chartStock, 'No hay productos con stock bajo.');
             stockLink?.classList.add('hidden');
         }
-
     });
-    
-
-
-
 </script>

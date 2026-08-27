@@ -1,18 +1,24 @@
 ---
 import Navbar from "../components/Navbar.astro"
+import empresa from "../data/empresa.json"
+import { estiloTemaInline } from "../utils/tema"
+
+const temaStyle = estiloTemaInline();
+const titulo = empresa.nombre || "Sistema de inventario";
 ---
 
 <!doctype html>
-<html lang="es">
+<html lang="es" style={temaStyle}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+		<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" sizes="any" />
+		<link rel="shortcut icon" href="/favicon.svg?v=2" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Sistema Inventario</title>
+		<title>{titulo}</title>
 	</head>
 	<body>
 		<div class="app-shell">
@@ -56,28 +62,33 @@ import Navbar from "../components/Navbar.astro"
 
 	:root {
 		--sidebar-width: 286px;
-		--surface-base: #f2eff8;
+		--primary-color: #0f0529;
+		--primary-rgb: 15, 5, 41;
+		--secondary-color: #1f0a52;
+		--secondary-rgb: 31, 10, 82;
+		--accent-brand: #4d2ea3;
+		--accent-rgb: 77, 46, 163;
+		--primary-strong: color-mix(in srgb, var(--primary-color) 82%, #000);
+		--secondary-strong: color-mix(in srgb, var(--secondary-color) 78%, #000);
+		--accent-glow: color-mix(in srgb, var(--accent-brand) 70%, white);
+		--accent-color: color-mix(in srgb, var(--primary-color) 16%, white);
+		--surface-base: color-mix(in srgb, var(--primary-color) 7%, white);
 		--surface-panel: rgba(255, 255, 255, 0.8);
 		--surface-card: #ffffff;
-		--surface-soft: #ece7f6;
-		--surface-strong: #0f0529;
-		--primary-color: #0f0529;
-		--primary-strong: #090218;
-		--secondary-color: #1f0a52;
-		--secondary-strong: #15063a;
-		--accent-color: #d9d1ec;
-		--text-color: #1d1430;
-		--text-muted: #675e7c;
-		--border-color: rgba(31, 10, 82, 0.12);
-		--shadow-soft: 0 20px 60px rgba(15, 5, 41, 0.14);
-		--shadow-card: 0 18px 32px rgba(15, 5, 41, 0.08);
+		--surface-soft: color-mix(in srgb, var(--primary-color) 10%, white);
+		--surface-strong: var(--primary-color);
+		--text-color: color-mix(in srgb, var(--primary-color) 55%, #2a2438);
+		--text-muted: color-mix(in srgb, var(--primary-color) 28%, #8a8496);
+		--border-color: rgba(var(--secondary-rgb), 0.12);
+		--shadow-soft: 0 20px 60px rgba(var(--primary-rgb), 0.14);
+		--shadow-card: 0 18px 32px rgba(var(--primary-rgb), 0.08);
 		--danger-color: #ff4d4d;
 		--danger-hover-color: #a51515;
 		--success-color: #008000;
 		--success-hover-color: #006600;
 		--warning-color: #f2c86d;
-		--table-header-color: #e6e0f2;
-		--gray-color: #d1cadf;
+		--table-header-color: color-mix(in srgb, var(--primary-color) 12%, white);
+		--gray-color: color-mix(in srgb, var(--primary-color) 18%, #e8e4ef);
 		--radius-xl: 32px;
 		--radius-lg: 24px;
 		--radius-md: 18px;
@@ -86,6 +97,19 @@ import Navbar from "../components/Navbar.astro"
 
 	html {
 		scroll-behavior: smooth;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(var(--secondary-rgb), 0.45) transparent;
+	}
+
+	html::-webkit-scrollbar,
+	body::-webkit-scrollbar {
+		width: 10px;
+	}
+
+	html::-webkit-scrollbar-thumb,
+	body::-webkit-scrollbar-thumb {
+		background: rgba(var(--secondary-rgb), 0.4);
+		border-radius: 999px;
 	}
 
 	body {
@@ -93,9 +117,9 @@ import Navbar from "../components/Navbar.astro"
 		font-family: "Roboto", sans-serif;
 		color: var(--text-color);
 		background:
-			radial-gradient(circle at top left, rgba(84, 56, 163, 0.18), transparent 28%),
-			radial-gradient(circle at right 10%, rgba(31, 10, 82, 0.14), transparent 24%),
-			linear-gradient(180deg, #f6f3fb 0%, #ede8f6 46%, #f7f4fc 100%);
+			radial-gradient(circle at top left, rgba(var(--accent-rgb), 0.18), transparent 28%),
+			radial-gradient(circle at right 10%, rgba(var(--secondary-rgb), 0.14), transparent 24%),
+			linear-gradient(180deg, color-mix(in srgb, var(--primary-color) 5%, white) 0%, color-mix(in srgb, var(--primary-color) 10%, white) 46%, color-mix(in srgb, var(--primary-color) 4%, white) 100%);
 	}
 
 	body::before {
@@ -136,6 +160,8 @@ import Navbar from "../components/Navbar.astro"
 	.content {
 		position: relative;
 		min-height: 100vh;
+		min-width: 0;
+		max-width: 100%;
 		margin-left: var(--sidebar-width);
 		padding: 1.6rem 1.25rem 1.15rem 1.55rem;
 		display: flex;
@@ -174,7 +200,7 @@ import Navbar from "../components/Navbar.astro"
 	.hero-panel h1,
 	.reportes-hero h1 {
 		max-width: none;
-		color: #f8f5ff;
+		color: #fff;
 	}
 
 	h2,
@@ -202,7 +228,7 @@ import Navbar from "../components/Navbar.astro"
 		border-radius: var(--radius-lg);
 	}
 
-	section:not(.login-section):not(.sidebar-panel):not(.menu-reportes):not(.hero-panel):not(.reportes-hero):not(.empresa):not(.usuario):not(.agotados):not(.ventas):not(.stock-bajo) {
+	section:not(.login-section):not(.sidebar-panel):not(.menu-reportes):not(.hero-panel):not(.reportes-hero):not(.empresa):not(.usuario):not(.agotados):not(.ventas):not(.stock-bajo):not(.insight-card) {
 		background: var(--surface-panel);
 		border: 1px solid rgba(255, 255, 255, 0.55);
 		box-shadow: var(--shadow-card);
@@ -251,7 +277,7 @@ import Navbar from "../components/Navbar.astro"
 	.modal-action--primary {
 		background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
 		color: #fff;
-		box-shadow: 0 10px 24px rgba(15, 5, 41, 0.22);
+		box-shadow: 0 10px 24px rgba(var(--primary-rgb),  0.22);
 	}
 
 	.btn-add_container {
@@ -353,7 +379,7 @@ import Navbar from "../components/Navbar.astro"
 		border-collapse: separate;
 		border-spacing: 0;
 		background: rgba(255, 255, 255, 0.82);
-		border: 1px solid rgba(31, 10, 82, 0.08);
+		border: 1px solid rgba(var(--secondary-rgb),  0.08);
 		border-radius: var(--radius-lg);
 		overflow: hidden;
 		box-shadow: var(--shadow-card);
@@ -361,7 +387,7 @@ import Navbar from "../components/Navbar.astro"
 
 	thead th {
 		padding: 0.85rem 1rem;
-		background: linear-gradient(180deg, #ede7f8 0%, #e3dbf3 100%);
+		background: linear-gradient(180deg, color-mix(in srgb, var(--primary-color) 10%, white) 0%, color-mix(in srgb, var(--primary-color) 16%, white) 100%);
 		color: var(--primary-strong);
 		font-size: 0.76rem;
 		font-weight: 800;
@@ -380,7 +406,7 @@ import Navbar from "../components/Navbar.astro"
 	}
 
 	tbody tr:hover {
-		background: rgba(223, 214, 245, 0.5);
+		background: rgba(var(--accent-rgb), 0.14);
 	}
 
 	td {
@@ -402,6 +428,9 @@ import Navbar from "../components/Navbar.astro"
 
 	.acciones button,
 	.acciones a {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		min-height: 40px;
 		padding: 0.65rem 0.95rem;
 		border-radius: 999px;
@@ -410,6 +439,7 @@ import Navbar from "../components/Navbar.astro"
 		letter-spacing: 0.04em;
 		border: 1px solid transparent;
 		color: #fff;
+		text-decoration: none;
 		transition:
 			transform 160ms ease,
 			box-shadow 160ms ease,
@@ -428,12 +458,37 @@ import Navbar from "../components/Navbar.astro"
 	.acciones .btn-detalles,
 	.acciones .btn-editar {
 		background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-		box-shadow: 0 8px 18px rgba(15, 5, 41, 0.18);
+		box-shadow: 0 8px 18px rgba(var(--primary-rgb),  0.18);
+	}
+
+	.acciones .btn-salida {
+		background: linear-gradient(135deg, #8a4b12, #c26a1a);
+		box-shadow: 0 8px 18px rgba(138, 75, 18, 0.22);
+	}
+
+	.acciones .btn-historial {
+		background: linear-gradient(135deg, var(--secondary-color), var(--accent-brand));
+		box-shadow: 0 8px 18px rgba(61, 42, 110, 0.22);
 	}
 
 	.acciones .btn-eliminar {
 		background: linear-gradient(135deg, var(--danger-color), #df6d63);
 		box-shadow: 0 8px 18px rgba(200, 76, 67, 0.22);
+	}
+
+	.acciones .btn-icono {
+		width: 42px;
+		min-width: 42px;
+		height: 42px;
+		min-height: 42px;
+		padding: 0;
+	}
+
+	.acciones .btn-icono svg {
+		width: 18px;
+		height: 18px;
+		display: block;
+		flex-shrink: 0;
 	}
 
 	.form-container {
@@ -481,7 +536,7 @@ import Navbar from "../components/Navbar.astro"
 		width: 100%;
 		padding: 0.82rem 0.9rem;
 		border-radius: var(--radius-sm);
-		border: 1px solid rgba(31, 10, 82, 0.12);
+		border: 1px solid rgba(var(--secondary-rgb),  0.12);
 		background: rgba(255, 255, 255, 0.78);
 		color: var(--text-color);
 		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
@@ -494,15 +549,15 @@ import Navbar from "../components/Navbar.astro"
 
 	input::placeholder,
 	textarea::placeholder {
-		color: #988d82;
+		color: var(--text-muted);
 	}
 
 	input:focus,
 	select:focus,
 	textarea:focus {
 		outline: none;
-		border-color: rgba(31, 10, 82, 0.38);
-		box-shadow: 0 0 0 4px rgba(31, 10, 82, 0.12);
+		border-color: rgba(var(--secondary-rgb),  0.38);
+		box-shadow: 0 0 0 4px rgba(var(--secondary-rgb),  0.12);
 		background: #fff;
 	}
 
@@ -518,6 +573,255 @@ import Navbar from "../components/Navbar.astro"
 			calc(100% - 16px) calc(50% - 3px);
 		background-size: 6px 6px, 6px 6px;
 		background-repeat: no-repeat;
+	}
+
+	.producto-picker {
+		position: relative;
+		width: 100%;
+		z-index: 5;
+	}
+
+	.producto-module_select {
+		overflow: visible;
+		z-index: 4;
+	}
+
+	.producto-picker_native {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	.producto-picker_trigger {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.85rem;
+		width: 100%;
+		min-height: 52px;
+		padding: 0.7rem 2.4rem 0.7rem 0.9rem;
+		border-radius: var(--radius-sm);
+		border: 1px solid rgba(var(--secondary-rgb),  0.12);
+		background: rgba(255, 255, 255, 0.92);
+		color: var(--text-color);
+		text-align: left;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+		cursor: pointer;
+		background-image:
+			linear-gradient(45deg, transparent 50%, var(--secondary-color) 50%),
+			linear-gradient(135deg, var(--secondary-color) 50%, transparent 50%);
+		background-position:
+			calc(100% - 22px) calc(50% - 3px),
+			calc(100% - 16px) calc(50% - 3px);
+		background-size: 6px 6px, 6px 6px;
+		background-repeat: no-repeat;
+	}
+
+	.producto-picker.is-open .producto-picker_trigger,
+	.producto-picker_trigger:focus {
+		outline: none;
+		border-color: rgba(var(--secondary-rgb),  0.38);
+		box-shadow: 0 0 0 4px rgba(var(--secondary-rgb),  0.12);
+		background-color: #fff;
+	}
+
+	.producto-picker_placeholder {
+		color: var(--text-muted);
+		font-size: 0.95rem;
+	}
+
+	.producto-picker_trigger-copy {
+		display: grid;
+		gap: 0.12rem;
+		min-width: 0;
+		flex: 1;
+	}
+
+	.producto-picker_trigger-code {
+		font-size: 0.7rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--secondary-color);
+	}
+
+	.producto-picker_trigger-name {
+		font-size: 0.92rem;
+		font-weight: 700;
+		color: var(--primary-strong);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.producto-picker_trigger-meta {
+		display: grid;
+		justify-items: end;
+		gap: 0.1rem;
+		flex-shrink: 0;
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: var(--text-muted);
+	}
+
+	.producto-picker_panel {
+		position: fixed;
+		z-index: 80;
+		overflow: hidden;
+		border-radius: 16px;
+		border: 1px solid rgba(var(--secondary-rgb),  0.1);
+		background: #fff;
+		box-shadow: 0 22px 40px rgba(var(--primary-rgb),  0.16);
+	}
+
+	.producto-picker_head,
+	.producto-picker_item {
+		display: grid;
+		grid-template-columns: 7.2rem minmax(0, 1fr) 6.4rem 7.2rem;
+		gap: 0.75rem;
+		align-items: center;
+		width: 100%;
+		padding: 0.72rem 0.95rem;
+	}
+
+	.producto-picker_head {
+		position: sticky;
+		top: 0;
+		font-size: 0.68rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--secondary-color);
+		background: #f4f0fb;
+		border-bottom: 1px solid rgba(var(--secondary-rgb),  0.08);
+	}
+
+	.producto-picker_list {
+		max-height: 280px;
+		overflow-y: auto;
+		overflow-x: hidden;
+		overscroll-behavior: contain;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-gutter: stable;
+	}
+
+	.producto-picker_item {
+		border: 0;
+		border-bottom: 1px solid rgba(var(--secondary-rgb),  0.06);
+		background: #fff;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+		border-radius: 0;
+		min-height: 0;
+		width: 100%;
+		max-width: none;
+		justify-self: stretch;
+	}
+
+	.producto-picker_item:hover,
+	.producto-picker_item.is-selected {
+		background: rgba(var(--secondary-rgb),  0.05);
+	}
+
+	.producto-picker_codigo {
+		font-size: 0.74rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		color: var(--secondary-color);
+	}
+
+	.producto-picker_nombre {
+		font-size: 0.88rem;
+		font-weight: 700;
+		color: var(--primary-strong);
+	}
+
+	.producto-picker_stock,
+	.producto-picker_precio {
+		font-size: 0.82rem;
+		font-weight: 700;
+		color: var(--text-color);
+	}
+
+	.producto-picker_item.is-bajo .producto-picker_stock {
+		color: #b45309;
+	}
+
+	.producto-picker_item.is-agotado .producto-picker_stock {
+		color: var(--danger-color);
+	}
+
+	.producto-picker_empty {
+		margin: 0;
+		padding: 1.1rem 0.95rem;
+		color: var(--text-muted);
+		font-size: 0.9rem;
+	}
+
+	form .producto-picker_trigger,
+	form .producto-picker_item {
+		min-width: 0;
+		width: 100%;
+		max-width: none;
+		justify-self: stretch;
+		letter-spacing: 0;
+		box-shadow: none;
+		transform: none;
+	}
+
+	form .producto-picker_trigger {
+		border-radius: var(--radius-sm);
+		border: 1px solid rgba(var(--secondary-rgb),  0.12);
+		background-color: rgba(255, 255, 255, 0.92);
+		background-image:
+			linear-gradient(45deg, transparent 50%, var(--secondary-color) 50%),
+			linear-gradient(135deg, var(--secondary-color) 50%, transparent 50%);
+		background-position:
+			calc(100% - 22px) calc(50% - 3px),
+			calc(100% - 16px) calc(50% - 3px);
+		background-size: 6px 6px, 6px 6px;
+		background-repeat: no-repeat;
+		color: var(--text-color);
+		padding: 0.7rem 2.4rem 0.7rem 0.9rem;
+	}
+
+	form .producto-picker_item {
+		min-height: 0;
+		border-radius: 0;
+		border: 0;
+		border-bottom: 1px solid rgba(var(--secondary-rgb),  0.06);
+		background: #fff;
+		color: inherit;
+		padding: 0.72rem 0.95rem;
+		font-weight: 700;
+	}
+
+	form .producto-picker_trigger:hover,
+	form .producto-picker_item:hover,
+	form .producto-picker_trigger:active,
+	form .producto-picker_item:active {
+		transform: none;
+		box-shadow: none;
+		cursor: pointer;
+	}
+
+	form .producto-picker.is-open .producto-picker_trigger,
+	form .producto-picker_trigger:focus {
+		background-color: #fff;
+		border-color: rgba(var(--secondary-rgb),  0.38);
+		box-shadow: 0 0 0 4px rgba(var(--secondary-rgb),  0.12);
+	}
+
+	form .producto-picker_item:hover,
+	form .producto-picker_item.is-selected {
+		background: rgba(var(--secondary-rgb),  0.05);
 	}
 
 	form button,
@@ -553,13 +857,13 @@ import Navbar from "../components/Navbar.astro"
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
 		cursor: pointer;
-		box-shadow: 0 8px 18px rgba(15, 5, 41, 0.18);
+		box-shadow: 0 8px 18px rgba(var(--primary-rgb),  0.18);
 		transition: transform 160ms ease, box-shadow 160ms ease;
 	}
 
 	.password-container .toggle-password:hover {
 		transform: translateY(-1px);
-		box-shadow: 0 12px 22px rgba(15, 5, 41, 0.22);
+		box-shadow: 0 12px 22px rgba(var(--primary-rgb),  0.22);
 	}
 
 	#mensaje {
@@ -644,8 +948,8 @@ import Navbar from "../components/Navbar.astro"
 		justify-content: center;
 		padding: 1rem 1.1rem;
 		border-radius: var(--radius-md);
-		background: linear-gradient(135deg, rgba(31, 10, 82, 0.08), rgba(217, 209, 236, 0.46));
-		border: 1px solid rgba(31, 10, 82, 0.12);
+		background: linear-gradient(135deg, rgba(var(--secondary-rgb),  0.08), rgba(217, 209, 236, 0.46));
+		border: 1px solid rgba(var(--secondary-rgb),  0.12);
 		color: var(--primary-strong);
 		font-size: 1rem;
 		font-weight: 700;
@@ -659,7 +963,7 @@ import Navbar from "../components/Navbar.astro"
 		align-items: center;
 		justify-content: center;
 		padding: 1.5rem;
-		background: rgba(15, 5, 41, 0.54);
+		background: rgba(var(--primary-rgb),  0.54);
 		backdrop-filter: blur(8px);
 		z-index: 1200;
 		transition: opacity 180ms ease, visibility 180ms ease;
@@ -682,7 +986,7 @@ import Navbar from "../components/Navbar.astro"
 		padding: 1.3rem;
 		border-radius: 28px;
 		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 241, 252, 0.98));
-		box-shadow: 0 24px 48px rgba(15, 5, 41, 0.24);
+		box-shadow: 0 24px 48px rgba(var(--primary-rgb),  0.24);
 		border: 1px solid rgba(255, 255, 255, 0.72);
 		display: flex;
 		flex-direction: column;
@@ -699,7 +1003,7 @@ import Navbar from "../components/Navbar.astro"
 	}
 
 	.modal[data-variant="confirm"] {
-		border-color: rgba(31, 10, 82, 0.24);
+		border-color: rgba(var(--secondary-rgb),  0.24);
 	}
 
 	.modal-icon {
@@ -726,7 +1030,7 @@ import Navbar from "../components/Navbar.astro"
 	}
 
 	.modal[data-variant="confirm"] .modal-icon {
-		background: linear-gradient(135deg, var(--secondary-color), #4d2ea3);
+		background: linear-gradient(135deg, var(--secondary-color), var(--accent-brand));
 	}
 
 	.modal-title {
@@ -751,9 +1055,9 @@ import Navbar from "../components/Navbar.astro"
 	}
 
 	.modal-action--secondary {
-		background: rgba(31, 10, 82, 0.08);
+		background: rgba(var(--secondary-rgb),  0.08);
 		color: var(--primary-strong);
-		border: 1px solid rgba(31, 10, 82, 0.12);
+		border: 1px solid rgba(var(--secondary-rgb),  0.12);
 		box-shadow: none;
 	}
 
@@ -938,7 +1242,7 @@ import Navbar from "../components/Navbar.astro"
 			padding: 1rem 1.05rem;
 			border-radius: var(--radius-md);
 			background: rgba(255, 255, 255, 0.92);
-			border: 1px solid rgba(31, 10, 82, 0.09);
+			border: 1px solid rgba(var(--secondary-rgb),  0.09);
 			box-shadow: var(--shadow-card);
 		}
 
@@ -961,7 +1265,7 @@ import Navbar from "../components/Navbar.astro"
 		table:not(.tabla-reportes) td.acciones {
 			margin-top: 0.5rem;
 			padding-top: 1rem;
-			border-top: 1px solid rgba(31, 10, 82, 0.08);
+			border-top: 1px solid rgba(var(--secondary-rgb),  0.08);
 			position: relative;
 			z-index: 2;
 		}
@@ -975,7 +1279,7 @@ import Navbar from "../components/Navbar.astro"
 			display: table !important;
 			width: 100% !important;
 			background: rgba(255, 255, 255, 0.82);
-			border: 1px solid rgba(31, 10, 82, 0.08);
+			border: 1px solid rgba(var(--secondary-rgb),  0.08);
 			border-radius: var(--radius-lg);
 			box-shadow: var(--shadow-card);
 		}
@@ -1043,6 +1347,15 @@ import Navbar from "../components/Navbar.astro"
 			z-index: 1;
 		}
 
+		.acciones .btn-icono {
+			width: 44px;
+			min-width: 44px;
+			height: 44px;
+			min-height: 44px;
+			flex: 0 0 44px;
+			padding: 0;
+		}
+
 		.btn-vermas_container {
 			width: 100%;
 			padding: 0.15rem 0;
@@ -1073,14 +1386,41 @@ import Navbar from "../components/Navbar.astro"
 			padding: 0.62rem 0.9rem;
 			font-size: 0.8rem;
 		}
+
+		.producto-picker_head {
+			display: none;
+		}
+
+		.producto-picker_item {
+			grid-template-columns: 1fr auto;
+			grid-template-areas:
+				"codigo precio"
+				"nombre stock";
+			row-gap: 0.15rem;
+		}
+
+		.producto-picker_codigo { grid-area: codigo; }
+		.producto-picker_nombre { grid-area: nombre; }
+		.producto-picker_stock { grid-area: stock; justify-self: end; }
+		.producto-picker_precio { grid-area: precio; justify-self: end; }
+
+		form .producto-picker_trigger,
+		form .producto-picker_item {
+			min-height: 0;
+			padding: 0.7rem 0.9rem;
+		}
+
+		form .producto-picker_trigger {
+			padding-right: 2.4rem;
+		}
 	}
 
 	.chart-card {
 		background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(237, 231, 248, 0.92));
-		border: 1px solid rgba(31, 10, 82, 0.08);
+		border: 1px solid rgba(var(--secondary-rgb),  0.08);
 		border-radius: 22px;
 		padding: 1.1rem 1.2rem 1.25rem;
-		box-shadow: 0 16px 28px rgba(15, 5, 41, 0.08);
+		box-shadow: 0 16px 28px rgba(var(--primary-rgb),  0.08);
 		width: 100%;
 	}
 

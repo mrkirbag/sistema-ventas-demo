@@ -1,5 +1,18 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
+import { ACCIONES, registrarBitacora } from '@/utils/bitacora.js';
+
+function payloadTasa(row) {
+    const cop = Number(row?.valor) || 0;
+    const bs = Number(row?.bs) || 0;
+
+    return {
+        id: row.id,
+        valor: cop,
+        cop,
+        bs,
+    };
+}
 
 export async function GET({ request }) {
 
@@ -21,8 +34,7 @@ export async function GET({ request }) {
             });
         }
         
-        // Retornar los clientes en formato JSON
-        return new Response(JSON.stringify(tasa.rows[0]), {
+        return new Response(JSON.stringify(payloadTasa(tasa.rows[0])), {
             headers: { 'Content-Type': 'application/json' },
             status: 200
         });
@@ -43,20 +55,36 @@ export async function PUT({ request }) {
 
     try {
         const body = await request.json();
-        const { tasa } = body;
+        const cop = Number(body.cop ?? body.tasa);
+        const bs = Number(body.bs);
 
-        // Validar que el cliente tenga los campos necesarios
-        if (!tasa) {
-            return new Response('Faltan datos de la tasa', { status: 400 });
+        if (!Number.isFinite(cop) || cop <= 0) {
+            return new Response(JSON.stringify({ error: 'La tasa COP debe ser un número mayor a 0' }), {
+                headers: { 'Content-Type': 'application/json' },
+                status: 400
+            });
         }
 
-        // Actualizar el cliente en la base de datos
-        const result = await db.execute('UPDATE tasa SET valor = ? WHERE id = 1', [tasa]);
+        if (!Number.isFinite(bs) || bs < 0) {
+            return new Response(JSON.stringify({ error: 'La tasa Bs debe ser un número mayor o igual a 0' }), {
+                headers: { 'Content-Type': 'application/json' },
+                status: 400
+            });
+        }
 
-        // Validar si no se encuentra
+        const result = await db.execute('UPDATE tasa SET valor = ?, bs = ? WHERE id = 1', [cop, bs]);
+
         if (result.affectedRows === 0) {
             return new Response('Tasa no encontrado', { status: 404 });
         }
+
+        await registrarBitacora(db, {
+            usuario,
+            accion: ACCIONES.TASA,
+            entidad: 'tasa',
+            entidadId: 1,
+            detalle: `COP ${cop} · Bs ${bs}`,
+        });
 
         return new Response(JSON.stringify({ message: "Tasa actualizado exitosamente" }), { status: 200 });
 

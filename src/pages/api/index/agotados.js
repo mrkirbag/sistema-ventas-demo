@@ -11,7 +11,7 @@ export async function GET({ request }) {
 
     try {
 
-        const query = "SELECT nombre, codigo, stock, unidad_medida FROM productos WHERE stock = 0 AND estatus = 'activo' ORDER BY nombre ASC LIMIT 3;";
+        const query = "SELECT nombre, codigo, stock, unidad_medida FROM productos WHERE stock = 0 AND estatus = 'activo' ORDER BY nombre ASC LIMIT 6;";
         const agotados = await db.execute(query);
 
         // Si no hay productos agotados, retornar un mensaje de error

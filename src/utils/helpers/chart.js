@@ -1,20 +1,15 @@
 import Chart from "chart.js/auto";
 import ChartDataLabels from "chartjs-plugin-datalabels";
+import { getColores, paletaGraficos, colorRgba } from "@/utils/tema";
 
 Chart.register(ChartDataLabels);
 
-const BRAND_COLORS = [
-    "rgba(31, 10, 82, 0.92)",
-    "rgba(77, 46, 163, 0.88)",
-    "rgba(99, 76, 179, 0.88)",
-    "rgba(133, 111, 204, 0.88)",
-    "rgba(58, 35, 130, 0.88)",
-    "rgba(108, 82, 190, 0.88)",
-    "rgba(45, 22, 110, 0.88)",
-    "rgba(160, 140, 220, 0.88)",
-];
-
+const BRAND_COLORS = paletaGraficos();
 const BRAND_BORDERS = BRAND_COLORS.map((c) => c.replace(/[\d.]+\)$/, "1)"));
+const COLOR_SECUNDARIO = getColores().secundario;
+const COLOR_PRIMARIO_RGBA = colorRgba(getColores().primario, 0.94);
+const COLOR_TEXTO = colorRgba(getColores().primario, 0.55);
+const COLOR_GRILLA = colorRgba(getColores().primario, 0.08);
 
 function truncateLabel(label, max = 22) {
     if (!label || label.length <= max) return label;
@@ -68,8 +63,12 @@ export function renderChart(title, labels, values, options = {}) {
 
     const compact = options.compact ?? false;
     const hideTitle = options.hideTitle ?? compact;
-    const horizontal = options.horizontal ?? (compact ? true : shouldUseHorizontal(labels));
-    const chartHeight = getChartHeight(labels, horizontal, compact);
+    const type = options.type || "bar";
+    const isRound = type === "doughnut" || type === "pie";
+    const horizontal = isRound ? false : (options.horizontal ?? (compact ? true : shouldUseHorizontal(labels)));
+    const chartHeight = isRound
+        ? (compact ? 188 : 280)
+        : getChartHeight(labels, horizontal, compact);
     const displayLabels = labels.map((label) => truncateLabel(String(label), compact ? 16 : 22));
     const colors = getColors(values.length);
     const borders = getBorders(values.length);
@@ -103,9 +102,10 @@ export function renderChart(title, labels, values, options = {}) {
     }
 
     const valueLabel = options.valueLabel || "";
+    const hasZeros = values.some((value) => Number(value) === 0);
 
     const chart = new Chart(ctx, {
-        type: "bar",
+        type: isRound ? type : "bar",
         data: {
             labels: displayLabels,
             datasets: [
@@ -113,11 +113,12 @@ export function renderChart(title, labels, values, options = {}) {
                     label: valueLabel || title,
                     data: values,
                     backgroundColor: colors,
-                    borderColor: borders,
-                    borderWidth: 1,
+                    borderColor: isRound ? "#ffffff" : borders,
+                    borderWidth: isRound ? 2 : 1,
                     borderRadius: compact ? 6 : horizontal ? 8 : { topLeft: 8, topRight: 8, bottomLeft: 0, bottomRight: 0 },
                     borderSkipped: false,
                     maxBarThickness: compact ? (horizontal ? 18 : 44) : horizontal ? 36 : 56,
+                    minBarLength: !isRound && compact && hasZeros ? 10 : 0,
                 },
             ],
         },
@@ -125,44 +126,60 @@ export function renderChart(title, labels, values, options = {}) {
             indexAxis: horizontal ? "y" : "x",
             responsive: true,
             maintainAspectRatio: false,
+            cutout: isRound && type === "doughnut" ? "62%" : undefined,
             animation: {
                 duration: compact ? 500 : 700,
                 easing: "easeOutQuart",
             },
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: isRound,
+                    position: "bottom",
+                    labels: {
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        padding: 12,
+                        color: COLOR_TEXTO,
+                        font: { family: "'Roboto', sans-serif", size: 11, weight: "700" },
+                    },
+                },
                 tooltip: {
-                    backgroundColor: "rgba(15, 5, 41, 0.94)",
-                    titleColor: "#f8f5ff",
-                    bodyColor: "#efe9ff",
+                    backgroundColor: COLOR_PRIMARIO_RGBA,
+                    titleColor: "#ffffff",
+                    bodyColor: "rgba(255, 255, 255, 0.92)",
                     padding: 12,
                     cornerRadius: 10,
                     displayColors: false,
                     callbacks: {
                         title: (items) => labels[items[0]?.dataIndex] ?? items[0]?.label ?? "",
                         label: (item) => {
-                            const value = item.parsed[horizontal ? "x" : "y"];
+                            const value = isRound
+                                ? item.parsed
+                                : item.parsed[horizontal ? "x" : "y"];
                             return valueLabel ? `${valueLabel}: ${value}` : `Valor: ${value}`;
                         },
                     },
                 },
                 datalabels: {
-                    anchor: compact && horizontal ? "end" : "end",
-                    align: compact && horizontal ? "end" : "end",
-                    offset: compact ? 2 : 4,
-                    color: compact && horizontal ? "#1f0a52" : horizontal ? "#1f0a52" : "#ffffff",
+                    display: true,
+                    anchor: isRound ? "center" : compact && horizontal ? "end" : "end",
+                    align: isRound ? "center" : compact && horizontal ? "end" : "end",
+                    offset: isRound ? 0 : compact ? 2 : 4,
+                    color: isRound
+                        ? "#ffffff"
+                        : compact && horizontal ? COLOR_SECUNDARIO : horizontal ? COLOR_SECUNDARIO : "#ffffff",
                     font: {
                         family: "'Roboto', sans-serif",
                         weight: "700",
                         size: compact ? 10 : 11,
                     },
-                    formatter: (value) => value,
+                    formatter: (value) => (isRound && Number(value) <= 0 ? "" : value),
                     clip: false,
                 },
             },
             layout: {
                 padding: compact
-                    ? { top: 0, right: horizontal ? 20 : 4, bottom: 0, left: 0 }
+                    ? { top: 0, right: horizontal ? 20 : 4, bottom: isRound ? 4 : 0, left: 0 }
                     : {
                           top: 8,
                           right: horizontal ? 24 : 8,
@@ -170,38 +187,40 @@ export function renderChart(title, labels, values, options = {}) {
                           left: horizontal ? 8 : 4,
                       },
             },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    grid: {
-                        color: "rgba(31, 10, 82, 0.06)",
-                        drawBorder: false,
-                        display: horizontal && !compact,
+            scales: isRound
+                ? { x: { display: false }, y: { display: false } }
+                : {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: COLOR_GRILLA,
+                            drawBorder: false,
+                            display: horizontal && !compact,
+                        },
+                        ticks: {
+                            color: COLOR_TEXTO,
+                            font: { family: "'Roboto', sans-serif", size: compact ? 10 : 11 },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: compact ? 4 : 8,
+                            display: horizontal && !compact,
+                        },
                     },
-                    ticks: {
-                        color: "#675e7c",
-                        font: { family: "'Roboto', sans-serif", size: compact ? 10 : 11 },
-                        maxRotation: 0,
-                        autoSkip: true,
-                        maxTicksLimit: compact ? 4 : 8,
-                        display: horizontal && !compact,
+                    y: {
+                        beginAtZero: !horizontal,
+                        grid: {
+                            color: COLOR_GRILLA,
+                            drawBorder: false,
+                            display: !horizontal && !compact,
+                        },
+                        ticks: {
+                            color: COLOR_TEXTO,
+                            font: { family: "'Roboto', sans-serif", size: compact ? 10 : 11 },
+                            autoSkip: !horizontal,
+                            padding: compact ? 4 : 8,
+                        },
                     },
                 },
-                y: {
-                    beginAtZero: !horizontal,
-                    grid: {
-                        color: "rgba(31, 10, 82, 0.06)",
-                        drawBorder: false,
-                        display: !horizontal && !compact,
-                    },
-                    ticks: {
-                        color: "#675e7c",
-                        font: { family: "'Roboto', sans-serif", size: compact ? 10 : 11 },
-                        autoSkip: !horizontal,
-                        padding: compact ? 4 : 8,
-                    },
-                },
-            },
         },
     });
 

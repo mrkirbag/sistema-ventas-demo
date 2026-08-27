@@ -1,5 +1,103 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
+import { documentoComparable, validarCliente } from '@/utils/clienteValidaciones.js';
+import { ACCIONES, registrarBitacora } from '@/utils/bitacora.js';
+
+const jsonHeaders = { 'Content-Type': 'application/json' };
+const LIMITE_BUSQUEDA = 50;
+const LIMITE_LISTA = 500;
+const LIMITE_MAXIMO = 500;
+const CLIENTE_ACTIVO = `IFNULL(estatus, 'activo') = 'activo'`;
+
+function serializarCliente(row) {
+    if (!row) return null;
+    return {
+        id: Number(row.id),
+        nombre: row.nombre,
+        telefono: row.telefono,
+        cedula: row.cedula,
+        estatus: row.estatus || 'activo',
+    };
+}
+
+function idNumerico(valor) {
+    if (typeof valor === 'bigint') return Number(valor);
+    const id = Number.parseInt(String(valor ?? ''), 10);
+    return Number.isFinite(id) && id > 0 ? id : null;
+}
+
+async function marcarClienteActivo(id) {
+    try {
+        await db.execute({
+            sql: 'UPDATE clientes SET estatus = ? WHERE id = ?',
+            args: ['activo', id],
+        });
+    } catch (error) {
+        console.warn('No se pudo forzar estatus activo del cliente:', error);
+    }
+}
+
+async function insertarClienteActivo(nombre, telefono, cedula) {
+    try {
+        const insert = await db.execute({
+            sql: `INSERT INTO clientes (nombre, telefono, cedula, estatus)
+                  VALUES (?, ?, ?, ?)
+                  RETURNING id, nombre, telefono, cedula, estatus`,
+            args: [nombre, telefono, cedula, 'activo'],
+        });
+
+        const fila = insert.rows?.[0];
+        const id = idNumerico(fila?.id) ?? idNumerico(insert.lastInsertRowid);
+        if (!id) {
+            throw new Error('No se obtuvo el ID del cliente insertado');
+        }
+
+        await marcarClienteActivo(id);
+        return (await obtenerClientePorId(id)) ?? serializarCliente({ ...fila, id, estatus: 'activo' });
+    } catch (error) {
+        const yaGuardado = await buscarClientePorDocumento(cedula);
+        if (yaGuardado) {
+            const id = idNumerico(yaGuardado.id);
+            if (id) await marcarClienteActivo(id);
+            return id ? await obtenerClientePorId(id) : serializarCliente(yaGuardado);
+        }
+
+        const insert = await db.execute({
+            sql: 'INSERT INTO clientes (nombre, telefono, cedula) VALUES (?, ?, ?)',
+            args: [nombre, telefono, cedula],
+        });
+        const id = idNumerico(insert.lastInsertRowid)
+            ?? idNumerico((await db.execute({
+                sql: 'SELECT id FROM clientes WHERE cedula = ?',
+                args: [cedula],
+            })).rows?.[0]?.id);
+
+        if (!id) throw error;
+
+        await marcarClienteActivo(id);
+        return await obtenerClientePorId(id);
+    }
+}
+
+async function buscarClientePorDocumento(cedula, idExcluido = null) {
+    const comparable = documentoComparable(cedula);
+    const result = await db.execute(
+        `SELECT * FROM clientes
+         WHERE REPLACE(REPLACE(REPLACE(UPPER(cedula), '-', ''), ' ', ''), '.', '') = ?`,
+        [comparable]
+    );
+
+    return result.rows?.find((row) => String(row.id) !== String(idExcluido ?? '')) ?? null;
+}
+
+async function obtenerClientePorId(id) {
+    const result = await db.execute('SELECT * FROM clientes WHERE id = ?', [id]);
+    return serializarCliente(result.rows?.[0]);
+}
+
+async function documentoYaExiste(cedula, idExcluido = null) {
+    return Boolean(await buscarClientePorDocumento(cedula, idExcluido));
+}
 
 export async function GET({ request }) {
 
@@ -13,41 +111,35 @@ export async function GET({ request }) {
         const url = new URL(request.url);
         const page = parseInt(url.searchParams.get('page')) || 1;
         const search = url.searchParams.get('search') || '';
-
-        const limit = 50;
+        const limit = Math.min(
+            parseInt(url.searchParams.get('limit')) || (search ? LIMITE_BUSQUEDA : LIMITE_LISTA),
+            LIMITE_MAXIMO
+        );
         const offset = (page - 1) * limit;
 
-        const esCedula = /^[1-9]\d*$/.test(search.trim());
+        const esDocumento = /^[A-Za-z0-9-]+$/.test(search.trim()) && /\d/.test(search.trim());
 
         const query = search
-        ? esCedula
+        ? esDocumento
             ? {
-                sql: 'SELECT * FROM clientes WHERE cedula = ? AND estatus = "activo" ORDER BY nombre COLLATE NOCASE ASC LIMIT ? OFFSET ?',
-                args: [search.trim(), limit, offset],
+                sql: `SELECT * FROM clientes WHERE REPLACE(REPLACE(REPLACE(UPPER(cedula), "-", ""), " ", ""), ".", "") LIKE ? AND ${CLIENTE_ACTIVO} ORDER BY nombre COLLATE NOCASE ASC LIMIT ? OFFSET ?`,
+                args: [`%${search.trim().toUpperCase().replace(/[.\s-]/g, '')}%`, limit, offset],
             }
             : {
-                sql: 'SELECT * FROM clientes WHERE nombre LIKE ? AND estatus = "activo" ORDER BY nombre COLLATE NOCASE ASC LIMIT ? OFFSET ?',
-                args: [`%${search.trim()}%`, limit, offset],
+                sql: `SELECT * FROM clientes WHERE (nombre LIKE ? OR telefono LIKE ? OR cedula LIKE ?) AND ${CLIENTE_ACTIVO} ORDER BY nombre COLLATE NOCASE ASC LIMIT ? OFFSET ?`,
+                args: [`%${search.trim()}%`, `%${search.trim()}%`, `%${search.trim()}%`, limit, offset],
             }
         : {
-            sql: 'SELECT * FROM clientes WHERE estatus = "activo" ORDER BY nombre COLLATE NOCASE ASC LIMIT ? OFFSET ?',
+            sql: `SELECT * FROM clientes WHERE ${CLIENTE_ACTIVO} ORDER BY nombre COLLATE NOCASE ASC LIMIT ? OFFSET ?`,
             args: [limit, offset],
             };
 
 
         const clientes = await db.execute(query);
+        const filas = (clientes.rows || []).map(serializarCliente);
 
-        // Si no hay clientes, retornar un mensaje de error
-        if (!clientes || !clientes.rows || clientes.rows.length === 0) {
-            return new Response(JSON.stringify({ message: 'No hay clientes registrados' }), {
-                headers: { 'Content-Type': 'application/json' },
-                status: 200
-            });
-        }
-        
-        // Retornar los clientes en formato JSON
-        return new Response(JSON.stringify(clientes.rows), {
-        headers: { 'Content-Type': 'application/json' },
+        return new Response(JSON.stringify(filas), {
+            headers: jsonHeaders,
         });
 
     } catch (error) {
@@ -65,38 +157,66 @@ export async function POST({ request }) {
 
     try {
         const body = await request.json();
-        const { nombre, telefono, cedula } = body;
+        const validado = validarCliente(body);
 
-        if (!nombre || !telefono || !cedula) {
-            return new Response('Faltan datos del cliente', { status: 400 });
+        if (!validado.ok) {
+            return new Response(JSON.stringify({ error: validado.error }), { status: 400, headers: jsonHeaders });
         }
 
-        const valor = Number(cedula);
-        if (
-            typeof cedula !== "string" && typeof cedula !== "number" ||
-            isNaN(valor) ||
-            !Number.isInteger(valor) ||
-            valor <= 0
-        ) {
-            return new Response(JSON.stringify({
-                error: "La cédula debe ser un número entero positivo mayor a cero",
-                campo: "cedula"
-            }), { status: 400 });
+        const { nombre, telefono, cedula } = validado.cliente;
+        const existente = await buscarClientePorDocumento(cedula);
+
+        if (existente) {
+            const idExistente = idNumerico(existente.id);
+            if ((existente.estatus || 'activo') === 'inactivo' && idExistente) {
+                await db.execute({
+                    sql: 'UPDATE clientes SET nombre = ?, telefono = ?, cedula = ?, estatus = ? WHERE id = ?',
+                    args: [nombre, telefono, cedula, 'activo', idExistente],
+                });
+
+                const reactivado = await obtenerClientePorId(idExistente);
+
+                await registrarBitacora(db, {
+                    usuario,
+                    accion: ACCIONES.CLIENTE_REACTIVAR,
+                    entidad: 'clientes',
+                    entidadId: idExistente,
+                    detalle: `${reactivado?.nombre || nombre} · ${reactivado?.cedula || cedula}`,
+                });
+
+                return new Response(JSON.stringify({
+                    message: 'Cliente reactivado exitosamente',
+                    cliente: reactivado,
+                }), { status: 201, headers: jsonHeaders });
+            }
+
+            return new Response(JSON.stringify({ error: 'Ya existe un cliente con esa cédula o RIF.' }), {
+                status: 409,
+                headers: jsonHeaders,
+            });
         }
 
-        // Validacion para que no se ingrese otro con misma cedula
-        const existe = await db.execute('SELECT 1 FROM clientes WHERE cedula = ?', [cedula]);
+        const clienteAgregado = await insertarClienteActivo(nombre, telefono, cedula);
 
-        if (existe.rows.length > 0) {
-            return new Response('Ya existe un cliente con esa cédula de identidad.', { status: 409 });
+        if (!clienteAgregado?.id) {
+            return new Response(JSON.stringify({ error: 'El cliente se guardó, pero no se pudo leer el registro' }), {
+                status: 500,
+                headers: jsonHeaders,
+            });
         }
 
-        // Insertar el nuevo cliente en la base de datos
-        const result = await db.execute('INSERT INTO clientes (nombre, telefono, cedula) VALUES (?, ?, ?)',[nombre, telefono, cedula]);
+        await registrarBitacora(db, {
+            usuario,
+            accion: ACCIONES.CLIENTE_NUEVO,
+            entidad: 'clientes',
+            entidadId: clienteAgregado.id,
+            detalle: `${clienteAgregado.nombre} · ${clienteAgregado.cedula}`,
+        });
 
-        const clienteAgregado = await db.execute('SELECT * FROM clientes WHERE cedula = ?', [cedula]);
-
-        return new Response(JSON.stringify({ message: "Cliente agregado exitosamente", cliente: clienteAgregado.rows }), { status: 201 });
+        return new Response(JSON.stringify({
+            message: 'Cliente agregado exitosamente',
+            cliente: clienteAgregado,
+        }), { status: 201, headers: jsonHeaders });
 
 
     } catch (error) {
@@ -121,7 +241,7 @@ export async function DELETE({ request }) {
         }
 
         const clienteActivo = await db.execute(
-            'SELECT id FROM clientes WHERE id = ? AND estatus = "activo"',
+            `SELECT id FROM clientes WHERE id = ? AND ${CLIENTE_ACTIVO}`,
             [id]
         );
 
@@ -145,11 +265,20 @@ export async function DELETE({ request }) {
             }), { status: 409 });
         }
 
+        const datos = await obtenerClientePorId(id);
         const result = await db.execute('UPDATE clientes SET estatus = "inactivo" WHERE id = ?', [id]);
 
         if ((result.rowsAffected ?? result.affectedRows ?? 0) === 0) {
             return new Response(JSON.stringify({ error: 'Cliente no encontrado' }), { status: 404 });
         }
+
+        await registrarBitacora(db, {
+            usuario,
+            accion: ACCIONES.CLIENTE_ELIMINAR,
+            entidad: 'clientes',
+            entidadId: Number(id),
+            detalle: `${datos?.nombre || 'Cliente'} · ${datos?.cedula || id}`,
+        });
 
         return new Response(JSON.stringify({ message: 'Cliente inactivado exitosamente' }), { status: 200 });
 
@@ -171,44 +300,39 @@ export async function PUT({ request }) {
     
     try {
         const body = await request.json();
-        const { idCliente, nombre, telefono, cedula } = body;
+        const { idCliente } = body;
 
-        // Validar que el cliente tenga los campos necesarios
-        if (!idCliente || !nombre || !telefono || !cedula) {
-            return new Response('Faltan datos del cliente', { status: 400 });
+        if (!idCliente) {
+            return new Response(JSON.stringify({ error: 'Faltan datos del cliente' }), { status: 400, headers: jsonHeaders });
         }
 
-        const valor = Number(cedula);
-        // Validacion de cedula
-        if (
-            typeof cedula !== "string" && typeof cedula !== "number" ||
-            isNaN(valor) ||
-            !Number.isInteger(valor) ||
-            valor <= 0
-        ) {
-            return new Response(JSON.stringify({
-                error: "La cédula debe ser un número entero positivo mayor a cero.",
-                campo: "cedula"
-            }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-            });
+        const validado = validarCliente(body);
+        if (!validado.ok) {
+            return new Response(JSON.stringify({ error: validado.error }), { status: 400, headers: jsonHeaders });
         }
 
-        // Validacion para que no se ingrese otra cédula igual
-        const existe = await db.execute('SELECT 1 FROM clientes WHERE cedula = ? AND id != ? AND estatus = "activo"', [cedula, idCliente]);
+        const { nombre, telefono, cedula } = validado.cliente;
 
-        if (existe.rows.length > 0) {
-            return new Response('Ya existe un cliente con esa cédula de identidad.', { status: 409 });
+        if (await documentoYaExiste(cedula, idCliente)) {
+            return new Response('Ya existe un cliente con esa cédula o RIF.', { status: 409 });
         }
 
-        // Actualizar el cliente en la base de datos
-        const result = await db.execute('UPDATE clientes SET nombre = ?, telefono = ?, cedula = ? WHERE id = ?', [nombre, telefono, cedula, idCliente]);
+        const result = await db.execute(
+            'UPDATE clientes SET nombre = ?, telefono = ?, cedula = ? WHERE id = ?',
+            [nombre, telefono, cedula, idCliente]
+        );
 
-        // Validar si no se encuentra
-        if (result.affectedRows === 0) {
+        if ((result.affectedRows ?? result.rowsAffected ?? 0) === 0) {
             return new Response('Cliente no encontrado', { status: 404 });
         }
+
+        await registrarBitacora(db, {
+            usuario,
+            accion: ACCIONES.CLIENTE_EDITAR,
+            entidad: 'clientes',
+            entidadId: Number(idCliente),
+            detalle: `${nombre} · ${cedula}`,
+        });
 
         return new Response(JSON.stringify({ message: "Cliente actualizado exitosamente" }), { status: 200 });
 

@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
 import xlsx from 'xlsx';
+import { ACCIONES, registrarBitacora } from '@/utils/bitacora.js';
 
 export async function POST({ request }) {
 
@@ -94,6 +95,14 @@ export async function POST({ request }) {
             [idCarga, r.codigo, r.nombre, Number(r.costo) || 0, Number(r.unidades_nuevas) || 0]
         );
     }
+
+    await registrarBitacora(db, {
+        usuario,
+        accion: ACCIONES.CARGA_MASIVA,
+        entidad: 'cargas_productos',
+        entidadId: Number(idCarga),
+        detalle: `${proveedor} · ${resultados.length} ítems · ${productosAgregados} nuevos · monto ${montoTotal}`,
+    });
 
     return new Response(JSON.stringify({ resultados, idCarga }), {
         status: 200,

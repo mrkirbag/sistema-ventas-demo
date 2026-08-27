@@ -29,6 +29,9 @@ if (usuario.rol !== 'admin') {
             <div class="btn-add_container">
                 <a class="btn-add" id="exportarBtn">Exportar a Excel</a>
             </div>
+            <div class="btn-add_container">
+                <a class="btn-add" href="/productos/historial">Historial de stock</a>
+            </div>
         </div>
 
         <div class="input-busqueda_container">
@@ -67,7 +70,9 @@ if (usuario.rol !== 'admin') {
 <script>
 
     import { noRegistros, confirmarAccion, mostrarError, mostrarMensaje } from "@/utils/helpers/mensajes.js";
-    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
+    import { obtenerTasas } from "@/utils/helpers/cambioMoneda.js";
+    import { desgloseMontos, obtenerMonedaBase } from "@/utils/helpers/tasas.js";
+    import { ponerIcono } from "@/utils/helpers/iconosAccion.js";
 
     document.addEventListener('DOMContentLoaded', async () => {
 
@@ -86,8 +91,16 @@ if (usuario.rol !== 'admin') {
         let paginaActual = 1;
         const porPagina = 10;
 
-        // Obtener tasa de cambio
-        const tasaCambio = await cambioUSDaCOP();
+        const tasas = await obtenerTasas();
+        const monedaBase = obtenerMonedaBase();
+
+        function htmlPrecio(valor: number) {
+            const { principal, secundarias } = desgloseMontos(valor, monedaBase, tasas);
+            const referencia = secundarias
+                ? `<br /><span style="font-size: .75rem;">${secundarias}</span>`
+                : '';
+            return `${principal}${referencia}`;
+        }
 
         // Mostrar lote de clientes
         async function mostrarPagina(pagina : number) {
@@ -114,9 +127,8 @@ if (usuario.rol !== 'admin') {
 
             lote.forEach( producto => {
                 const tr = document.createElement('tr');
-
-                let costoPesos = producto.costo * tasaCambio;
-                let ventaPesos = producto.venta * tasaCambio;
+                const costo = Number(producto.costo) || 0;
+                const venta = Number(producto.venta) || 0;
 
                 tr.innerHTML = `    
                                     <td data-label="Código y Nombre">
@@ -125,39 +137,37 @@ if (usuario.rol !== 'admin') {
                                         ${producto.nombre.toUpperCase()}
                                     </td>
                                     <td data-label="Cantidad">${producto.stock} ${producto.unidad_medida}</td>
-                                    <td data-label="Precio de Costo">
-                                        ${producto.costo.toFixed(2)} USD
-                                        <br />
-                                        <span style="font-size: .75rem;">${Math.ceil(costoPesos)} COP</span>
-                                    </td>
-                                    <td data-label="Precio de Venta">
-                                        ${producto.venta.toFixed(2)} USD
-                                        <br />
-                                        <span style="font-size: .75rem;">${Math.ceil(ventaPesos)} COP</span>
-                                    </td>
+                                    <td data-label="Precio de Costo">${htmlPrecio(costo)}</td>
+                                    <td data-label="Precio de Venta">${htmlPrecio(venta)}</td>
                                 `;
 
                 // Botones de acciones
                 const tdAcciones = document.createElement('td');
                 tdAcciones.classList.add('acciones');
 
-                // Boton de agregar a stock
-                const btnStock = document.createElement('button');
-                btnStock.type = 'button';
-                btnStock.classList.add('btn-stock');
-                btnStock.textContent = 'AGREGAR STOCK';
+                const btnAgregar = document.createElement('a');
+                btnAgregar.href = `/productos/movimiento?id=${producto.id}&tipo=entrada`;
+                btnAgregar.classList.add('btn-stock');
+                ponerIcono(btnAgregar, 'agregar');
+                tdAcciones.appendChild(btnAgregar);
 
-                btnStock.onclick = async () => {
-                    window.location.href = `/productos/agregarStock?id=${producto.id}`;
-                }
+                const btnSacar = document.createElement('a');
+                btnSacar.href = `/productos/movimiento?id=${producto.id}&tipo=salida`;
+                btnSacar.classList.add('btn-salida');
+                ponerIcono(btnSacar, 'sacar');
+                tdAcciones.appendChild(btnSacar);
 
-                tdAcciones.appendChild(btnStock)
+                const btnHistorial = document.createElement('a');
+                btnHistorial.href = `/productos/historial?id=${producto.id}`;
+                btnHistorial.classList.add('btn-historial');
+                ponerIcono(btnHistorial, 'historial');
+                tdAcciones.appendChild(btnHistorial);
 
                 // Boton de eliminar
                 const btnEliminar = document.createElement('button');
                 btnEliminar.type = 'button';
                 btnEliminar.classList.add('btn-eliminar');
-                btnEliminar.textContent = 'DEL';
+                ponerIcono(btnEliminar, 'eliminar');
 
                 btnEliminar.onclick = async () => {
                     // Confirmación antes de eliminar
@@ -198,7 +208,7 @@ if (usuario.rol !== 'admin') {
                 const btnEditar = document.createElement('button');
                 btnEditar.type = 'button';
                 btnEditar.classList.add('btn-editar');
-                btnEditar.textContent = 'EDIT';
+                ponerIcono(btnEditar, 'editar');
                 btnEditar.onclick = () => {
                     window.location.href = `/productos/${producto.id}`;
                 };

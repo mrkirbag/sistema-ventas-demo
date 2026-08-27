@@ -117,8 +117,8 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
         gap: 1rem;
         padding: 1rem 1.15rem;
         border-radius: var(--radius-lg);
-        background: linear-gradient(135deg, rgba(31, 10, 82, 0.06), rgba(217, 209, 236, 0.42));
-        border: 1px solid rgba(31, 10, 82, 0.1);
+        background: linear-gradient(135deg, rgba(var(--secondary-rgb), 0.06), rgba(217, 209, 236, 0.42));
+        border: 1px solid rgba(var(--secondary-rgb), 0.1);
         box-shadow: var(--shadow-card);
     }
 
@@ -133,7 +133,7 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
         font-family: "Archivo Black", sans-serif;
         font-size: 1.35rem;
         flex-shrink: 0;
-        box-shadow: 0 10px 22px rgba(15, 5, 41, 0.2);
+        box-shadow: 0 10px 22px rgba(var(--primary-rgb), 0.2);
     }
 
     .summary-eyebrow {
@@ -186,9 +186,9 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
         font-weight: 800;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        background: rgba(31, 10, 82, 0.08);
+        background: rgba(var(--secondary-rgb), 0.08);
         color: var(--primary-strong);
-        border: 1px solid rgba(31, 10, 82, 0.12);
+        border: 1px solid rgba(var(--secondary-rgb), 0.12);
     }
 
     :global(.monto-usd) {

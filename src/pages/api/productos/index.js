@@ -1,5 +1,6 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
+import { ACCIONES, registrarBitacora } from '@/utils/bitacora.js';
 
 const LIMITE_BUSQUEDA = 50;
 const LIMITE_LISTA = 80;
@@ -18,43 +19,13 @@ export async function GET({ request }) {
         const url = new URL(request.url);
         const page = parseInt(url.searchParams.get('page')) || 1;
         const search = url.searchParams.get('search') || '';
-        const codigo = url.searchParams.get('codigo')?.trim() || '';
-
-        if (codigo) {
-            const columnas = 'id, codigo, nombre, stock, costo, venta, unidad_medida';
-            let result = await db.execute(
-                `SELECT ${columnas} FROM productos WHERE estatus = 'activo' AND codigo = ? LIMIT 1`,
-                [codigo]
-            );
-
-            if (!result.rows?.length) {
-                const sinCeros = codigo.replace(/^0+/, '');
-                if (sinCeros && sinCeros !== codigo) {
-                    result = await db.execute(
-                        `SELECT ${columnas} FROM productos WHERE estatus = 'activo' AND codigo = ? LIMIT 1`,
-                        [sinCeros]
-                    );
-                }
-            }
-
-            if (!result.rows?.length) {
-                return new Response(JSON.stringify({ message: 'Producto no encontrado' }), {
-                    headers: { 'Content-Type': 'application/json' },
-                    status: 404,
-                });
-            }
-
-            return new Response(JSON.stringify(result.rows[0]), {
-                headers: { 'Content-Type': 'application/json' },
-            });
-        }
 
         const limit = Math.min(
             parseInt(url.searchParams.get('limit')) || (search ? LIMITE_BUSQUEDA : LIMITE_LISTA),
             LIMITE_MAXIMO
         );
         const offset = (page - 1) * limit;
-        const columnasLista = 'id, codigo, nombre, stock, venta, unidad_medida';
+        const columnasLista = 'id, codigo, nombre, stock, costo, venta, unidad_medida';
 
         const query = search ? {
                                     sql: `
@@ -139,6 +110,14 @@ export async function POST({ request }) {
         // Insertar el nuevo cliente en la base de datos
         const result = await db.execute('INSERT INTO productos (codigo, nombre, stock, costo, venta, unidad_medida) VALUES (?, ?, ?, ?, ?, ?)',[codigo, nombre, stockFinal, costoFinal, ventaFinal, unidad_medida]);
 
+        await registrarBitacora(db, {
+            usuario,
+            accion: ACCIONES.PRODUCTO_NUEVO,
+            entidad: 'productos',
+            entidadId: Number(result.lastInsertRowid || 0),
+            detalle: `${codigo} — ${nombre} · stock ${stockFinal} · venta ${ventaFinal}`,
+        });
+
         return new Response(JSON.stringify({ message: "Producto agregado exitosamente" }), { status: 201 });
 
     } catch (error) {
@@ -195,6 +174,14 @@ export async function DELETE({ request }) {
             return new Response(JSON.stringify({ error: 'Producto no encontrado' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
 
+        await registrarBitacora(db, {
+            usuario,
+            accion: ACCIONES.PRODUCTO_ELIMINAR,
+            entidad: 'productos',
+            entidadId: Number(id),
+            detalle: `Producto #${id} inactivado`,
+        });
+
         return new Response(JSON.stringify({ message: 'Producto inactivado exitosamente' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
@@ -248,6 +235,14 @@ export async function PUT({ request }) {
         if (result.affectedRows === 0) {
             return new Response('Producto no encontrado', { status: 404 });
         }
+
+        await registrarBitacora(db, {
+            usuario,
+            accion: ACCIONES.PRODUCTO_EDITAR,
+            entidad: 'productos',
+            entidadId: Number(id),
+            detalle: `${codigo} — ${nombre} · stock ${stockFinal} · costo ${costoFinal} · venta ${ventaFinal}`,
+        });
 
         return new Response(JSON.stringify({ message: "Producto actualizado exitosamente" }), { status: 200 });
 

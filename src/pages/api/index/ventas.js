@@ -19,7 +19,7 @@ export async function GET({ request }) {
                         WHERE v.estado IN ('pendiente', 'completado')
                         AND date(v.fecha) = date('now', '-4 hours')
                         ORDER BY v.fecha ASC
-                        LIMIT 3;
+                        LIMIT 6;
                     `;
 
         const ventas = await db.execute(query);

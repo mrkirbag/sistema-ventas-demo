@@ -7,5 +7,6 @@
     "email": "contacto@empresa.com",
     "logo": "/logo.svg",
     "etiquetaMarca": "Marca",
-    "sistema": "SISTEMA"
+    "sistema": "SISTEMA",
+    "monedaBase": "USD"
 }

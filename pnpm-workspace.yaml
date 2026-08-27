@@ -1,2 +1,3 @@
-ignoredBuiltDependencies:
+# bcrypt necesita su binario nativo para login y seed
+onlyBuiltDependencies:
   - bcrypt

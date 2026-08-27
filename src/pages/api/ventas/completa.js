@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
-import { withTransaction } from '@/utils/dbTransaction';
+import { executeInTx, withTransaction } from '@/utils/dbTransaction';
 import {
     parsearItemVenta,
     verificarProductoDisponible,
@@ -8,8 +8,26 @@ import {
     insertarDetalleVenta,
     normalizarId,
 } from '@/utils/ventaValidaciones';
+import { obtenerMonedaBase } from '@/utils/helpers/tasas.js';
+import { validarPagosVenta } from '@/utils/helpers/metodosPago.js';
+import { ACCIONES, registrarBitacoraEnTx } from '@/utils/bitacora.js';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
+
+async function tasasDelDia() {
+    const result = await db.execute('SELECT valor, bs FROM tasa WHERE id = 1');
+    const row = result.rows?.[0];
+    return {
+        cop: Number(row?.valor) || 0,
+        bs: Number(row?.bs) || 0,
+    };
+}
+
+function idClienteValido(valor) {
+    if (typeof valor === 'bigint') return Number(valor);
+    const id = Number.parseInt(String(valor ?? ''), 10);
+    return Number.isFinite(id) && id > 0 ? id : null;
+}
 
 export async function POST({ request }) {
     const usuario = verificarToken(request);
@@ -19,7 +37,8 @@ export async function POST({ request }) {
 
     try {
         const body = await request.json();
-        const { fecha, tipoPago, clienteId, totalDeVenta, productos } = body;
+        const { fecha, tipoPago, totalDeVenta, productos, pagos } = body;
+        const clienteId = idClienteValido(body.clienteId);
 
         if (!fecha || !clienteId || !tipoPago || totalDeVenta == null) {
             return new Response(JSON.stringify({ error: 'Faltan datos de la venta' }), { status: 400, headers: jsonHeaders });
@@ -37,6 +56,19 @@ export async function POST({ request }) {
             return new Response(JSON.stringify({ error: 'Tipo de pago inválido' }), { status: 400, headers: jsonHeaders });
         }
 
+        const tasas = await tasasDelDia();
+        const pagosValidados = validarPagosVenta({
+            tipoPago,
+            pagos,
+            totalBase: totalDeVenta,
+            monedaBase: obtenerMonedaBase(),
+            tasas,
+        });
+
+        if (!pagosValidados.ok) {
+            return new Response(JSON.stringify({ error: pagosValidados.error }), { status: 400, headers: jsonHeaders });
+        }
+
         const itemsParseados = [];
         for (const producto of productos) {
             const parsed = parsearItemVenta(producto);
@@ -47,13 +79,24 @@ export async function POST({ request }) {
         }
 
         const ventaId = await withTransaction(db, async (tx) => {
-            const cliente = await tx.execute(
-                'SELECT id FROM clientes WHERE id = ? AND estatus = "activo"',
+            const cliente = await executeInTx(
+                tx,
+                `SELECT id, estatus FROM clientes WHERE id = ?`,
                 [clienteId]
             );
 
-            if (!cliente.rows?.length) {
+            const filaCliente = cliente.rows?.[0];
+            if (!filaCliente) {
                 throw Object.assign(new Error('Cliente no encontrado o inactivo'), { status: 404 });
+            }
+
+            const estatus = String(filaCliente.estatus || 'activo').toLowerCase();
+            if (estatus === 'inactivo') {
+                await executeInTx(
+                    tx,
+                    'UPDATE clientes SET estatus = ? WHERE id = ?',
+                    ['activo', clienteId]
+                );
             }
 
             const stockPorCodigo = new Map();
@@ -71,7 +114,8 @@ export async function POST({ request }) {
 
             const estado = tipoPago === 'credito' ? 'pendiente' : 'completado';
 
-            const ventaResult = await tx.execute(
+            const ventaResult = await executeInTx(
+                tx,
                 'INSERT INTO ventas (fecha, cliente_id, total, estado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
                 [fecha, clienteId, totalDeVenta, estado, tipoPago]
             );
@@ -79,9 +123,29 @@ export async function POST({ request }) {
             const idVenta = normalizarId(ventaResult.lastInsertRowid);
 
             if (tipoPago === 'credito') {
-                await tx.execute(
+                await executeInTx(
+                    tx,
                     'INSERT INTO creditos (id_venta, saldo_pendiente) VALUES (?, ?)',
                     [idVenta, totalDeVenta]
+                );
+            }
+
+            for (const pago of pagosValidados.pagos) {
+                await executeInTx(
+                    tx,
+                    `INSERT INTO pagos_venta
+                        (id_venta, moneda, metodo, monto, monto_base, moneda_base, tasa_cop, tasa_bs)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        idVenta,
+                        pago.moneda,
+                        pago.metodo,
+                        pago.monto,
+                        pago.monto_base,
+                        pago.moneda_base,
+                        pago.tasa_cop,
+                        pago.tasa_bs,
+                    ]
                 );
             }
 
@@ -89,6 +153,14 @@ export async function POST({ request }) {
                 await insertarDetalleVenta(tx, idVenta, item);
                 await descontarStock(tx, item.codigo, item.cantidad);
             }
+
+            await registrarBitacoraEnTx(tx, {
+                usuario,
+                accion: tipoPago === 'credito' ? ACCIONES.CREDITO : ACCIONES.VENTA,
+                entidad: 'ventas',
+                entidadId: idVenta,
+                detalle: `Venta #${idVenta} · ${tipoPago} · total ${totalDeVenta}`,
+            });
 
             return idVenta;
         });

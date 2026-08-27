@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { db } from '../db.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { ACCIONES, registrarBitacora } from '@/utils/bitacora.js';
 
 dotenv.config();
 
@@ -40,6 +41,13 @@ export async function POST({ request }) {
     try {
 
         await db.execute('INSERT INTO usuarios (usuario, clave, rol, nombre) VALUES (?, ?, ?, ?)', [usuario, contrasenaHasheada, rol, nombre]);
+
+        await registrarBitacora(db, {
+            usuario: payload,
+            accion: ACCIONES.USUARIO_NUEVO,
+            entidad: 'usuarios',
+            detalle: `${nombre} (${usuario}) · ${rol}`,
+        });
 
         return new Response(JSON.stringify({ mensaje: 'Usuario registrado correctamente' }), { status: 201 });
         

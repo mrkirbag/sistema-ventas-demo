@@ -21,7 +21,7 @@ if (!usuario) {
         </div>
 
         <div class="input-busqueda_container">
-            <input type="text" id="inputBusqueda" placeholder="Buscar por nombre o cédula..." />
+                    <input type="text" id="inputBusqueda" placeholder="Buscar por nombre, cédula, RIF o teléfono..." />
         </div>
     </div>
 
@@ -30,7 +30,7 @@ if (!usuario) {
         <thead id="thead">
             <tr>
                 <th>Nombre</th>
-                <th>Cédula</th>
+                <th>Cédula / RIF</th>
                 <th>Teléfono</th>
                 <th>Acciones</th>
             </tr>
@@ -55,6 +55,7 @@ if (!usuario) {
 <script>
 
     import { noRegistros, confirmarAccion, mostrarError, mostrarMensaje } from "@/utils/helpers/mensajes.js";
+    import { ponerIcono } from "@/utils/helpers/iconosAccion.js";
 
     document.addEventListener('DOMContentLoaded', () => {
 
@@ -97,7 +98,7 @@ if (!usuario) {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                                     <td data-label="Nombre">${cliente.nombre.toUpperCase()}</td>
-                                    <td data-label="Cédula">${cliente.cedula}</td>
+                                    <td data-label="Cédula / RIF">${cliente.cedula}</td>
                                     <td data-label="Teléfono">${cliente.telefono}</td>
                                 `;
 
@@ -109,7 +110,7 @@ if (!usuario) {
                 const btnEliminar = document.createElement('button');
                 btnEliminar.type = 'button';
                 btnEliminar.classList.add('btn-eliminar');
-                btnEliminar.textContent = 'DEL';
+                ponerIcono(btnEliminar, 'eliminar');
 
                 btnEliminar.onclick = async () => {
 
@@ -152,7 +153,7 @@ if (!usuario) {
                 const btnEditar = document.createElement('button');
                 btnEditar.type = 'button';
                 btnEditar.classList.add('btn-editar');
-                btnEditar.textContent = 'EDIT';
+                ponerIcono(btnEditar, 'editar');
                 btnEditar.onclick = () => {
                     window.location.href = `/clientes/${cliente.id}`;
                 };
@@ -169,10 +170,12 @@ if (!usuario) {
 
         // Filtro local por nombre o cédula
         function aplicarFiltro(texto : string) {
-            const filtro = texto.toLowerCase();
+            const filtro = texto.toLowerCase().replace(/[.\s-]/g, '');
+            const filtroTexto = texto.toLowerCase();
             return todosLosClientes.filter(cliente =>
-                cliente.nombre.toLowerCase().includes(filtro) ||
-                cliente.cedula?.toString().includes(filtro)
+                String(cliente.nombre || '').toLowerCase().includes(filtroTexto)
+                || String(cliente.cedula || '').toLowerCase().replace(/[.\s-]/g, '').includes(filtro)
+                || String(cliente.telefono || '').includes(filtroTexto.replace(/\D/g, '') || filtroTexto)
             );
         }
 
@@ -182,7 +185,7 @@ if (!usuario) {
                 const res = await fetch('/api/clientes');
                 const data = await res.json();
 
-                if (data.message) {
+                if (!Array.isArray(data) || data.length === 0) {
                     tbody.innerHTML = "";
                     thead.style.display = 'none';
                     noRegistros("No hay clientes registrados");

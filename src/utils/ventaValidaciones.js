@@ -27,10 +27,10 @@ export function parsearItemVenta(item) {
 }
 
 export async function verificarProductoDisponible(tx, codigo, cantidadRequerida) {
-    const result = await tx.execute(
-        'SELECT id, stock, estatus, nombre FROM productos WHERE codigo = ?',
-        [codigo]
-    );
+    const result = await tx.execute({
+        sql: 'SELECT id, stock, estatus, nombre FROM productos WHERE codigo = ?',
+        args: [codigo],
+    });
 
     if (!result.rows?.length) {
         return { ok: false, error: `Producto ${codigo} no encontrado` };
@@ -56,11 +56,11 @@ export async function verificarProductoDisponible(tx, codigo, cantidadRequerida)
 }
 
 export async function descontarStock(tx, codigo, cantidad) {
-    const result = await tx.execute(
-        `UPDATE productos SET stock = stock - ?
+    const result = await tx.execute({
+        sql: `UPDATE productos SET stock = stock - ?
          WHERE codigo = ? AND estatus = 'activo' AND stock >= ?`,
-        [cantidad, codigo, cantidad]
-    );
+        args: [cantidad, codigo, cantidad],
+    });
 
     const afectadas = result.rowsAffected ?? result.affectedRows ?? 0;
     if (afectadas === 0) {
@@ -69,12 +69,12 @@ export async function descontarStock(tx, codigo, cantidad) {
 }
 
 export async function insertarDetalleVenta(tx, ventaId, item) {
-    await tx.execute(
-        `INSERT INTO detalle_venta
+    await tx.execute({
+        sql: `INSERT INTO detalle_venta
             (id_venta, producto_id, codigo_producto, nombre_producto, precio_unitario, cantidad)
             VALUES (?, ?, ?, ?, ?, ?)`,
-        [ventaId, item.productoId, item.codigo, item.nombre, item.precio, item.cantidad]
-    );
+        args: [ventaId, item.productoId, item.codigo, item.nombre, item.precio, item.cantidad],
+    });
 }
 
 export function normalizarId(id) {

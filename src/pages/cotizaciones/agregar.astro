@@ -1,44 +1,110 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import Layout from '../../layouts/Layout.astro';
 import { verificarToken } from '@/utils/auth.js';
 
 const usuario = verificarToken(Astro.request);
 if (!usuario) {
     return Astro.redirect('/login');
 }
+
+const fechaVenezuela = new Intl.DateTimeFormat('es-VE', {
+    timeZone: 'America/Caracas',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+}).format(new Date());
+
+const [dia, mes, ano] = fechaVenezuela.split('/');
+const fechaCompleta = `${ano}-${mes}-${dia}`;
 ---
 
 <Layout>
     <header class="page-header">
         <p class="eyebrow">Gestión comercial</p>
-        <h1>Presupuestos</h1>
-        <p class="page-intro">Arma cotizaciones con productos del inventario, revisa los totales y genera un documento listo para imprimir.</p>
+        <h1>Agregar cotización</h1>
+        <p class="page-intro">Registra los datos del cliente, arma la cotización con productos del inventario y guárdala para consultarla después.</p>
     </header>
 
-    <main class="presupuesto-flow">
-        <section class="presupuesto-panel">
+    <div class="btn-add_container">
+        <a class="btn-add" href="/cotizaciones">Regresar</a>
+    </div>
+
+    <main class="cotizacion-flow">
+        <section class="cotizacion-panel">
             <div class="panel-heading">
                 <span class="step-badge">1</span>
                 <div>
-                    <p class="eyebrow">Productos</p>
-                    <h2>Agregar al presupuesto</h2>
+                    <p class="eyebrow">Cliente</p>
+                    <h2>Datos del cliente</h2>
                 </div>
             </div>
 
-            <section class="form-container page-form presupuesto-form">
+            <section class="form-container page-form cotizacion-form">
+                <div class="cliente-module">
+                    <div class="form-field">
+                        <label for="clienteNombre">Nombre y apellido</label>
+                        <input
+                            type="text"
+                            id="clienteNombre"
+                            placeholder="Ej. Carlos Pérez"
+                            autocomplete="name"
+                            maxlength="80"
+                        />
+                    </div>
+
+                    <div class="form-field">
+                        <label for="clienteCedulaRif">Cédula / RIF</label>
+                        <input
+                            type="text"
+                            id="clienteCedulaRif"
+                            placeholder="Ej. 12345678 o J-12345678-9"
+                            autocomplete="off"
+                            maxlength="15"
+                        />
+                    </div>
+
+                    <div class="form-field">
+                        <label for="clienteTelefono">Teléfono</label>
+                        <input
+                            type="text"
+                            id="clienteTelefono"
+                            placeholder="Ej. 04141234567"
+                            autocomplete="tel"
+                            maxlength="20"
+                        />
+                    </div>
+
+                    <div class="form-field cliente-module_direccion">
+                        <label for="clienteDireccion">Dirección</label>
+                        <input
+                            type="text"
+                            id="clienteDireccion"
+                            placeholder="Ej. Av. Principal, Edificio 5, Apto 3"
+                            autocomplete="street-address"
+                            maxlength="120"
+                        />
+                    </div>
+
+                    <div class="form-field">
+                        <label for="fecha">Fecha de cotización</label>
+                        <input type="date" id="fecha" value={fechaCompleta} />
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <section class="cotizacion-panel">
+            <div class="panel-heading">
+                <span class="step-badge">2</span>
+                <div>
+                    <p class="eyebrow">Productos</p>
+                    <h2>Agregar a la cotización</h2>
+                </div>
+            </div>
+
+            <section class="form-container page-form cotizacion-form">
                 <form onsubmit="return false;">
                     <div id="productos-container" class="producto-module">
-                        <div class="form-field producto-module_search">
-                            <label for="codigoBarras">Codigo de barras</label>
-                            <input
-                                type="text"
-                                id="codigoBarras"
-                                placeholder="Escanea aqui"
-                                autocomplete="off"
-                                autofocus
-                            />
-                        </div>
-
                         <div class="form-field producto-module_search">
                             <label for="busquedaProductos">Buscar producto</label>
                             <input
@@ -73,7 +139,7 @@ if (!usuario) {
             </section>
         </section>
 
-        <section class="presupuesto-panel invoice-table-card">
+        <section class="cotizacion-panel invoice-table-card">
             <div class="table-heading">
                 <div>
                     <p class="eyebrow">Detalle</p>
@@ -99,18 +165,18 @@ if (!usuario) {
             </div>
         </section>
 
-        <section class="presupuesto-summary-card" aria-live="polite">
+        <section class="cotizacion-summary-card" aria-live="polite">
             <div class="summary-icon" aria-hidden="true">$</div>
             <div>
-                <p class="summary-eyebrow">Estado del presupuesto</p>
-                <p class="summary-text" id="resumenPresupuesto">Agrega productos para comenzar el presupuesto.</p>
+                <p class="summary-eyebrow">Estado de la cotización</p>
+                <p class="summary-text" id="resumenCotizacion">Completa los datos del cliente y agrega productos para comenzar la cotización.</p>
                 <p class="summary-subtext" id="resumenItems"></p>
             </div>
         </section>
 
-        <section class="presupuesto-footer" id="presupuestoFooter" hidden>
+        <section class="cotizacion-footer" id="cotizacionFooter" hidden>
             <section class="total-box" id="totalResumen">
-                <p class="total-box_label">Total del presupuesto</p>
+                <p class="total-box_label">Total de la cotización</p>
                 <div class="total-box_values">
                     <div>
                         <span class="total-box_caption">USD</span>
@@ -124,7 +190,7 @@ if (!usuario) {
             </section>
 
             <div class="btns-container" id="btns">
-                <button type="button" id="imprimir" disabled>Imprimir presupuesto</button>
+                <button type="button" id="guardarCotizacion" disabled>Guardar cotización</button>
                 <button type="button" id="reiniciar" class="btn-secundario" disabled>Cancelar</button>
             </div>
         </section>
@@ -137,21 +203,21 @@ if (!usuario) {
 </Layout>
 
 <style>
-    .presupuesto-flow {
+    .cotizacion-flow {
         display: flex;
         flex-direction: column;
         gap: 1.2rem;
     }
 
-    .presupuesto-panel,
+    .cotizacion-panel,
     .invoice-table-card {
         border-radius: 22px;
         background: rgba(255, 255, 255, 0.82);
-        border: 1px solid rgba(31, 10, 82, 0.08);
-        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.08);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
+        box-shadow: 0 18px 32px rgba(var(--primary-rgb), 0.08);
     }
 
-    .presupuesto-panel {
+    .cotizacion-panel {
         padding: 1.15rem;
     }
 
@@ -173,7 +239,7 @@ if (!usuario) {
         font-family: "Archivo Black", sans-serif;
         font-size: 1rem;
         flex-shrink: 0;
-        box-shadow: 0 10px 20px rgba(15, 5, 41, 0.18);
+        box-shadow: 0 10px 20px rgba(var(--primary-rgb), 0.18);
     }
 
     .panel-heading h2 {
@@ -181,7 +247,7 @@ if (!usuario) {
         font-size: 1.2rem;
     }
 
-    .presupuesto-form {
+    .cotizacion-form {
         width: 100%;
         margin: 0;
         padding: 0;
@@ -191,6 +257,7 @@ if (!usuario) {
         backdrop-filter: none;
     }
 
+    .cliente-module,
     .producto-module {
         grid-column: 1 / -1;
         display: grid;
@@ -199,9 +266,10 @@ if (!usuario) {
         padding: 1.1rem;
         border-radius: var(--radius-md);
         background: linear-gradient(180deg, rgba(236, 231, 246, 0.5), rgba(255, 255, 255, 0.72));
-        border: 1px solid rgba(31, 10, 82, 0.08);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
     }
 
+    .cliente-module_direccion,
     .producto-module_search,
     .producto-module_select,
     .producto-module_actions {
@@ -243,14 +311,14 @@ if (!usuario) {
         line-height: 1.5;
     }
 
-    .presupuesto-summary-card {
+    .cotizacion-summary-card {
         display: flex;
         align-items: center;
         gap: 1rem;
         padding: 1rem 1.15rem;
         border-radius: var(--radius-lg);
-        background: linear-gradient(135deg, rgba(31, 10, 82, 0.06), rgba(217, 209, 236, 0.42));
-        border: 1px solid rgba(31, 10, 82, 0.1);
+        background: linear-gradient(135deg, rgba(var(--secondary-rgb), 0.06), rgba(217, 209, 236, 0.42));
+        border: 1px solid rgba(var(--secondary-rgb), 0.1);
         box-shadow: var(--shadow-card);
     }
 
@@ -265,7 +333,7 @@ if (!usuario) {
         font-family: "Archivo Black", sans-serif;
         font-size: 1.35rem;
         flex-shrink: 0;
-        box-shadow: 0 10px 22px rgba(15, 5, 41, 0.2);
+        box-shadow: 0 10px 22px rgba(var(--primary-rgb), 0.2);
     }
 
     .summary-eyebrow {
@@ -292,12 +360,12 @@ if (!usuario) {
         font-weight: 600;
     }
 
-    .presupuesto-footer {
+    .cotizacion-footer {
         display: grid;
         gap: 1rem;
     }
 
-    .presupuesto-footer[hidden] {
+    .cotizacion-footer[hidden] {
         display: none;
     }
 
@@ -382,13 +450,13 @@ if (!usuario) {
         font-weight: 700;
         letter-spacing: 0.02em;
         border: none;
-        box-shadow: 0 10px 24px rgba(15, 5, 41, 0.22);
+        box-shadow: 0 10px 24px rgba(var(--primary-rgb), 0.22);
         transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
     }
 
     .btns-container button:hover:not(:disabled) {
         transform: translateY(-1px);
-        box-shadow: 0 14px 28px rgba(15, 5, 41, 0.28);
+        box-shadow: 0 14px 28px rgba(var(--primary-rgb), 0.28);
         cursor: pointer;
     }
 
@@ -400,14 +468,14 @@ if (!usuario) {
     }
 
     .btn-secundario {
-        background: rgba(15, 5, 41, 0.08) !important;
+        background: rgba(var(--primary-rgb), 0.08) !important;
         color: var(--secondary-color) !important;
-        border: 1px solid rgba(31, 10, 82, 0.16) !important;
+        border: 1px solid rgba(var(--secondary-rgb), 0.16) !important;
         box-shadow: none !important;
     }
 
     .btn-secundario:hover:not(:disabled) {
-        background: rgba(15, 5, 41, 0.12) !important;
+        background: rgba(var(--primary-rgb), 0.12) !important;
         box-shadow: none !important;
     }
 
@@ -422,6 +490,7 @@ if (!usuario) {
     }
 
     @media (max-width: 768px) {
+        .cliente-module,
         .producto-module {
             grid-template-columns: 1fr;
         }
@@ -435,7 +504,7 @@ if (!usuario) {
             max-width: none;
         }
 
-        .presupuesto-summary-card {
+        .cotizacion-summary-card {
             align-items: flex-start;
             padding: 0.9rem 1rem;
         }
@@ -463,19 +532,139 @@ if (!usuario) {
 <script >
 
     import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda";
-    import { imprimir } from '@/utils/helpers/imprimir.js';
-    import { mostrarError } from "@/utils/helpers/mensajes";
+    import { mostrarError, mostrarMensaje } from "@/utils/helpers/mensajes";
+    import { ponerIcono } from '@/utils/helpers/iconosAccion.js';
+    import { validarCliente } from '@/utils/clienteValidaciones.js';
     import {
         crearModuloProductos,
-        enfocarLectorCodigoBarras,
+        enfocarBusquedaProductos,
         reiniciarBusquedaProductos,
     } from '@/utils/helpers/seleccionProducto.js';
 
     let moduloProductos: ReturnType<typeof crearModuloProductos> | null = null;
+    let productosSeleccionados: ProductoSeleccionado[] = [];
+    let totalDeCotizacion = 0;
+
+    interface ProductoSeleccionado {
+        id: number;
+        codigo: string;
+        nombre: string;
+        precio: number;
+        cantidad: number;
+        subtotal: number;
+    }
 
     const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
     const precioInput = document.getElementById("precio") as HTMLInputElement;
     const precioReferencia = document.getElementById("precioReferencia") as HTMLSpanElement;
+    const clienteNombreInput = document.getElementById("clienteNombre") as HTMLInputElement;
+    const clienteCedulaRifInput = document.getElementById("clienteCedulaRif") as HTMLInputElement;
+    const clienteTelefonoInput = document.getElementById("clienteTelefono") as HTMLInputElement;
+    const clienteDireccionInput = document.getElementById("clienteDireccion") as HTMLInputElement;
+
+    function obtenerDatosCliente() {
+        return {
+            nombre: clienteNombreInput.value.trim(),
+            cedulaRif: clienteCedulaRifInput.value.trim(),
+            telefono: clienteTelefonoInput.value.trim(),
+            direccion: clienteDireccionInput.value.trim(),
+        };
+    }
+
+    function validarDatosCliente() {
+        const datos = obtenerDatosCliente();
+        const validado = validarCliente({
+            nombre: datos.nombre,
+            cedula: datos.cedulaRif,
+            telefono: datos.telefono,
+            direccion: datos.direccion,
+        });
+
+        if (!validado.ok) {
+            mostrarError(validado.error);
+            return false;
+        }
+
+        clienteNombreInput.value = validado.cliente.nombre;
+        clienteCedulaRifInput.value = validado.cliente.cedula;
+        clienteTelefonoInput.value = validado.cliente.telefono;
+        clienteDireccionInput.value = validado.cliente.direccion ?? datos.direccion;
+        return true;
+    }
+
+    function toggleCotizacionActiva(activo: boolean) {
+        const thead = document.querySelector('#headerTablaProductos') as HTMLTableSectionElement;
+        const cotizacionFooter = document.querySelector('#cotizacionFooter') as HTMLElement;
+        const btnGuardar = document.querySelector('#guardarCotizacion') as HTMLButtonElement;
+        const btnCancelar = document.querySelector('#reiniciar') as HTMLButtonElement;
+
+        thead.style.opacity = activo ? '1' : '0';
+        cotizacionFooter.hidden = !activo;
+        btnGuardar.disabled = !activo;
+        btnCancelar.disabled = !activo;
+    }
+
+    (document.querySelector('#guardarCotizacion') as HTMLButtonElement).addEventListener('click', async () => {
+        if (!validarDatosCliente()) {
+            return;
+        }
+
+        const fecha = (document.getElementById('fecha') as HTMLInputElement).value;
+        if (!fecha) {
+            mostrarError('Selecciona la fecha de la cotización');
+            return;
+        }
+
+        if (productosSeleccionados.length === 0) {
+            mostrarError('Agrega al menos un producto a la cotización');
+            return;
+        }
+
+        if (isNaN(totalDeCotizacion) || totalDeCotizacion <= 0) {
+            mostrarError('El total de la cotización no es válido');
+            return;
+        }
+
+        const { nombre, cedulaRif, telefono, direccion } = obtenerDatosCliente();
+
+        try {
+            const response = await fetch('/api/cotizaciones/completa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fecha,
+                    clienteNombre: nombre,
+                    clienteCedulaRif: cedulaRif,
+                    clienteTelefono: telefono,
+                    clienteDireccion: direccion,
+                    totalDeCotizacion,
+                    productos: productosSeleccionados.map(({ id, codigo, nombre, precio, cantidad }) => ({
+                        idProducto: id,
+                        codigo,
+                        nombre,
+                        precio,
+                        cantidad,
+                    })),
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                mostrarError(data.error || 'Error al guardar la cotización');
+                return;
+            }
+
+            mostrarMensaje('Cotización guardada correctamente');
+
+            setTimeout(() => {
+                window.location.href = `/cotizaciones/${data.cotizacionId}`;
+            }, 1500);
+        } catch (error) {
+            console.error('Error al guardar cotización:', error);
+            mostrarError('Error al guardar la cotización');
+        }
+    });
 
     function actualizarReferenciaPrecio(tasa: number) {
         const precio = parseFloat(precioInput.value);
@@ -510,16 +699,21 @@ if (!usuario) {
             productoSelect,
             cantidadInput,
             onNoEncontrado: mostrarError,
-            onProductoSeleccionado: (producto) => {
-                aplicarPrecioProducto(producto);
-            },
         });
     }
 
+    function enfocarDatosCliente() {
+        clienteNombreInput?.focus();
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', iniciarModuloProductos);
+        document.addEventListener('DOMContentLoaded', () => {
+            iniciarModuloProductos();
+            enfocarDatosCliente();
+        });
     } else {
         iniciarModuloProductos();
+        enfocarDatosCliente();
     }
 
     precioInput.addEventListener('input', async () => {
@@ -541,128 +735,27 @@ if (!usuario) {
     }
 
     function actualizarResumen(cantidadItems: number, totalUSD = 0, totalCOP = 0) {
-        const resumen = document.getElementById('resumenPresupuesto') as HTMLParagraphElement;
+        const resumen = document.getElementById('resumenCotizacion') as HTMLParagraphElement;
         const resumenItems = document.getElementById('resumenItems') as HTMLParagraphElement;
         if (!resumen || !resumenItems) return;
 
         if (cantidadItems === 0) {
-            resumen.textContent = 'Agrega productos para comenzar el presupuesto.';
+            resumen.textContent = 'Completa los datos del cliente y agrega productos para comenzar la cotización.';
             resumenItems.textContent = '';
             return;
         }
 
         const textoItems = cantidadItems === 1
-            ? '1 producto en el presupuesto'
-            : `${cantidadItems} productos en el presupuesto`;
+            ? '1 producto en la cotización'
+            : `${cantidadItems} productos en la cotización`;
 
         resumen.textContent = textoItems;
         resumenItems.textContent = `Total estimado: ${totalUSD.toFixed(2)} USD · ${totalCOP} COP`;
     }
 
-    function togglePresupuestoActivo(activo: boolean) {
-        const thead = document.querySelector('#headerTablaProductos') as HTMLTableSectionElement;
-        const presupuestoFooter = document.querySelector('#presupuestoFooter') as HTMLElement;
-        const btnImprimir = document.querySelector('#imprimir') as HTMLButtonElement;
-        const btnCancelar = document.querySelector('#reiniciar') as HTMLButtonElement;
-
-        thead.style.opacity = activo ? '1' : '0';
-        presupuestoFooter.hidden = !activo;
-        btnImprimir.disabled = !activo;
-        btnCancelar.disabled = !activo;
-    }
-
-    // Impresion
-    (document.querySelector('#imprimir') as HTMLButtonElement).addEventListener('click', () => {
-
-        const tablaOriginal = document.querySelector('#contenidoImpresion') as HTMLTableElement;
-        const totalUSD = (document.querySelector('#totalUSD') as HTMLElement)?.textContent || '0.00';
-        const totalCOP = (document.querySelector('#totalCOP') as HTMLElement)?.textContent || '0';
-
-        const filas = Array.from(tablaOriginal.querySelectorAll('tbody tr')).map(fila => {
-            const celdas = fila.querySelectorAll('td');
-            return `
-            <tr>
-                <td>${celdas[0]?.textContent}</td>
-                <td>${celdas[1]?.textContent}</td>
-                <td>${celdas[2]?.textContent}</td>
-                <td>${celdas[3]?.textContent}</td>
-            </tr>
-            `;
-        }).join('');
-
-        imprimir({
-            titulo: 'Presupuestos',
-            tituloDocumento: 'PRESUPUESTO',
-            estilosExtra: `
-                .total-box {
-                    margin-left: auto;
-                    width: 260px;
-                    border: 1px solid #000;
-                    border-radius: 14px;
-                    padding: 12px;
-                }
-                .total-box_label {
-                    margin: 0 0 8px;
-                    font-size: 10px;
-                    font-weight: bold;
-                    text-transform: uppercase;
-                    letter-spacing: 0.08em;
-                }
-                .total-box_values {
-                    display: table;
-                    width: 100%;
-                }
-                .total-row {
-                    display: table-row;
-                }
-                .total-row span,
-                .total-row strong {
-                    display: table-cell;
-                    padding: 4px 0;
-                }
-                .total-row span {
-                    font-size: 11px;
-                    font-weight: bold;
-                }
-                .total-row strong {
-                    font-size: 13px;
-                    text-align: right;
-                }
-            `,
-            contenido: `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Precio por Unidad</th>
-                            <th>Cantidad</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${filas}
-                    </tbody>
-                </table>
-                <div class="total-box">
-                    <p class="total-box_label">Total del presupuesto</p>
-                    <div class="total-box_values">
-                        <div class="total-row">
-                            <span>USD</span>
-                            <strong>${totalUSD}</strong>
-                        </div>
-                        <div class="total-row">
-                            <span>COP</span>
-                            <strong>${totalCOP}</strong>
-                        </div>
-                    </div>
-                </div>
-            `,
-        });
-    });
-
     const btnReiniciar = document.querySelector('#reiniciar') as HTMLButtonElement;
     btnReiniciar.addEventListener('click', () => {
-        window.location.reload();
+        window.location.href = '/cotizaciones';
     });
 
     productoSelect.addEventListener("change", async () => {
@@ -712,11 +805,15 @@ if (!usuario) {
 
         e.preventDefault();
 
+        if (!validarDatosCliente()) {
+            return;
+        }
+
         const productoId = productoSelect.value;
         const cantidadInput = document.getElementById("cantidad") as HTMLInputElement;
 
-        const cantidad = Number(cantidadInput.value);
-        const precio = parseFloat(precioInput.value);
+        const cantidad = parseFloat(cantidadInput.value.replace(',', '.'));
+        const precio = parseFloat(precioInput.value.replace(',', '.'));
 
         try {
 
@@ -726,8 +823,8 @@ if (!usuario) {
             }
             const producto = await response.json();
 
-            if (!producto || !producto.stock) {
-                mostrarError('Producto no encontrado o sin stock disponible');
+            if (!producto) {
+                mostrarError('Producto no encontrado');
                 return;
             }
             if (isNaN(cantidad) || Number(cantidad) <= 0) {
@@ -738,12 +835,9 @@ if (!usuario) {
                 mostrarError("El precio del producto no es válido");
                 return;
             }
-            if (Number(cantidad) > producto.stock) {
-                mostrarError(`Cantidad insuficiente en stock. Stock disponible: ${producto.stock}`);
-                return;
-            }
 
             let productoSeleccionado = {
+                id: producto.id,
                 codigo: producto.codigo,
                 nombre: producto.nombre,
                 cantidad,
@@ -751,6 +845,7 @@ if (!usuario) {
                 subtotal: (precio * cantidad)
             }
 
+            productosSeleccionados.push(productoSeleccionado);
             mostrarProductosEnTabla(productoSeleccionado)
             
         } catch (error) {
@@ -759,7 +854,7 @@ if (!usuario) {
         }
     });
 
-    async function mostrarProductosEnTabla(productoSeleccionado : { codigo: string; nombre: string; cantidad: number; precio: number; subtotal: number; }) {
+    async function mostrarProductosEnTabla(productoSeleccionado : ProductoSeleccionado) {
         
         const tbody = document.querySelector('#listaProductos') as HTMLTableSectionElement;
         const cantidadInput = document.getElementById("cantidad") as HTMLInputElement;
@@ -796,12 +891,13 @@ if (!usuario) {
         const btnEliminar = document.createElement('button');
         btnEliminar.type = 'button';
         btnEliminar.classList.add('btn-eliminar');
-        btnEliminar.textContent = 'DEL';
+        ponerIcono(btnEliminar, 'eliminar');
         btnEliminar.addEventListener('click', () => {
+            productosSeleccionados = productosSeleccionados.filter(p => p.codigo !== productoSeleccionado.codigo);
             tr.remove();
             totalizar();
             if (tbody && tbody.querySelectorAll('tr').length <= 0) {
-                togglePresupuestoActivo(false);
+                toggleCotizacionActiva(false);
             }
         });
 
@@ -810,7 +906,7 @@ if (!usuario) {
         tbody.appendChild(tr);
 
         if (tbody && tbody.querySelectorAll('tr').length > 0) {
-            togglePresupuestoActivo(true);
+            toggleCotizacionActiva(true);
         }
 
         productoSelect.value = "";
@@ -818,39 +914,30 @@ if (!usuario) {
         precioInput.value = "";
         precioReferencia.textContent = 'Referencia: 0 COP';
         reiniciarBusquedaProductos();
-        enfocarLectorCodigoBarras();
+        enfocarBusquedaProductos();
 
         totalizar();
     }
 
-    async function totalizar(){
-        const elementosSubtotal = document.querySelectorAll('.subtotal') as NodeListOf<HTMLSpanElement>;
+    async function totalizar() {
         const totalResumen = document.querySelector('#totalResumen') as HTMLElement;
         const totalUSDNode = document.querySelector('#totalUSD') as HTMLElement;
         const totalCOPNode = document.querySelector('#totalCOP') as HTMLElement;
 
-        const valoresSubtotal = Array.from(elementosSubtotal)
-            .map(el => {
-                const texto = el.textContent.trim();
-                const match = texto.match(/[\d,.]+/);
-                return match ? parseFloat(match[0].replace(',', '')) : 0;
-            });
+        const totalUSD = productosSeleccionados.reduce(
+            (suma, producto) => suma + (producto.precio * producto.cantidad),
+            0
+        );
 
         const tasa = await cambioUSDaCOP();
-
-        let totalUSD = 0;
-
-        valoresSubtotal.forEach(subtotal => {
-            totalUSD += subtotal;
-        });
-
         const totalCOP = Math.ceil(tasa * totalUSD);
 
-        totalResumen.classList.toggle('is-empty', totalUSD <= 0);
-        totalUSDNode.textContent = totalUSD.toFixed(2);
-        totalCOPNode.textContent = totalCOP.toString();
+        totalResumen?.classList.toggle('is-empty', totalUSD <= 0);
+        if (totalUSDNode) totalUSDNode.textContent = totalUSD.toFixed(2);
+        if (totalCOPNode) totalCOPNode.textContent = totalCOP.toString();
+        totalDeCotizacion = totalUSD;
 
-        actualizarResumen(elementosSubtotal.length, totalUSD, totalCOP);
+        actualizarResumen(productosSeleccionados.length, totalUSD, totalCOP);
     }
 
 </script>

@@ -13,3 +13,8 @@ export async function withTransaction(db, fn) {
         throw error;
     }
 }
+
+/** libSQL requiere { sql, args } dentro de transacciones. */
+export function executeInTx(tx, sql, args = []) {
+    return tx.execute({ sql, args });
+}

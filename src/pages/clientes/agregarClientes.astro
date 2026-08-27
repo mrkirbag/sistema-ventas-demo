@@ -12,7 +12,7 @@ if (!usuario) {
     <header class="page-header">
         <p class="eyebrow">Gestión comercial</p>
         <h1>Agregar cliente</h1>
-        <p class="page-intro">Registra un nuevo cliente con su nombre, teléfono y cédula.</p>
+        <p class="page-intro">Registra un nuevo cliente con nombre, cédula o RIF y teléfono.</p>
     </header>
 
     <div class="btn-add_container">
@@ -28,6 +28,18 @@ if (!usuario) {
                     name="nombre"
                     id="nombre"
                     placeholder="Ej. Carlos Pérez"
+                    maxlength="80"
+                />
+            </div>
+
+            <div class="form-field">
+                <label for="cedula">Cédula o RIF</label>
+                <input
+                    type="text"
+                    name="cedula"
+                    id="cedula"
+                    placeholder="Ej. 12345678 o J-12345678-9"
+                    maxlength="15"
                 />
             </div>
 
@@ -37,18 +49,8 @@ if (!usuario) {
                     type="text"
                     name="telefono"
                     id="telefono"
-                    placeholder="Ej. 3001234567"
-                />
-            </div>
-
-            <div class="form-field">
-                <label for="cedula">Cédula</label>
-                <input
-                    type="number"
-                    name="cedula"
-                    id="cedula"
-                    placeholder="Ej. 1234567890"
-                    min="0"
+                    placeholder="Ej. 04141234567"
+                    maxlength="20"
                 />
             </div>
 
@@ -65,54 +67,40 @@ if (!usuario) {
 </Layout>
 
 <script>
-
     import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
+    import { validarCliente } from '@/utils/clienteValidaciones.js';
 
     const formulario = document.getElementById('formulario') as HTMLFormElement;
 
     formulario.addEventListener('submit', async (event : SubmitEvent) => { 
-        
         event.preventDefault();
 
         const formData = new FormData(formulario);
-        const nombre = (formData.get('nombre') as string).trim();
-        const telefono = (formData.get('telefono') as string).trim();
-        const cedulaText = formData.get('cedula') as string;
+        const validado = validarCliente({
+            nombre: formData.get('nombre'),
+            cedula: formData.get('cedula'),
+            telefono: formData.get('telefono'),
+        });
 
-        if (nombre === '' || telefono === '' || cedulaText === '') {
-            mostrarError('Todos los campos son obligatorios');
+        if (!validado.ok) {
+            mostrarError(validado.error);
             return;
         }
-
-        const telefonoRegex = /^\d+$/; 
-        if (!telefonoRegex.test(telefono)) {
-            mostrarError('El número de teléfono debe contener solo números');
-            return;
-        }
-
-        const cedulaRegex = /^[1-9]\d*$/;
-        if (!cedulaRegex.test(cedulaText)) {
-            mostrarError("La cédula debe ser un número entero positivo mayor a cero");
-            return;
-        }
-
-        const cedula = parseInt(cedulaText);
 
         const response = await fetch("/api/clientes", {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ nombre, telefono, cedula })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(validado.cliente)
         });
 
         if (!response.ok) {
-            if (response.status === 409) {
-                const mensaje = await response.text();
-                mostrarError(mensaje);
-            } else {
-                mostrarError('Error al agregar cliente: ' + response.status);
-            }
+            const raw = await response.text();
+            let mensaje = raw || `Error al agregar cliente: ${response.status}`;
+            try {
+                const data = JSON.parse(raw);
+                mensaje = data.error || data.message || mensaje;
+            } catch {}
+            mostrarError(mensaje);
             return;
         }
 
@@ -122,5 +110,4 @@ if (!usuario) {
             window.location.href = '/clientes';
         }, 1000);
     });
-    
 </script>

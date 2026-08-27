@@ -1,4 +1,7 @@
 import empresa from '@/data/empresa.json';
+import { getColores } from '@/utils/tema';
+
+const colorMarca = getColores().secundario;
 
 const ESTILOS_BASE = `
     body {
@@ -48,7 +51,7 @@ const ESTILOS_BASE = `
 const ESTILOS_ENCABEZADO = `
     .encabezado-impresion {
         text-align: center;
-        border-bottom: 2px solid #1f0a52;
+        border-bottom: 2px solid ${colorMarca};
         padding-bottom: 12px;
         margin-bottom: 16px;
     }
@@ -81,7 +84,7 @@ const ESTILOS_ENCABEZADO = `
         font-size: 14px;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: #1f0a52;
+        color: ${colorMarca};
     }
 
     .encabezado-impresion .fecha-impresion {

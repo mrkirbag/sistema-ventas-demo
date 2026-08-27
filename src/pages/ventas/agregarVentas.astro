@@ -1,6 +1,9 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { verificarToken } from '@/utils/auth.js';
+import { obtenerMonedaBase } from '@/utils/helpers/tasas.js';
+
+const monedaBase = obtenerMonedaBase();
 
 const usuario = verificarToken(Astro.request);
 if (!usuario) {
@@ -48,17 +51,6 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
                     <div id="productos-container" class="producto-module">
                         <div class="form-field producto-module_search">
-                            <label for="codigoBarras">Codigo de barras</label>
-                            <input
-                                type="text"
-                                id="codigoBarras"
-                                placeholder="Escanea aqui"
-                                autocomplete="off"
-                                autofocus
-                            />
-                        </div>
-
-                        <div class="form-field producto-module_search">
                             <label for="busquedaProductos">Buscar producto</label>
                             <input
                                 type="text"
@@ -79,9 +71,9 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                         </div>
 
                         <div class="form-field">
-                            <label for="precio">Precio por unidad (USD)</label>
-                            <input type="text" id="precio" placeholder="0.00"/>
-                            <span id="precioPesos" class="precio-referencia"></span>
+                            <label for="precio">Precio por unidad ({monedaBase})</label>
+                            <input type="text" id="precio" placeholder={monedaBase === 'COP' ? '0' : '0.00'}/>
+                            <span id="precioReferencia" class="precio-referencia">Referencia: —</span>
                         </div>
 
                         <div class="form-actions producto-module_actions">
@@ -98,7 +90,6 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                     <p class="eyebrow">Detalle</p>
                     <h2>Productos seleccionados</h2>
                 </div>
-                <p class="table-caption">Revisa cantidades y subtotales antes de continuar.</p>
             </div>
 
             <div class="table-wrap">
@@ -133,10 +124,10 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 </div>
             </div>
 
-            <form class="checkout-form">
+            <form class="checkout-form" onsubmit="return false;">
                 <div class="form-field">
                     <label for="busquedaClientes">Buscar cliente</label>
-                    <input type="text" id="busquedaClientes" placeholder="Buscar por cédula" />
+                    <input type="text" id="busquedaClientes" placeholder="Nombre, cédula o RIF" autocomplete="off" />
                 </div>
 
                 <div class="form-field select-container password-container">
@@ -148,16 +139,16 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 <div id="moduloAgregarClienteNuevo" class="cliente-nuevo-panel" style="display: none;">
                     <p class="cliente-nuevo_title">Registrar cliente no existente</p>
                     <div class="form-field">
-                        <label for="nombre">Nombre y apellido</label>
-                        <input type="text" name="nombre" id="nombre" placeholder="Ej. Carlos Pérez" />
+                        <label for="clienteNuevoNombre">Nombre y apellido</label>
+                        <input type="text" name="clienteNuevoNombre" id="clienteNuevoNombre" placeholder="Ej. Carlos Pérez" maxlength="80" autocomplete="off" />
                     </div>
                     <div class="form-field">
-                        <label for="telefono">Teléfono</label>
-                        <input type="text" name="telefono" id="telefono" placeholder="Ej. 3001234567" />
+                        <label for="clienteNuevoCedula">Cédula o RIF</label>
+                        <input type="text" name="clienteNuevoCedula" id="clienteNuevoCedula" placeholder="Ej. 12345678 o J-12345678-9" maxlength="15" autocomplete="off" />
                     </div>
                     <div class="form-field">
-                        <label for="cedula">Cédula</label>
-                        <input type="number" name="cedula" id="cedula" placeholder="Ej. 1234567890" min="0"/>
+                        <label for="clienteNuevoTelefono">Teléfono</label>
+                        <input type="text" name="clienteNuevoTelefono" id="clienteNuevoTelefono" placeholder="Ej. 04141234567" maxlength="20" autocomplete="off" />
                     </div>
                     <div class="form-actions">
                         <button type="button" id="btnAgregarClienteNuevo">Registrar cliente</button>
@@ -172,6 +163,50 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                         <option value="credito">A crédito</option>
                     </select>
                 </div>
+
+                <div id="moduloPagosVenta" class="pagos-venta-panel" hidden>
+                    <p class="pagos-venta_title">Métodos de pago</p>
+                    <p class="pagos-venta_hint">Puedes combinar USD, COP y Bs. El total cubierto debe igualar la venta.</p>
+
+                    <div class="pagos-venta_form">
+                        <div class="form-field">
+                            <label for="pagoMoneda">Moneda</label>
+                            <select id="pagoMoneda"></select>
+                        </div>
+                        <div class="form-field">
+                            <label for="pagoMetodo">Método</label>
+                            <select id="pagoMetodo"></select>
+                        </div>
+                        <div class="form-field">
+                            <label for="pagoMonto">Monto recibido</label>
+                            <input type="text" id="pagoMonto" inputmode="decimal" placeholder="0" autocomplete="off" />
+                        </div>
+                        <div class="form-actions pagos-venta_add">
+                            <button type="button" id="btnAgregarPago">Agregar pago</button>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap pagos-venta_tabla" id="pagosVentaTablaWrap" hidden>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Método</th>
+                                    <th>Recibido</th>
+                                    <th>Equivalente</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaPagosVenta"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagos-venta_resumen" id="pagosVentaResumen">
+                        <p>Cubierto: <strong id="pagosCubierto">—</strong></p>
+                        <p>Falta: <strong id="pagosFalta">—</strong></p>
+                    </div>
+                </div>
+
+                <p class="pagos-venta_credito" id="avisoPagoCredito" hidden>En ventas a crédito el ingreso se registra cuando se abona.</p>
 
                 <div class="total-box checkout-total">
                     <p class="total-box_label">Total de la venta</p>
@@ -201,8 +236,8 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
     .invoice-table-card {
         border-radius: 22px;
         background: rgba(255, 255, 255, 0.82);
-        border: 1px solid rgba(31, 10, 82, 0.08);
-        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.08);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
+        box-shadow: 0 18px 32px rgba(var(--primary-rgb), 0.08);
     }
 
     .venta-panel {
@@ -227,7 +262,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         font-family: "Archivo Black", sans-serif;
         font-size: 1rem;
         flex-shrink: 0;
-        box-shadow: 0 10px 20px rgba(15, 5, 41, 0.18);
+        box-shadow: 0 10px 20px rgba(var(--primary-rgb), 0.18);
     }
 
     .panel-heading h2 {
@@ -253,7 +288,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         padding: 1.1rem;
         border-radius: var(--radius-md);
         background: linear-gradient(180deg, rgba(236, 231, 246, 0.5), rgba(255, 255, 255, 0.72));
-        border: 1px solid rgba(31, 10, 82, 0.08);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
     }
 
     .producto-module_search,
@@ -263,10 +298,12 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
     }
 
     .precio-referencia {
+        display: block;
         margin-top: 0.35rem;
         font-size: 0.78rem;
         font-weight: 700;
         color: var(--secondary-color);
+        line-height: 1.4;
     }
 
     .invoice-table-card {
@@ -312,7 +349,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         letter-spacing: 0.02em;
         background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         color: #fff;
-        box-shadow: 0 10px 24px rgba(15, 5, 41, 0.22);
+        box-shadow: 0 10px 24px rgba(var(--primary-rgb), 0.22);
         transition:
             transform 160ms ease,
             box-shadow 160ms ease,
@@ -321,7 +358,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
     .btn-confirmar:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 14px 26px rgba(15, 5, 41, 0.22);
+        box-shadow: 0 14px 26px rgba(var(--primary-rgb), 0.22);
         cursor: pointer;
     }
 
@@ -363,14 +400,14 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         font-size: 1.2rem;
         color: #fff;
         background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        box-shadow: 0 8px 18px rgba(15, 5, 41, 0.18);
+        box-shadow: 0 8px 18px rgba(var(--primary-rgb), 0.18);
         transition: transform 160ms ease, box-shadow 160ms ease;
         align-self: end;
     }
 
     .btn-cliente:hover {
         transform: translateY(-1px);
-        box-shadow: 0 12px 22px rgba(15, 5, 41, 0.22);
+        box-shadow: 0 12px 22px rgba(var(--primary-rgb), 0.22);
     }
 
     .cliente-nuevo-panel {
@@ -381,7 +418,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         padding: 1rem;
         border-radius: var(--radius-md);
         background: rgba(236, 231, 246, 0.45);
-        border: 1px dashed rgba(31, 10, 82, 0.18);
+        border: 1px dashed rgba(var(--secondary-rgb), 0.18);
     }
 
     .cliente-nuevo_title {
@@ -436,10 +473,79 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         justify-content: flex-end;
     }
 
+    .pagos-venta-panel,
+    .pagos-venta_credito {
+        grid-column: 1 / -1;
+    }
+
+    .pagos-venta-panel {
+        display: grid;
+        gap: 0.85rem;
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        background: rgba(236, 231, 246, 0.45);
+        border: 1px dashed rgba(var(--secondary-rgb), 0.18);
+    }
+
+    .pagos-venta-panel[hidden],
+    .pagos-venta_credito[hidden],
+    .pagos-venta_tabla[hidden] {
+        display: none !important;
+    }
+
+    .pagos-venta_title {
+        margin: 0;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
+    }
+
+    .pagos-venta_hint,
+    .pagos-venta_credito {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        line-height: 1.45;
+    }
+
+    .pagos-venta_form {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem 1rem;
+        align-items: end;
+    }
+
+    .pagos-venta_add {
+        grid-column: 1 / -1;
+        margin: 0;
+    }
+
+    .pagos-venta_tabla {
+        margin: 0;
+    }
+
+    .pagos-venta_resumen {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1.4rem;
+        font-size: 0.9rem;
+    }
+
+    .pagos-venta_resumen p {
+        margin: 0;
+    }
+
+    .pagos-venta_resumen.is-completo strong {
+        color: #15803d;
+    }
+
     @media (max-width: 768px) {
         .producto-module,
         .cliente-nuevo-panel,
-        .checkout-form {
+        .checkout-form,
+        .pagos-venta_form {
             grid-template-columns: 1fr;
         }
 
@@ -475,30 +581,65 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 <script>
 
     import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
-    import { cambioUSDaCOP } from '@/utils/helpers/cambioMoneda.js';
+    import { obtenerTasas } from '@/utils/helpers/cambioMoneda.js';
+    import { ponerIcono } from '@/utils/helpers/iconosAccion.js';
+    import { validarCliente } from '@/utils/clienteValidaciones.js';
+    import {
+        convertirPrecio,
+        desgloseMontos,
+        formatearMoneda,
+        obtenerMonedaBase,
+        textoReferencia,
+        textoTotal,
+        toleranciaPago,
+    } from '@/utils/helpers/tasas.js';
+    import {
+        etiquetaPago,
+        metodosDeMoneda,
+        montoRestanteEnMoneda,
+        monedasPagoDisponibles,
+        parsearLineaPago,
+        resumenPagos,
+        validarPagosVenta,
+    } from '@/utils/helpers/metodosPago.js';
     import {
         crearModuloProductos,
-        enfocarLectorCodigoBarras,
+        enfocarBusquedaProductos,
         reiniciarBusquedaProductos,
     } from '@/utils/helpers/seleccionProducto.js';
 
+    const monedaBase = obtenerMonedaBase();
     let moduloProductos: ReturnType<typeof crearModuloProductos> | null = null;
 
     const productoSelect = document.getElementById("productoSelect") as HTMLSelectElement;
     const precioInput = document.getElementById("precio") as HTMLInputElement;
-    const precioPesos = document.getElementById("precioPesos") as HTMLSpanElement;
+    const precioReferencia = document.getElementById("precioReferencia") as HTMLSpanElement;
+
+    async function actualizarReferenciaPrecio() {
+        const precio = parseFloat(precioInput.value.replace(',', '.'));
+        const tasas = await obtenerTasas();
+        precioReferencia.textContent = textoReferencia(precio, monedaBase, tasas);
+    }
 
     async function aplicarPrecioProducto(producto: Producto) {
         const venta = parseFloat(String(producto.venta ?? ''));
 
         if (!Number.isNaN(venta) && venta > 0) {
-            precioInput.value = venta.toFixed(2);
-            const tasa = await cambioUSDaCOP();
-            precioPesos.textContent = `Referencia: ${Math.ceil(venta * tasa)} COP`;
+            precioInput.value = monedaBase === 'COP' ? String(venta) : venta.toFixed(2);
         } else {
             precioInput.value = "";
-            precioPesos.textContent = "";
         }
+
+        await actualizarReferenciaPrecio();
+    }
+
+    function htmlMontosCelda(precio: number, tasas: { cop: number; bs: number }) {
+        const { principal, secundarias } = desgloseMontos(precio, monedaBase, tasas);
+        const referencia = secundarias
+            ? `<br /><span style="font-size: 0.78rem; color: var(--text-muted);">${secundarias}</span>`
+            : '';
+
+        return `<strong>${principal}</strong>${referencia}`;
     }
 
     function iniciarModuloProductos() {
@@ -510,21 +651,12 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             productoSelect,
             cantidadInput,
             onNoEncontrado: mostrarError,
-            onProductoSeleccionado: (producto) => {
-                aplicarPrecioProducto(producto);
-            },
         });
     }
 
     function iniciarPagina() {
         rellenarSelectClientes();
         iniciarModuloProductos();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', iniciarPagina);
-    } else {
-        iniciarPagina();
     }
 
     interface Cliente {
@@ -549,67 +681,125 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
     const btnAbrirMenuClienteNuevo = document.getElementById("abrirMenuClienteNuevo") as HTMLSpanElement;
     const btnAgregarClienteNuevo = document.getElementById("btnAgregarClienteNuevo") as HTMLButtonElement;
+    const selectClientes = document.getElementById("cliente") as HTMLSelectElement;
+    const busquedaClientes = document.getElementById("busquedaClientes") as HTMLInputElement;
+    const moduloAgregarCliente = document.getElementById("moduloAgregarClienteNuevo") as HTMLDivElement;
+    const inputClienteNombre = document.getElementById("clienteNuevoNombre") as HTMLInputElement;
+    const inputClienteCedula = document.getElementById("clienteNuevoCedula") as HTMLInputElement;
+    const inputClienteTelefono = document.getElementById("clienteNuevoTelefono") as HTMLInputElement;
 
-    async function rellenarSelectClientes() {
+    let clientesListados: Cliente[] = [];
+    let clienteDeLaVenta: Cliente | null = null;
+    let cargaClientesSeq = 0;
+    let busquedaClientesTimer: ReturnType<typeof setTimeout> | null = null;
+    let registrandoCliente = false;
 
-        const selectClientes = document.getElementById("cliente") as HTMLSelectElement;
-        const busqueda = document.getElementById("busquedaClientes") as HTMLInputElement;
+    function idCliente(valor: unknown) {
+        const id = Number.parseInt(String(valor ?? ''), 10);
+        return Number.isFinite(id) && id > 0 ? String(id) : '';
+    }
 
-        let clientesListados : Cliente[] = [];
+    function textoOpcionCliente(cliente: Cliente) {
+        return `${String(cliente.nombre || "").toUpperCase()} - ${cliente.cedula}`;
+    }
+
+    function clientesParaSelect(clientes: Cliente[]) {
+        if (!clienteDeLaVenta) return clientes;
+        const id = idCliente(clienteDeLaVenta.id);
+        return [clienteDeLaVenta, ...clientes.filter(cliente => idCliente(cliente.id) !== id)];
+    }
+
+    function renderOpcionesClientes(clientes: Cliente[]) {
+        const lista = clientesParaSelect(clientes);
+        const seleccionado = idCliente(clienteDeLaVenta?.id) || idCliente(selectClientes.value);
+        selectClientes.innerHTML = "";
+
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "Selecciona un cliente";
+        defaultOption.disabled = true;
+        selectClientes.appendChild(defaultOption);
+
+        if (lista.length === 0) {
+            const noResultsOption = document.createElement("option");
+            noResultsOption.value = "";
+            noResultsOption.textContent = "— Sin coincidencias para la búsqueda —";
+            noResultsOption.disabled = true;
+            selectClientes.appendChild(noResultsOption);
+            defaultOption.selected = true;
+            return;
+        }
+
+        lista.forEach(cliente => {
+            const option = document.createElement("option");
+            option.value = idCliente(cliente.id);
+            option.textContent = textoOpcionCliente(cliente);
+            selectClientes.appendChild(option);
+        });
+
+        if (seleccionado && lista.some(cliente => idCliente(cliente.id) === seleccionado)) {
+            selectClientes.value = seleccionado;
+            return;
+        }
+
+        defaultOption.selected = true;
+    }
+
+    async function cargarClientes(filtro = "") {
+        const seq = ++cargaClientesSeq;
+        const params = new URLSearchParams({ limit: filtro ? "80" : "500" });
+        if (filtro) params.set("search", filtro);
 
         try {
-            const response = await fetch("/api/clientes");
+            const response = await fetch(`/api/clientes?${params.toString()}`);
             const data = await response.json();
-
+            if (seq !== cargaClientesSeq) return;
             clientesListados = Array.isArray(data) ? data : [];
-
-            const renderOpciones = (clientes : Cliente[]) => {
-                selectClientes.innerHTML = "";
-
-                const defaultOption = document.createElement("option");
-                defaultOption.value = "";
-                defaultOption.textContent = "Selecciona un cliente";
-                defaultOption.disabled = true;
-                defaultOption.selected = true;
-                selectClientes.appendChild(defaultOption);
-
-                if (clientes.length === 0) {
-                    const noResultsOption = document.createElement("option");
-                    noResultsOption.value = "";
-                    noResultsOption.textContent = "— Sin coincidencias para la búsqueda —";
-                    noResultsOption.disabled = true;
-                    selectClientes.appendChild(noResultsOption);
-                    return;
-                }
-
-                clientes.forEach(cliente => {
-                    const option = document.createElement("option") as HTMLOptionElement;
-                    option.value = (cliente.id).toString();
-                    option.textContent = `${cliente.nombre.toUpperCase()} - ${cliente.cedula}`;
-                    selectClientes.appendChild(option);
-                });
-            };
-
-            renderOpciones(clientesListados);
-
-            busqueda.addEventListener("input", () => {
-                const filtro = busqueda.value.trim();
-
-                if (!filtro) {
-                    renderOpciones(clientesListados);
-                    return;
-                }
-
-                const clientesFiltrados = clientesListados.filter(cliente =>
-                    String(cliente.cedula || "").includes(filtro)
-                );
-
-                renderOpciones(clientesFiltrados);
-            });
-
+            renderOpcionesClientes(clientesListados);
         } catch (error) {
+            if (seq !== cargaClientesSeq) return;
             console.error("Error al cargar los clientes:", error);
+            mostrarError("No se pudieron cargar los clientes");
         }
+    }
+
+    function seleccionarClienteEnVenta(cliente: Cliente) {
+        if (busquedaClientesTimer) {
+            clearTimeout(busquedaClientesTimer);
+            busquedaClientesTimer = null;
+        }
+
+        clienteDeLaVenta = {
+            id: Number(cliente.id),
+            nombre: cliente.nombre,
+            cedula: cliente.cedula,
+            telefono: cliente.telefono,
+        };
+
+        const id = idCliente(clienteDeLaVenta.id);
+        const yaListado = clientesListados.some(item => idCliente(item.id) === id);
+        if (!yaListado) {
+            clientesListados = [clienteDeLaVenta, ...clientesListados];
+        } else {
+            clientesListados = clientesListados.map(item => idCliente(item.id) === id ? clienteDeLaVenta as Cliente : item);
+        }
+
+        busquedaClientes.value = "";
+        cargaClientesSeq += 1;
+        renderOpcionesClientes(clientesListados);
+        selectClientes.value = id;
+    }
+
+    function cerrarPanelClienteNuevo() {
+        moduloAgregarCliente.style.display = "none";
+        btnAbrirMenuClienteNuevo.textContent = "+";
+        inputClienteNombre.value = "";
+        inputClienteCedula.value = "";
+        inputClienteTelefono.value = "";
+    }
+
+    async function rellenarSelectClientes() {
+        await cargarClientes(busquedaClientes.value.trim());
     }
 
     productoSelect.addEventListener("change", async () => {
@@ -617,7 +807,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
         if (!productoId) {
             precioInput.value = "";
-            precioPesos.textContent = "";
+            await actualizarReferenciaPrecio();
             return;
         }
 
@@ -627,28 +817,22 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             if (!response.ok) {
                 console.error("Error al obtener el producto:", response.status);
                 precioInput.value = "";
-                precioPesos.textContent = "";
+                await actualizarReferenciaPrecio();
                 return;
             }
 
             const producto = await response.json();
-
-            const venta = parseFloat(String(producto.venta ?? ''));
-
-            if (!Number.isNaN(venta) && venta > 0) {
-                precioInput.value = venta.toFixed(2);
-                const tasa = await cambioUSDaCOP();
-                precioPesos.textContent = `Referencia: ${Math.ceil(venta * tasa)} COP`;
-            } else {
-                precioInput.value = "";
-                precioPesos.textContent = "";
-            }
+            await aplicarPrecioProducto(producto);
 
         } catch (error) {
             console.error("Error de red o parsing:", error);
             precioInput.value = "";
-            precioPesos.textContent = "";
+            await actualizarReferenciaPrecio();
         }
+    });
+
+    precioInput.addEventListener("input", () => {
+        actualizarReferenciaPrecio();
     });
 
     const btnagregarProducto = document.getElementById("agregarProducto") as HTMLButtonElement;
@@ -691,7 +875,10 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 return;
             }
 
-            const tasa = await cambioUSDaCOP();
+            const tasas = await obtenerTasas();
+            const claveBase = monedaBase.toLowerCase() as 'usd' | 'cop';
+            const precioUnitario = convertirPrecio(precio, monedaBase, tasas)[claveBase];
+            const subtotal = precioUnitario * cantidad;
 
             const theader = document.getElementById("headerTablaProductos") as HTMLTableSectionElement;
 
@@ -706,15 +893,11 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                                     <span style="font-size: 0.78rem; color: var(--text-muted);">${producto.codigo}</span>
                                 </td>
                                 <td data-label="P. Unitario">
-                                    <strong>${precio.toFixed(2)} USD</strong>
-                                    <br />
-                                    <span style="font-size: 0.78rem; color: var(--text-muted);">${Math.ceil(precio * tasa)} COP</span>
+                                    ${htmlMontosCelda(precioUnitario, tasas)}
                                 </td>
                                 <td data-label="Cantidad">${cantidad} U.</td>
                                 <td data-label="Subtotal">
-                                    <strong>${(cantidad * precio).toFixed(2)} USD</strong>
-                                    <br />
-                                    <span style="font-size: 0.78rem; color: var(--text-muted);">${Math.ceil(cantidad * precio * tasa)} COP</span>
+                                    ${htmlMontosCelda(subtotal, tasas)}
                                 </td>
                             `;
 
@@ -724,7 +907,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             const btnEliminar = document.createElement('button');
             btnEliminar.type = 'button';
             btnEliminar.classList.add('btn-eliminar');
-            btnEliminar.textContent = 'DEL';
+            ponerIcono(btnEliminar, 'eliminar');
             btnEliminar.addEventListener('click', () => {
 
                 fila.remove();
@@ -759,15 +942,15 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             productoSelect.value = "";
             cantidadInput.value = "";
             precioInput.value = "";
-            precioPesos.textContent = "";
+            await actualizarReferenciaPrecio();
             reiniciarBusquedaProductos();
-            enfocarLectorCodigoBarras();
+            enfocarBusquedaProductos();
 
             productosSeleccionados.push({
                 id: producto.id,
                 nombre: producto.nombre,
                 codigo: producto.codigo,
-                precio: precio,
+                precio: precioUnitario,
                 cantidad: cantidad,
                 stock: producto.stock,
                 costo: producto.costo,
@@ -784,6 +967,150 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
     const btnConfirmacion = document.getElementById("btnConfirmacion") as HTMLButtonElement;
 
     let totalDeVenta = 0;
+    let tasasVenta = { cop: 0, bs: 0 };
+    let pagosVenta: { moneda: string; metodo: string; monto: number; monto_base: number }[] = [];
+
+    const tipoPagoSelect = document.getElementById("tipoPago") as HTMLSelectElement;
+    const moduloPagosVenta = document.getElementById("moduloPagosVenta") as HTMLDivElement;
+    const avisoPagoCredito = document.getElementById("avisoPagoCredito") as HTMLParagraphElement;
+    const pagoMonedaSelect = document.getElementById("pagoMoneda") as HTMLSelectElement;
+    const pagoMetodoSelect = document.getElementById("pagoMetodo") as HTMLSelectElement;
+    const pagoMontoInput = document.getElementById("pagoMonto") as HTMLInputElement;
+    const listaPagosVenta = document.getElementById("listaPagosVenta") as HTMLTableSectionElement;
+    const pagosVentaTablaWrap = document.getElementById("pagosVentaTablaWrap") as HTMLDivElement;
+    const pagosCubierto = document.getElementById("pagosCubierto") as HTMLElement;
+    const pagosFalta = document.getElementById("pagosFalta") as HTMLElement;
+    const pagosVentaResumen = document.getElementById("pagosVentaResumen") as HTMLDivElement;
+
+    function rellenarMetodosPago() {
+        const moneda = pagoMonedaSelect.value;
+        const metodos = metodosDeMoneda(moneda);
+        const actual = pagoMetodoSelect.value;
+        pagoMetodoSelect.innerHTML = metodos.map((metodo: { id: string; etiqueta: string }) => (
+            `<option value="${metodo.id}">${metodo.etiqueta}</option>`
+        )).join('');
+        if (metodos.some((metodo: { id: string }) => metodo.id === actual)) {
+            pagoMetodoSelect.value = actual;
+        }
+    }
+
+    function rellenarMonedasPago() {
+        const monedas = monedasPagoDisponibles(tasasVenta);
+        const actual = pagoMonedaSelect.value;
+        pagoMonedaSelect.innerHTML = monedas.map((moneda: { id: string; etiqueta: string }) => (
+            `<option value="${moneda.id}">${moneda.etiqueta}</option>`
+        )).join('');
+        if (monedas.some((moneda: { id: string }) => moneda.id === actual)) {
+            pagoMonedaSelect.value = actual;
+        } else if (monedas[0]) {
+            pagoMonedaSelect.value = monedas[0].id;
+        }
+        rellenarMetodosPago();
+        sugerirMontoRestante();
+    }
+
+    function resumenActualPagos() {
+        return resumenPagos(pagosVenta, totalDeVenta, monedaBase, tasasVenta);
+    }
+
+    function sugerirMontoRestante() {
+        const { restante, completo } = resumenActualPagos();
+        if (completo || restante <= 0) {
+            pagoMontoInput.value = '';
+            pagoMontoInput.placeholder = '0';
+            return;
+        }
+
+        const moneda = pagoMonedaSelect.value;
+        const sugerido = montoRestanteEnMoneda(restante, moneda, monedaBase, tasasVenta);
+        pagoMontoInput.placeholder = moneda === 'COP'
+            ? String(Math.round(sugerido) || 0)
+            : (sugerido || 0).toFixed(2);
+    }
+
+    function renderPagosVenta() {
+        const resumen = resumenActualPagos();
+        pagosCubierto.textContent = resumen.cubiertoTexto;
+        pagosFalta.textContent = resumen.completo ? '0' : resumen.restanteTexto;
+        pagosVentaResumen.classList.toggle('is-completo', resumen.completo);
+        pagosVentaTablaWrap.hidden = pagosVenta.length === 0;
+        listaPagosVenta.innerHTML = '';
+
+        pagosVenta.forEach((pago, indice) => {
+            const fila = document.createElement('tr');
+            fila.innerHTML = `
+                <td data-label="Método">${etiquetaPago(pago.moneda, pago.metodo)}</td>
+                <td data-label="Recibido">${formatearMoneda(pago.monto, pago.moneda)}</td>
+                <td data-label="Equivalente">${formatearMoneda(pago.monto_base, monedaBase)}</td>
+                <td class="acciones"></td>
+            `;
+            const btnEliminar = document.createElement('button');
+            btnEliminar.type = 'button';
+            btnEliminar.classList.add('btn-eliminar');
+            ponerIcono(btnEliminar, 'eliminar');
+            btnEliminar.addEventListener('click', () => {
+                pagosVenta.splice(indice, 1);
+                renderPagosVenta();
+            });
+            fila.querySelector('.acciones')?.appendChild(btnEliminar);
+            listaPagosVenta.appendChild(fila);
+        });
+
+        sugerirMontoRestante();
+    }
+
+    function mostrarPanelPagos() {
+        const tipo = tipoPagoSelect.value;
+        moduloPagosVenta.hidden = tipo !== 'contado';
+        avisoPagoCredito.hidden = tipo !== 'credito';
+        if (tipo === 'contado') {
+            rellenarMonedasPago();
+            renderPagosVenta();
+        }
+    }
+
+    function agregarPagoVenta() {
+        const linea = parsearLineaPago({
+            moneda: pagoMonedaSelect.value,
+            metodo: pagoMetodoSelect.value,
+            monto: pagoMontoInput.value,
+        }, monedaBase, tasasVenta);
+
+        if (!linea.ok) {
+            mostrarError(linea.error);
+            return;
+        }
+
+        const pagoNuevo = linea.pago;
+        const cubierto = pagosVenta.reduce((acc, pago) => acc + pago.monto_base, 0) + pagoNuevo.monto_base;
+        const exceso = cubierto - totalDeVenta;
+        if (exceso > toleranciaPago(monedaBase)) {
+            mostrarError(`Los pagos exceden el total por ${formatearMoneda(exceso, monedaBase)}`);
+            return;
+        }
+
+        pagosVenta.push({
+            moneda: pagoNuevo.moneda,
+            metodo: pagoNuevo.metodo,
+            monto: pagoNuevo.monto,
+            monto_base: pagoNuevo.monto_base,
+        });
+        pagoMontoInput.value = '';
+        renderPagosVenta();
+    }
+
+    tipoPagoSelect.addEventListener('change', mostrarPanelPagos);
+    pagoMonedaSelect.addEventListener('change', () => {
+        rellenarMetodosPago();
+        sugerirMontoRestante();
+    });
+    document.getElementById('btnAgregarPago')?.addEventListener('click', agregarPagoVenta);
+    pagoMontoInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            agregarPagoVenta();
+        }
+    });
 
     btnConfirmacion.addEventListener("click", async () => {
         
@@ -793,92 +1120,118 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         btnConfirmacion.disabled = true;
         btnConfirmacion.textContent = "Procesando...";
 
-        const tasa = await cambioUSDaCOP();
-
+        const tasas = await obtenerTasas();
+        tasasVenta = tasas;
+        pagosVenta = [];
         const total = productosSeleccionados.map(p => p.precio * p.cantidad).reduce((a, b) => a + b, 0);
         const totalTexto = document.getElementById("totalDeVenta") as HTMLParagraphElement;
-        totalTexto.textContent = `${total.toFixed(2)} USD · ${Math.ceil(total * tasa)} COP`;
+        totalTexto.textContent = textoTotal(total, monedaBase, tasas);
         totalDeVenta = total;
+        mostrarPanelPagos();
 
         moduloDatosCompletar.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     });
 
+    selectClientes.addEventListener("change", () => {
+        const id = idCliente(selectClientes.value);
+        if (!id) return;
+
+        const encontrado = clientesParaSelect(clientesListados).find(cliente => idCliente(cliente.id) === id) || null;
+        clienteDeLaVenta = encontrado;
+    });
+
+    busquedaClientes.addEventListener("input", () => {
+        if (busquedaClientesTimer) clearTimeout(busquedaClientesTimer);
+        busquedaClientesTimer = setTimeout(() => {
+            cargarClientes(busquedaClientes.value.trim());
+        }, 250);
+    });
+
     btnAbrirMenuClienteNuevo.addEventListener("click", (e) => {
         e.preventDefault();
-        const moduloAgregarCliente = document.getElementById("moduloAgregarClienteNuevo") as HTMLDivElement;
+        const abierto = moduloAgregarCliente.style.display === "grid";
+        moduloAgregarCliente.style.display = abierto ? "none" : "grid";
+        btnAbrirMenuClienteNuevo.textContent = abierto ? "+" : "−";
+        if (!abierto) {
+            inputClienteNombre.focus();
+        }
+    });
 
-        moduloAgregarCliente.style.display = 
-            moduloAgregarCliente.style.display === "none" ? "grid" : "none";
-        btnAbrirMenuClienteNuevo.textContent = 
-            moduloAgregarCliente.style.display === "grid" ? "−" : "+";
-    }); 
-    
     btnAgregarClienteNuevo.addEventListener("click", agregarClienteNuevo);
+
+    moduloAgregarCliente.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            agregarClienteNuevo(e);
+        }
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciarPagina);
+    } else {
+        iniciarPagina();
+    }
 
     async function agregarClienteNuevo(event : Event) {
 
         event.preventDefault();
 
-        const nombre = (document.getElementById('nombre') as HTMLInputElement).value;
-        const telefono = (document.getElementById('telefono') as HTMLInputElement).value;
-        const cedulaText = (document.getElementById('cedula') as HTMLInputElement).value;
+        if (registrandoCliente) return;
 
-        if (nombre === '' || telefono === '' || cedulaText === '') {
-            mostrarError('Todos los campos son obligatorios');
-            return;
-        }
-
-        const telefonoRegex = /^\d+$/; 
-        if (!telefonoRegex.test(telefono)) {
-            mostrarError('El número de teléfono debe contener solo números');
-            return;
-        }
-
-        const cedulaRegex = /^[1-9]\d*$/;
-        if (!cedulaRegex.test(cedulaText)) {
-            mostrarError("La cédula debe ser un número entero positivo mayor a cero");
-            return;
-        }
-
-        const cedula = parseInt(cedulaText);
-
-        const response = await fetch("/api/clientes", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ nombre, telefono, cedula })
+        const validado = validarCliente({
+            nombre: inputClienteNombre.value,
+            telefono: inputClienteTelefono.value,
+            cedula: inputClienteCedula.value,
         });
 
-        if (!response.ok) {
-            if (response.status === 409) {
-                const mensaje = await response.text();
-                mostrarError(mensaje);
-            } else {
-                mostrarError('Error al agregar cliente: ' + response.status);
-            }
+        if (!validado.ok) {
+            mostrarError(validado.error);
             return;
         }
 
-        const data = await response.json();
-        const clienteAgregado = data.cliente[0];
-        
-        const selectClientes = document.getElementById("cliente") as HTMLSelectElement;
-        const option = document.createElement("option");
-        option.value = clienteAgregado.id;
-        option.textContent = `${clienteAgregado.nombre.toUpperCase()} - ${clienteAgregado.cedula}`;
-        selectClientes.appendChild(option);
-        option.selected = true;
+        registrandoCliente = true;
+        btnAgregarClienteNuevo.disabled = true;
+        const textoBoton = btnAgregarClienteNuevo.textContent;
+        btnAgregarClienteNuevo.textContent = "Registrando...";
 
-        (document.getElementById('nombre') as HTMLInputElement).value = '';
-        (document.getElementById('telefono') as HTMLInputElement).value = '';
-        (document.getElementById('cedula') as HTMLInputElement).value = '';
-        btnAbrirMenuClienteNuevo.textContent = "+";
-        const moduloAgregarCliente = document.getElementById("moduloAgregarClienteNuevo") as HTMLDivElement;
-        moduloAgregarCliente.style.display = "none";
+        try {
+            const response = await fetch("/api/clientes", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(validado.cliente)
+            });
 
-        mostrarMensaje('Cliente agregado exitosamente.');
+            const raw = await response.text();
+            let data: any = null;
+            try {
+                data = raw ? JSON.parse(raw) : null;
+            } catch {}
+
+            if (!response.ok) {
+                mostrarError(data?.error || data?.message || raw || `Error al agregar cliente: ${response.status}`);
+                return;
+            }
+
+            const clienteAgregado = Array.isArray(data?.cliente) ? data.cliente[0] : data?.cliente;
+            if (!clienteAgregado?.id) {
+                mostrarError("El cliente se guardó, pero no se pudo seleccionar. Recarga e inténtalo de nuevo.");
+                return;
+            }
+
+            seleccionarClienteEnVenta(clienteAgregado);
+            cerrarPanelClienteNuevo();
+            mostrarMensaje(data?.message || "Cliente agregado exitosamente.");
+        } catch (error) {
+            console.error("Error al agregar cliente:", error);
+            mostrarError("Error al agregar el cliente. Inténtalo de nuevo.");
+        } finally {
+            registrandoCliente = false;
+            btnAgregarClienteNuevo.disabled = false;
+            btnAgregarClienteNuevo.textContent = textoBoton || "Registrar cliente";
+        }
     }
 
     const btnFinalizar = document.getElementById("btnFinalizar") as HTMLButtonElement;
@@ -889,14 +1242,9 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
         const fecha = (document.getElementById('fecha') as HTMLInputElement).value;
         const tipoPago = (document.getElementById('tipoPago') as HTMLSelectElement).value;
-        const clienteId = (document.getElementById('cliente') as HTMLSelectElement).value;
+        const clienteId = Number.parseInt(idCliente(clienteDeLaVenta?.id) || idCliente(selectClientes.value), 10);
 
-        if (!fecha || !tipoPago || !clienteId) {
-            mostrarError("Todos los campos son obligatorios");
-            return;
-        }
-
-        if(fecha === '' || tipoPago === '' || clienteId === '') {
+        if (!fecha || !tipoPago || !Number.isFinite(clienteId) || clienteId <= 0) {
             mostrarError("Todos los campos son obligatorios");
             return;
         }
@@ -908,6 +1256,19 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
         if (isNaN(totalDeVenta) || totalDeVenta <= 0) {
             mostrarError("El total de la venta no es válido");
+            return;
+        }
+
+        const pagosValidados = validarPagosVenta({
+            tipoPago,
+            pagos: pagosVenta,
+            totalBase: totalDeVenta,
+            monedaBase,
+            tasas: tasasVenta,
+        });
+
+        if (!pagosValidados.ok) {
+            mostrarError(pagosValidados.error);
             return;
         }
 
@@ -923,6 +1284,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                     tipoPago,
                     clienteId,
                     totalDeVenta,
+                    pagos: pagosValidados.pagos,
                     productos: productosSeleccionados.map(({ codigo, nombre, precio, cantidad, id }) => ({
                         idProducto: id,
                         codigo,

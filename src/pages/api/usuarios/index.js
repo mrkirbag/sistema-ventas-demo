@@ -1,5 +1,6 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
+import { ACCIONES, registrarBitacora } from '@/utils/bitacora.js';
 
 export async function GET({ request }) {
 
@@ -13,7 +14,7 @@ export async function GET({ request }) {
     }
 
     try {
-        const usuarios = await db.execute('SELECT * FROM usuarios ORDER BY id ASC');
+        const usuarios = await db.execute('SELECT id, usuario, rol, nombre FROM usuarios ORDER BY id ASC');
 
         // Si no hay usuarios, retornar un mensaje de error
         if (!usuarios || !usuarios.rows || usuarios.rows.length === 0) {
@@ -61,6 +62,43 @@ export async function DELETE({ request }) {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
+
+        const objetivo = await db.execute(
+            'SELECT id, usuario, nombre, rol FROM usuarios WHERE id = ?',
+            [id]
+        );
+        const fila = objetivo.rows?.[0];
+
+        if (!fila) {
+            return new Response(JSON.stringify({ error: 'Usuario no encontrado' }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        const movimientos = await db.execute(
+            'SELECT COUNT(*) AS total FROM movimientos_inventario WHERE usuario_id = ?',
+            [id]
+        );
+
+        if (Number(movimientos.rows?.[0]?.total ?? 0) > 0) {
+            return new Response(JSON.stringify({
+                error: 'No se puede eliminar el usuario porque tiene movimientos de inventario registrados',
+            }), {
+                status: 409,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        await registrarBitacora(db, {
+            usuario,
+            accion: ACCIONES.USUARIO_ELIMINAR,
+            entidad: 'usuarios',
+            entidadId: Number(id),
+            detalle: `${fila.nombre} (${fila.usuario}) · ${fila.rol}`,
+        });
+
+        await db.execute('UPDATE bitacora SET usuario_id = NULL WHERE usuario_id = ?', [id]);
 
         const result = await db.execute('DELETE FROM usuarios WHERE id = ?', [id]);
 

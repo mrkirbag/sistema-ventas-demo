@@ -1,22 +1,30 @@
-<html lang="es">
+---
+import empresa from '../data/empresa.json';
+import { estiloTemaInline } from '../utils/tema';
+
+const temaStyle = estiloTemaInline();
+const titulo = empresa.nombre || 'Sistema de inventario';
+---
+<html lang="es" style={temaStyle}>
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" sizes="any" />
+        <link rel="shortcut icon" href="/favicon.svg?v=2" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
-        <title>Iniciar Sesión · SAVI Demo</title>
+        <title>Iniciar sesión · {titulo}</title>
     </head>
     <body>
         <main class="login-shell">
             <section class="login-brand" aria-hidden="false">
                 <div class="brand-top">
-                    <img src="/logo.svg" alt="Logo SAVI Demo" class="brand-logo" width="72" height="72" />
-                    <p class="eyebrow">Sistema comercial</p>
+                    <img src={empresa.logo} alt={`Logo de ${titulo}`} class="brand-logo" width="72" height="72" />
+                    <p class="eyebrow">{empresa.etiquetaMarca || 'Sistema comercial'}</p>
                 </div>
-                <h1>SAVI Demo</h1>
-                <p class="brand-text">Controla inventario, ventas, créditos y reportes desde una interfaz clara, rápida y lista para presentar a clientes.</p>
+                <h1>{titulo}</h1>
+                <p class="brand-text">{empresa.subtitulo}</p>
 
                 <div class="feature-list">
                     <article>
@@ -125,7 +133,7 @@
                         </div>
                     </form>
 
-                    <p class="login-footer">SAVI Demo · Gestión de inventario y ventas</p>
+                    <p class="login-footer">{titulo} · Gestión de inventario y ventas</p>
                 </div>
             </section>
         </main>
@@ -234,13 +242,17 @@
 
     :root {
         --primary-color: #0f0529;
-        --primary-strong: #090218;
+        --primary-rgb: 15, 5, 41;
         --secondary-color: #1f0a52;
-        --accent-glow: #5d45aa;
-        --surface-base: #f2eff8;
+        --secondary-rgb: 31, 10, 82;
+        --accent-brand: #4d2ea3;
+        --accent-rgb: 77, 46, 163;
+        --primary-strong: color-mix(in srgb, var(--primary-color) 82%, #000);
+        --accent-glow: color-mix(in srgb, var(--accent-brand) 70%, white);
+        --surface-base: color-mix(in srgb, var(--primary-color) 7%, white);
         --surface-card: rgba(255, 255, 255, 0.9);
-        --text-color: #1d1430;
-        --text-muted: #675e7c;
+        --text-color: color-mix(in srgb, var(--primary-color) 55%, #2a2438);
+        --text-muted: color-mix(in srgb, var(--primary-color) 28%, #8a8496);
         --danger-color: #ff4d4d;
         --success-color: #008000;
     }
@@ -277,8 +289,8 @@
         place-items: center;
         overflow: hidden;
         background:
-            radial-gradient(circle at 12% 18%, rgba(93, 69, 170, 0.24), transparent 32%),
-            radial-gradient(circle at 88% 82%, rgba(31, 10, 82, 0.22), transparent 30%),
+            radial-gradient(circle at 12% 18%, rgba(var(--accent-rgb), 0.24), transparent 32%),
+            radial-gradient(circle at 88% 82%, rgba(var(--secondary-rgb),  0.22), transparent 30%),
             linear-gradient(180deg, #f8f5fc 0%, #ebe4f5 100%);
         color: var(--text-color);
         font-family: 'Roboto', sans-serif;
@@ -300,7 +312,7 @@
         height: 320px;
         left: -80px;
         top: -60px;
-        background: rgba(93, 69, 170, 0.18);
+        background: rgba(var(--accent-rgb), 0.18);
     }
 
     body::after {
@@ -308,7 +320,7 @@
         height: 400px;
         right: -140px;
         bottom: -140px;
-        background: rgba(31, 10, 82, 0.16);
+        background: rgba(var(--secondary-rgb),  0.16);
         animation-delay: -4s;
     }
 
@@ -325,7 +337,7 @@
         border-radius: clamp(18px, 3dvh, 32px);
         overflow: hidden;
         box-shadow:
-            0 32px 64px rgba(15, 5, 41, 0.16),
+            0 32px 64px rgba(var(--primary-rgb),  0.16),
             0 0 0 1px rgba(255, 255, 255, 0.4) inset;
         backdrop-filter: blur(20px);
         animation: fadeUp 0.7s ease both;
@@ -335,9 +347,9 @@
         position: relative;
         padding: clamp(1.25rem, 3.5dvh, 3rem) clamp(1.25rem, 3vw, 3rem);
         background:
-            radial-gradient(circle at 80% 20%, rgba(93, 69, 170, 0.35), transparent 45%),
-            linear-gradient(155deg, rgba(9, 2, 24, 0.97), rgba(31, 10, 82, 0.94));
-        color: #f7f4ff;
+            radial-gradient(circle at 80% 20%, rgba(var(--accent-rgb), 0.35), transparent 45%),
+            linear-gradient(155deg, rgba(var(--primary-rgb), 0.97), rgba(var(--secondary-rgb), 0.94));
+        color: #fff;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -354,7 +366,7 @@
         right: -60px;
         bottom: -60px;
         border-radius: 50%;
-        background: rgba(203, 185, 255, 0.08);
+        background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.06);
         pointer-events: none;
     }
@@ -377,7 +389,7 @@
         font-size: 0.75rem;
         letter-spacing: 0.18em;
         text-transform: uppercase;
-        color: rgba(239, 233, 255, 0.7);
+        color: rgba(255, 255, 255, 0.7);
         font-weight: 500;
     }
 
@@ -394,7 +406,7 @@
         max-width: 36ch;
         font-size: clamp(0.82rem, 1.8dvh, 1rem);
         line-height: 1.55;
-        color: rgba(239, 233, 255, 0.8);
+        color: rgba(255, 255, 255, 0.8);
     }
 
     .feature-list {
@@ -425,8 +437,8 @@
         width: clamp(30px, 5dvh, 38px);
         height: clamp(30px, 5dvh, 38px);
         border-radius: 12px;
-        background: rgba(203, 185, 255, 0.14);
-        color: #e8ddff;
+        background: rgba(255, 255, 255, 0.14);
+        color: rgba(255, 255, 255, 0.88);
         display: grid;
         place-items: center;
         flex-shrink: 0;
@@ -440,14 +452,14 @@
     .feature-list strong {
         display: block;
         font-size: clamp(0.8rem, 1.7dvh, 0.95rem);
-        color: #fff7ea;
+        color: #fff;
         margin-bottom: 0.15rem;
     }
 
     .feature-list span {
         font-size: clamp(0.75rem, 1.5dvh, 0.88rem);
         line-height: 1.45;
-        color: rgba(239, 233, 255, 0.72);
+        color: rgba(255, 255, 255, 0.72);
     }
 
     .login-section {
@@ -532,7 +544,7 @@
     input {
         width: 100%;
         padding: clamp(0.7rem, 1.8dvh, 0.95rem) 1rem clamp(0.7rem, 1.8dvh, 0.95rem) 2.85rem;
-        border: 1.5px solid rgba(31, 10, 82, 0.1);
+        border: 1.5px solid rgba(var(--secondary-rgb),  0.1);
         border-radius: 14px;
         font-size: clamp(0.85rem, 1.8dvh, 0.95rem);
         font-family: inherit;
@@ -551,8 +563,8 @@
 
     input:focus {
         outline: none;
-        border-color: rgba(93, 69, 170, 0.5);
-        box-shadow: 0 0 0 4px rgba(93, 69, 170, 0.12);
+        border-color: rgba(var(--accent-rgb), 0.5);
+        box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
         background: #fff;
     }
 
@@ -577,11 +589,11 @@
 
     .toggle-password:hover {
         color: var(--secondary-color);
-        background: rgba(31, 10, 82, 0.06);
+        background: rgba(var(--secondary-rgb),  0.06);
     }
 
     .toggle-password:focus-visible {
-        outline: 2px solid rgba(93, 69, 170, 0.5);
+        outline: 2px solid rgba(var(--accent-rgb), 0.5);
         outline-offset: 2px;
     }
 
@@ -609,7 +621,7 @@
     button[type='submit'] {
         width: 100%;
         position: relative;
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 55%, #3d2280 100%);
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 55%, var(--accent-brand) 100%);
         color: #fff;
         border-radius: 999px;
         padding: clamp(0.75rem, 1.8dvh, 1rem) 1.2rem;
@@ -620,7 +632,7 @@
         font-family: inherit;
         border: none;
         cursor: pointer;
-        box-shadow: 0 14px 28px rgba(15, 5, 41, 0.24);
+        box-shadow: 0 14px 28px rgba(var(--primary-rgb),  0.24);
         transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
         display: flex;
         align-items: center;
@@ -631,7 +643,7 @@
 
     button[type='submit']:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 18px 32px rgba(15, 5, 41, 0.28);
+        box-shadow: 0 18px 32px rgba(var(--primary-rgb),  0.28);
     }
 
     button[type='submit']:active:not(:disabled) {
@@ -753,7 +765,7 @@
         align-items: center;
         justify-content: center;
         padding: 1.5rem;
-        background: rgba(15, 5, 41, 0.54);
+        background: rgba(var(--primary-rgb),  0.54);
         backdrop-filter: blur(8px);
         z-index: 9999;
         transition: opacity 180ms ease, visibility 180ms ease;
@@ -776,7 +788,7 @@
         padding: 1.6rem;
         border-radius: 28px;
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 241, 252, 0.98));
-        box-shadow: 0 24px 48px rgba(15, 5, 41, 0.24);
+        box-shadow: 0 24px 48px rgba(var(--primary-rgb),  0.24);
         border: 1px solid rgba(255, 255, 255, 0.72);
         display: flex;
         flex-direction: column;
@@ -808,7 +820,7 @@
     }
 
     .modal[data-variant='confirm'] .modal-icon {
-        background: linear-gradient(135deg, #1f0a52, #4d2ea3);
+        background: linear-gradient(135deg, var(--secondary-color), var(--accent-brand));
     }
 
     .modal-title {
@@ -816,13 +828,13 @@
         font-size: 1.45rem;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: #090218;
+        color: var(--primary-strong);
     }
 
     .modal-message {
         font-size: 1rem;
         line-height: 1.65;
-        color: #675e7c;
+        color: var(--text-muted);
     }
 
     .modal-actions {
@@ -846,15 +858,15 @@
     }
 
     .modal-action--primary {
-        background: linear-gradient(135deg, #0f0529, #1f0a52);
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         color: #fff;
-        box-shadow: 0 10px 24px rgba(15, 5, 41, 0.22);
+        box-shadow: 0 10px 24px rgba(var(--primary-rgb),  0.22);
     }
 
     .modal-action--secondary {
-        background: rgba(31, 10, 82, 0.08);
-        color: #090218;
-        border: 1px solid rgba(31, 10, 82, 0.12);
+        background: rgba(var(--secondary-rgb),  0.08);
+        color: var(--primary-strong);
+        border: 1px solid rgba(var(--secondary-rgb),  0.12);
     }
 
     .modal-action:hover {

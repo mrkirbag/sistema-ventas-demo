@@ -23,7 +23,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
     <header class="page-header">
         <p class="eyebrow">Cuentas por cobrar</p>
         <h1>Registrar abono</h1>
-        <p class="page-intro">Ingresa el monto y la fecha del pago parcial para actualizar el saldo pendiente del crédito.</p>
+        <p class="page-intro">Registra el pago con moneda, método y monto recibido para actualizar el saldo pendiente.</p>
     </header>
 
     <div class="btn-add_container">
@@ -35,9 +35,9 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         <div>
             <p class="summary-eyebrow">Saldo pendiente</p>
             <p class="summary-amount">
-                <span id="pendiente">—</span> <small>USD</small>
+                <span id="pendiente">—</span>
             </p>
-            <p class="summary-subtext"><span id="pendienteCOP">—</span> COP</p>
+            <p class="summary-subtext" id="pendienteRef">—</p>
         </div>
     </section>
 
@@ -49,15 +49,26 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             </div>
 
             <div class="form-field">
-                <label for="montoAbono">Monto en USD</label>
+                <label for="pagoMoneda">Moneda</label>
+                <select id="pagoMoneda" name="pagoMoneda"></select>
+            </div>
+
+            <div class="form-field">
+                <label for="pagoMetodo">Método de pago</label>
+                <select id="pagoMetodo" name="pagoMetodo"></select>
+            </div>
+
+            <div class="form-field">
+                <label for="montoAbono">Monto recibido</label>
                 <input
                     type="text"
                     name="montoAbono"
                     id="montoAbono"
-                    placeholder="Ej. 25.50"
+                    placeholder="0"
                     inputmode="decimal"
+                    autocomplete="off"
                 />
-                <p class="field-hint" id="montoCopPreview">El equivalente en COP se mostrará al ingresar el monto.</p>
+                <p class="field-hint" id="montoCopPreview">El equivalente se mostrará al ingresar el monto.</p>
             </div>
 
             <div class="form-actions">
@@ -122,16 +133,16 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         color: var(--text-muted);
     }
 
+    .abono-form {
+        max-width: 640px;
+        margin-left: 0;
+    }
+
     .summary-subtext {
         margin: 0.3rem 0 0;
         font-size: 0.88rem;
         font-weight: 600;
         color: var(--text-muted);
-    }
-
-    .abono-form {
-        max-width: 520px;
-        margin-left: 0;
     }
 
     .field-hint {
@@ -149,68 +160,125 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 </style>
 
 <script>
-
     import { mostrarError, mostrarMensaje, confirmarAccion } from '@/utils/helpers/mensajes.js';
-    import { cambioUSDaCOP } from '@/utils/helpers/cambioMoneda.js';
+    import { obtenerTasas } from '@/utils/helpers/cambioMoneda.js';
+    import {
+        formatearMoneda,
+        obtenerMonedaBase,
+        textoTotal,
+        toleranciaPago,
+    } from '@/utils/helpers/tasas.js';
+    import {
+        etiquetaPago,
+        metodosDeMoneda,
+        montoRestanteEnMoneda,
+        monedasPagoDisponibles,
+        parsearLineaPago,
+    } from '@/utils/helpers/metodosPago.js';
 
     const id = location.pathname.split("/").pop() as string;
     const saldoPendiente = document.querySelector('#pendiente') as HTMLElement;
-    const saldoPendienteCOP = document.querySelector('#pendienteCOP') as HTMLElement;
-    const montoCopPreview = document.querySelector('#montoCopPreview') as HTMLParagraphElement;
+    const saldoPendienteRef = document.querySelector('#pendienteRef') as HTMLElement;
+    const montoPreview = document.querySelector('#montoCopPreview') as HTMLParagraphElement;
     const montoAbonoInput = document.querySelector('#montoAbono') as HTMLInputElement;
+    const pagoMonedaSelect = document.querySelector('#pagoMoneda') as HTMLSelectElement;
+    const pagoMetodoSelect = document.querySelector('#pagoMetodo') as HTMLSelectElement;
+    const formulario = document.getElementById('formulario') as HTMLFormElement;
 
-    let tasaActual = 0;
+    const monedaBase = obtenerMonedaBase();
+    let tasasActuales = { cop: 0, bs: 0 };
     let saldoMaximo = 0;
+
+    function rellenarMetodos() {
+        const moneda = pagoMonedaSelect.value;
+        const metodos = metodosDeMoneda(moneda);
+        const actual = pagoMetodoSelect.value;
+        pagoMetodoSelect.innerHTML = metodos
+            .map((metodo: { id: string; etiqueta: string }) => `<option value="${metodo.id}">${metodo.etiqueta}</option>`)
+            .join('');
+        if (metodos.some((metodo: { id: string }) => metodo.id === actual)) {
+            pagoMetodoSelect.value = actual;
+        }
+    }
+
+    function rellenarMonedas() {
+        const monedas = monedasPagoDisponibles(tasasActuales);
+        const actual = pagoMonedaSelect.value;
+        pagoMonedaSelect.innerHTML = monedas
+            .map((moneda: { id: string; etiqueta: string }) => `<option value="${moneda.id}">${moneda.etiqueta}</option>`)
+            .join('');
+        if (monedas.some((moneda: { id: string }) => moneda.id === actual)) {
+            pagoMonedaSelect.value = actual;
+        } else if (monedas[0]) {
+            pagoMonedaSelect.value = monedas[0].id;
+        }
+        rellenarMetodos();
+        actualizarVistaMonto();
+    }
+
+    function actualizarVistaMonto() {
+        const sugerido = montoRestanteEnMoneda(saldoMaximo, pagoMonedaSelect.value, monedaBase, tasasActuales);
+        montoAbonoInput.placeholder = pagoMonedaSelect.value === 'COP'
+            ? String(Math.round(sugerido) || 0)
+            : (sugerido || 0).toFixed(2);
+
+        const linea = parsearLineaPago({
+            moneda: pagoMonedaSelect.value,
+            metodo: pagoMetodoSelect.value,
+            monto: montoAbonoInput.value,
+        }, monedaBase, tasasActuales);
+
+        if (!linea.ok) {
+            montoPreview.textContent = saldoMaximo > 0
+                ? `Saldo pendiente: ${formatearMoneda(saldoMaximo, monedaBase)}`
+                : 'El equivalente se mostrará al ingresar el monto.';
+            return;
+        }
+
+        const resto = Math.max(0, saldoMaximo - linea.pago.monto_base);
+        montoPreview.textContent = `Equivale a ${formatearMoneda(linea.pago.monto_base, monedaBase)}. Quedaría ${formatearMoneda(resto, monedaBase)} pendiente.`;
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
         try {
             const response = await fetch(`/api/creditos/${id}`);
             const data = await response.json();
-
+            tasasActuales = await obtenerTasas();
             saldoMaximo = Number(data.credito.saldo_pendiente);
-            const saldo = saldoMaximo.toFixed(2);
-            saldoPendiente.textContent = saldo;
-
-            tasaActual = await cambioUSDaCOP();
-            saldoPendienteCOP.textContent = Math.ceil(tasaActual * saldoMaximo).toString();
-
+            saldoPendiente.textContent = formatearMoneda(saldoMaximo, monedaBase);
+            saldoPendienteRef.textContent = textoTotal(saldoMaximo, monedaBase, tasasActuales);
+            rellenarMonedas();
         } catch (error) {
             console.error('Error al cargar datos de crédito o tasa:', error);
             saldoPendiente.textContent = '—';
-            saldoPendienteCOP.textContent = '—';
+            saldoPendienteRef.textContent = '—';
         }
     });
 
-    montoAbonoInput.addEventListener('input', () => {
-        const raw = montoAbonoInput.value.trim().replace(',', '.');
-        const monto = parseFloat(raw);
-
-        if (!montoAbonoInput.value || isNaN(monto) || monto <= 0) {
-            montoCopPreview.textContent = 'El equivalente en COP se mostrará al ingresar el monto.';
-            return;
-        }
-
-        const cop = Math.ceil(monto * tasaActual);
-        montoCopPreview.textContent = `Equivalente aproximado: ${cop} COP`;
+    pagoMonedaSelect.addEventListener('change', () => {
+        rellenarMetodos();
+        actualizarVistaMonto();
     });
-
-    const formulario = document.getElementById('formulario') as HTMLFormElement;
+    pagoMetodoSelect.addEventListener('change', actualizarVistaMonto);
+    montoAbonoInput.addEventListener('input', actualizarVistaMonto);
 
     formulario.addEventListener('submit', async (event: Event) => {
         event.preventDefault();
 
-        const fechaInput = document.querySelector('#fecha') as HTMLInputElement;
-        const raw = montoAbonoInput.value.trim().replace(',', '.');
-        const montoAbono = parseFloat(raw);
-        const fecha = fechaInput.value?.trim();
+        const fecha = (document.querySelector('#fecha') as HTMLInputElement).value?.trim();
+        const linea = parsearLineaPago({
+            moneda: pagoMonedaSelect.value,
+            metodo: pagoMetodoSelect.value,
+            monto: montoAbonoInput.value,
+        }, monedaBase, tasasActuales);
 
-        if (!montoAbonoInput.value || isNaN(montoAbono) || montoAbono <= 0) {
-            mostrarError('Debe ingresar un monto válido mayor a cero');
+        if (!linea.ok) {
+            mostrarError(linea.error);
             return;
         }
 
-        if (montoAbono > saldoMaximo) {
-            mostrarError(`El abono no puede superar el saldo pendiente (${saldoMaximo.toFixed(2)} USD)`);
+        if (linea.pago.monto_base > saldoMaximo + toleranciaPago(monedaBase)) {
+            mostrarError(`El abono no puede superar el saldo pendiente (${formatearMoneda(saldoMaximo, monedaBase)})`);
             return;
         }
 
@@ -219,8 +287,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             return;
         }
 
-        const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(fecha);
-        if (!fechaValida) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
             mostrarError('El formato de fecha no es válido');
             return;
         }
@@ -231,42 +298,33 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             return;
         }
 
-        const confirmar = await confirmarAccion(`¿Deseas registrar un abono por ${montoAbono.toFixed(2)} USD?`, {
-            titulo: 'Registrar abono',
-            textoAceptar: 'Registrar',
-        });
+        const confirmar = await confirmarAccion(
+            `¿Registrar ${formatearMoneda(linea.pago.monto, linea.pago.moneda)} por ${etiquetaPago(linea.pago.moneda, linea.pago.metodo)}?`,
+            { titulo: 'Registrar abono', textoAceptar: 'Registrar' }
+        );
         if (!confirmar) return;
 
         const response = await fetch("/api/abonos/agregarAbono", {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ id, fecha, montoAbono }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id,
+                fecha,
+                moneda: linea.pago.moneda,
+                metodo: linea.pago.metodo,
+                monto: linea.pago.monto,
+            }),
         });
 
+        const raw = await response.text();
+        let data: any = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch {}
+
         if (!response.ok) {
-            const mensaje = await response.text();
-            switch (response.status) {
-                case 400:
-                    mostrarError('Datos inválidos: ' + mensaje);
-                    break;
-                case 404:
-                    mostrarError('Crédito no encontrado');
-                    break;
-                case 409:
-                    mostrarError(mensaje);
-                    break;
-                case 500:
-                    mostrarError('Error interno del servidor');
-                    break;
-                default:
-                    mostrarError('Error inesperado: ' + response.status);
-            }
+            mostrarError(data?.message || data?.error || raw || `Error ${response.status}`);
             return;
         }
 
-        const data = await response.json();
         mostrarMensaje(data.message);
 
         if (data.venta_actualizada) {

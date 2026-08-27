@@ -1,0 +1,223 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/');
+}
+
+const productoId = Astro.url.searchParams.get('id');
+---
+
+<Layout>
+    <header class="page-header">
+        <p class="eyebrow">Inventario</p>
+        <h1>Historial de stock</h1>
+        <p class="page-intro" id="pageIntro">
+            Entradas y salidas manuales por producto, usuario, fecha, hora y motivo.
+        </p>
+    </header>
+
+    <div class="page-toolbar">
+        <div class="toolbar-actions">
+            <div class="btn-add_container">
+                <a class="btn-add" href="/productos">Regresar</a>
+            </div>
+        </div>
+
+        <div class="input-busqueda_container">
+            <input type="text" id="inputBusqueda" placeholder="Buscar por producto, usuario o motivo..." />
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead id="thead">
+                <tr>
+                    <th>Fecha y hora</th>
+                    <th>Producto</th>
+                    <th>Tipo</th>
+                    <th>Cantidad</th>
+                    <th>Usuario</th>
+                    <th>Motivo</th>
+                </tr>
+            </thead>
+            <tbody id="listaMovimientos"></tbody>
+        </table>
+    </div>
+
+    <div class="btn-vermas_container">
+        <button id="btnVerAnterior" class="btn-vermas">Anterior</button>
+        <button id="btnVerMas" class="btn-vermas">Siguiente</button>
+    </div>
+
+    <div id="mensaje"></div>
+</Layout>
+
+<script>
+    import { noRegistros } from '@/utils/helpers/mensajes.js';
+    import { formatearFecha } from '@/utils/helpers/formateoFecha.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const productoId = params.get('id');
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const thead = document.getElementById('thead') as HTMLTableSectionElement;
+        const tbody = document.getElementById('listaMovimientos') as HTMLTableSectionElement;
+        const btnVerMas = document.getElementById('btnVerMas') as HTMLButtonElement;
+        const btnVerAnterior = document.getElementById('btnVerAnterior') as HTMLButtonElement;
+        const busqueda = document.getElementById('inputBusqueda') as HTMLInputElement;
+        const pageIntro = document.getElementById('pageIntro') as HTMLParagraphElement;
+
+        let movimientos = [] as any[];
+        let filtrados = [] as any[];
+        let paginaActual = 1;
+        const porPagina = 12;
+
+        function etiquetaTipo(tipo: string) {
+            return tipo === 'salida' ? 'Salida' : 'Entrada';
+        }
+
+        function mostrarPagina(pagina: number) {
+            const inicio = (pagina - 1) * porPagina;
+            const fin = inicio + porPagina;
+            const lote = filtrados.slice(inicio, fin);
+
+            tbody.innerHTML = '';
+
+            if (lote.length === 0) {
+                thead.style.display = 'none';
+                noRegistros(productoId
+                    ? 'Este producto aún no tiene movimientos de stock'
+                    : 'No hay movimientos de stock registrados');
+                btnVerMas.style.display = 'none';
+                btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
+                return;
+            }
+
+            noRegistros('');
+            thead.style.display = 'table-header-group';
+
+            lote.forEach((movimiento) => {
+                const tr = document.createElement('tr');
+                const tipoClase = movimiento.tipo === 'salida' ? 'tipo-salida' : 'tipo-entrada';
+
+                tr.innerHTML = `
+                    <td data-label="Fecha y hora">
+                        ${formatearFecha(movimiento.fecha)}
+                        <br />
+                        <span class="hora">${movimiento.hora}</span>
+                    </td>
+                    <td data-label="Producto">
+                        <strong>${String(movimiento.codigo_producto || '').toUpperCase()}</strong>
+                        <br />
+                        ${String(movimiento.nombre_producto || '').toUpperCase()}
+                    </td>
+                    <td data-label="Tipo"><span class="tipo-pill ${tipoClase}">${etiquetaTipo(movimiento.tipo)}</span></td>
+                    <td data-label="Cantidad">
+                        ${movimiento.tipo === 'salida' ? '−' : '+'}${movimiento.cantidad}
+                        <br />
+                        <span class="hora">Stock: ${movimiento.stock_antes} → ${movimiento.stock_despues}</span>
+                    </td>
+                    <td data-label="Usuario">${movimiento.usuario_nombre}</td>
+                    <td data-label="Motivo">${movimiento.motivo}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            btnVerMas.style.display = filtrados.length > fin ? 'block' : 'none';
+            btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
+        }
+
+        function aplicarFiltro(texto: string) {
+            if (!texto.trim()) return [...movimientos];
+
+            const filtro = texto.toLowerCase();
+            return movimientos.filter((movimiento) =>
+                String(movimiento.codigo_producto || '').toLowerCase().includes(filtro)
+                || String(movimiento.nombre_producto || '').toLowerCase().includes(filtro)
+                || String(movimiento.usuario_nombre || '').toLowerCase().includes(filtro)
+                || String(movimiento.motivo || '').toLowerCase().includes(filtro)
+                || etiquetaTipo(movimiento.tipo).toLowerCase().includes(filtro)
+            );
+        }
+
+        try {
+            const url = productoId
+                ? `/api/productos/movimientos?productoId=${encodeURIComponent(productoId)}`
+                : '/api/productos/movimientos';
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (!response.ok) {
+                thead.style.display = 'none';
+                noRegistros(data.error || 'Error al cargar el historial');
+                return;
+            }
+
+            movimientos = Array.isArray(data) ? data : (data.movimientos || []);
+            filtrados = [...movimientos];
+
+            if (productoId && movimientos[0]) {
+                pageIntro.textContent = `Movimientos de ${String(movimientos[0].codigo_producto).toUpperCase()} — ${String(movimientos[0].nombre_producto).toUpperCase()}.`;
+            }
+
+            mostrarPagina(paginaActual);
+        } catch (error) {
+            console.error('Error al cargar historial:', error);
+            thead.style.display = 'none';
+            noRegistros('Error al cargar el historial');
+        }
+
+        busqueda.addEventListener('input', () => {
+            paginaActual = 1;
+            filtrados = aplicarFiltro(busqueda.value);
+            mostrarPagina(paginaActual);
+        });
+
+        btnVerMas.addEventListener('click', () => {
+            paginaActual++;
+            mostrarPagina(paginaActual);
+        });
+
+        btnVerAnterior.addEventListener('click', () => {
+            if (paginaActual > 1) {
+                paginaActual--;
+                mostrarPagina(paginaActual);
+            }
+        });
+    });
+</script>
+
+<style>
+    .hora {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+    }
+
+    .tipo-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0.2rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .tipo-entrada {
+        background: rgba(0, 128, 0, 0.12);
+        color: var(--success-color);
+    }
+
+    .tipo-salida {
+        background: rgba(255, 77, 77, 0.12);
+        color: var(--danger-color);
+    }
+</style>

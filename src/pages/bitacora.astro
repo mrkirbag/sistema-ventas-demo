@@ -1,0 +1,171 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+if (usuario.rol !== 'admin') {
+    return Astro.redirect('/');
+}
+---
+
+<Layout>
+    <header class="page-header">
+        <p class="eyebrow">Administración</p>
+        <h1>Bitácora</h1>
+        <p class="page-intro">Quién inició sesión y quién registró ventas, abonos, créditos, clientes, tasas y cambios de inventario.</p>
+    </header>
+
+    <div class="page-toolbar">
+        <div class="input-busqueda_container">
+            <input type="text" id="inputBusqueda" placeholder="Buscar por usuario, acción o detalle..." />
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead id="thead">
+                <tr>
+                    <th>Fecha y hora</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Detalle</th>
+                </tr>
+            </thead>
+            <tbody id="listaBitacora"></tbody>
+        </table>
+    </div>
+
+    <div class="btn-vermas_container">
+        <button id="btnVerAnterior" class="btn-vermas">Anterior</button>
+        <button id="btnVerMas" class="btn-vermas">Siguiente</button>
+    </div>
+
+    <div id="mensaje"></div>
+</Layout>
+
+<script>
+    import { noRegistros } from '@/utils/helpers/mensajes.js';
+    import { formatearFecha } from '@/utils/helpers/formateoFecha.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const thead = document.getElementById('thead') as HTMLTableSectionElement;
+        const tbody = document.getElementById('listaBitacora') as HTMLTableSectionElement;
+        const btnVerMas = document.getElementById('btnVerMas') as HTMLButtonElement;
+        const btnVerAnterior = document.getElementById('btnVerAnterior') as HTMLButtonElement;
+        const busqueda = document.getElementById('inputBusqueda') as HTMLInputElement;
+
+        let registros = [] as any[];
+        let filtrados = [] as any[];
+        let paginaActual = 1;
+        const porPagina = 14;
+
+        function mostrarPagina(pagina: number) {
+            const inicio = (pagina - 1) * porPagina;
+            const fin = inicio + porPagina;
+            const lote = filtrados.slice(inicio, fin);
+
+            tbody.innerHTML = '';
+
+            if (lote.length === 0) {
+                thead.style.display = 'none';
+                noRegistros('No hay movimientos en la bitácora');
+                btnVerMas.style.display = 'none';
+                btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
+                return;
+            }
+
+            noRegistros('');
+            thead.style.display = 'table-header-group';
+
+            lote.forEach((item) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Fecha y hora">
+                        ${formatearFecha(item.fecha)}
+                        <br />
+                        <span class="hora">${item.hora || ''}</span>
+                    </td>
+                    <td data-label="Usuario">${item.usuario_nombre || '—'}</td>
+                    <td data-label="Acción"><span class="accion-pill">${item.etiqueta || item.accion}</span></td>
+                    <td data-label="Detalle">${item.detalle || '—'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            btnVerMas.style.display = filtrados.length > fin ? 'block' : 'none';
+            btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
+        }
+
+        function aplicarFiltro(texto: string) {
+            if (!texto.trim()) return [...registros];
+            const filtro = texto.toLowerCase();
+            return registros.filter((item) =>
+                String(item.usuario_nombre || '').toLowerCase().includes(filtro)
+                || String(item.etiqueta || '').toLowerCase().includes(filtro)
+                || String(item.accion || '').toLowerCase().includes(filtro)
+                || String(item.detalle || '').toLowerCase().includes(filtro)
+            );
+        }
+
+        try {
+            const response = await fetch('/api/bitacora');
+            const data = await response.json();
+
+            if (!response.ok) {
+                thead.style.display = 'none';
+                noRegistros(data.error || 'Error al cargar la bitácora');
+                return;
+            }
+
+            registros = Array.isArray(data) ? data : [];
+            filtrados = [...registros];
+            mostrarPagina(paginaActual);
+        } catch (error) {
+            console.error('Error al cargar bitácora:', error);
+            thead.style.display = 'none';
+            noRegistros('Error al cargar la bitácora');
+        }
+
+        busqueda.addEventListener('input', () => {
+            paginaActual = 1;
+            filtrados = aplicarFiltro(busqueda.value);
+            mostrarPagina(paginaActual);
+        });
+
+        btnVerMas.addEventListener('click', () => {
+            paginaActual++;
+            mostrarPagina(paginaActual);
+        });
+
+        btnVerAnterior.addEventListener('click', () => {
+            if (paginaActual > 1) {
+                paginaActual--;
+                mostrarPagina(paginaActual);
+            }
+        });
+    });
+</script>
+
+<style>
+    .hora {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+    }
+
+    .accion-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0.2rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: rgba(var(--accent-rgb), 0.14);
+        color: var(--secondary-color);
+    }
+</style>

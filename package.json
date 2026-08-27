@@ -7,7 +7,12 @@
     "dev:force": "astro dev --force",
     "build": "astro build",
     "preview": "astro preview",
-    "seed": "node scripts/seed.js",
+    "seed": "node --experimental-strip-types scripts/seed.ts",
+    "migrate:cotizaciones": "node scripts/migrate-cotizaciones.js",
+    "migrate:tasas": "node scripts/migrate-tasas.js",
+    "migrate:movimientos": "node scripts/migrate-movimientos-inventario.js",
+    "migrate:pagos": "node scripts/migrate-pagos-venta.js",
+    "migrate:abonos": "node scripts/migrate-abonos-pago.js",
     "astro": "astro"
   },
   "dependencies": {
@@ -23,5 +28,9 @@
     "html-to-image": "^1.11.13",
     "jsonwebtoken": "^9.0.3",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3"
   }
 }
