@@ -154,6 +154,9 @@ const titulo = empresa.nombre || "Sistema de inventario";
 		position: fixed;
 		inset: 0 auto 0 0;
 		width: var(--sidebar-width);
+		max-width: var(--sidebar-width);
+		min-width: 0;
+		overflow-x: clip;
 		z-index: 20;
 	}
 
@@ -454,26 +457,26 @@ const titulo = empresa.nombre || "Sistema de inventario";
 	}
 
 	.acciones .btn-clave,
-	.acciones .btn-stock,
 	.acciones .btn-detalles,
 	.acciones .btn-editar {
 		background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
 		box-shadow: 0 8px 18px rgba(var(--primary-rgb),  0.18);
 	}
 
-	.acciones .btn-salida {
-		background: linear-gradient(135deg, #8a4b12, #c26a1a);
-		box-shadow: 0 8px 18px rgba(138, 75, 18, 0.22);
+	.acciones .btn-stock {
+		background: linear-gradient(135deg, var(--success-color), var(--success-hover-color));
+		box-shadow: 0 8px 18px rgba(0, 102, 0, 0.22);
+	}
+
+	.acciones .btn-salida,
+	.acciones .btn-eliminar {
+		background: linear-gradient(135deg, var(--danger-color), var(--danger-hover-color));
+		box-shadow: 0 8px 18px rgba(165, 21, 21, 0.22);
 	}
 
 	.acciones .btn-historial {
-		background: linear-gradient(135deg, var(--secondary-color), var(--accent-brand));
-		box-shadow: 0 8px 18px rgba(61, 42, 110, 0.22);
-	}
-
-	.acciones .btn-eliminar {
-		background: linear-gradient(135deg, var(--danger-color), #df6d63);
-		box-shadow: 0 8px 18px rgba(200, 76, 67, 0.22);
+		background: linear-gradient(135deg, #1d4ed8, #2563eb);
+		box-shadow: 0 8px 18px rgba(29, 78, 216, 0.22);
 	}
 
 	.acciones .btn-icono {
