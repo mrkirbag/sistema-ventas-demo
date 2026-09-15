@@ -6,6 +6,7 @@ export const ACCIONES = {
     CREDITO: 'credito',
     ABONO: 'abono',
     ANULAR_VENTA: 'anular_venta',
+    DEVOLUCION: 'devolucion',
     TASA: 'tasa',
     PRODUCTO_NUEVO: 'producto_nuevo',
     PRODUCTO_EDITAR: 'producto_editar',
@@ -29,6 +30,7 @@ export const ETIQUETAS_ACCION = {
     credito: 'Venta a crédito',
     abono: 'Abono a crédito',
     anular_venta: 'Anulación de venta',
+    devolucion: 'Devolución',
     tasa: 'Cambio de tasa',
     producto_nuevo: 'Producto nuevo',
     producto_editar: 'Edición de producto',
@@ -72,14 +74,32 @@ function armarArgs({ usuario, accion, entidad = null, entidadId = null, detalle 
     const { fecha, hora } = fechaHoraVenezuela();
     const texto = typeof detalle === 'string' ? detalle : JSON.stringify(detalle);
 
+    let entidadIdSanitizado = null;
+    if (entidadId !== null && entidadId !== undefined) {
+        if (typeof entidadId === 'number') {
+            entidadIdSanitizado = Number.isFinite(entidadId) ? String(entidadId) : null;
+        } else {
+            entidadIdSanitizado = String(entidadId).trim() || null;
+        }
+    }
+
+    let usuarioIdSanitizado = null;
+    if (usuario?.id !== null && usuario?.id !== undefined) {
+        if (typeof usuario.id === 'number') {
+            usuarioIdSanitizado = Number.isFinite(usuario.id) ? String(usuario.id) : null;
+        } else {
+            usuarioIdSanitizado = String(usuario.id).trim() || null;
+        }
+    }
+
     return [
         fecha,
         hora,
-        usuario?.id ?? null,
+        usuarioIdSanitizado,
         usuario?.nombre || usuario?.usuario || 'Sistema',
         accion,
         entidad,
-        entidadId ?? null,
+        entidadIdSanitizado,
         texto,
     ];
 }

@@ -1,6 +1,6 @@
 # SAVI Demo · Sistema de inventario y ventas
 
-Demo comercial en **Astro 5** con backend SSR, base de datos **Turso (libSQL)** y despliegue en **Netlify**. Cubre inventario, ventas, créditos, reportes, cotizaciones y gestión de usuarios con roles.
+Demo comercial en **Astro 5** con backend SSR, base de datos **Turso (libSQL)** y despliegue en **Netlify**. Cubre inventario, compras a proveedores con gestión de seriales, ventas inmutables, devoluciones con notas de crédito, cuentas por cobrar (créditos y abonos), reportes de caja/utilidad, cotizaciones y auditoría con bitácora.
 
 ---
 
@@ -37,8 +37,8 @@ Se instalan automáticamente con `pnpm install`. Referencia principal:
 | `@libsql/client` | Conexión a Turso |
 | `bcrypt` | Hash de contraseñas |
 | `jsonwebtoken` | Autenticación por JWT |
-| `chart.js` | Gráficos del dashboard |
-| `xlsx` | Carga masiva de productos (Excel) |
+| `chart.js` | Gráficos del dashboard y reportes |
+| `xlsx` | Importación y exportación de productos (Excel) |
 | `html-to-image` | Exportar / imprimir documentos |
 | `dotenv` | Variables de entorno (seed local) |
 
@@ -145,12 +145,6 @@ Seed completado.
 
 El script es **idempotente**: si el usuario ya existe, no lo duplica.
 
-Si la BD ya existía antes de las tasas en Bs:
-
-```bash
-pnpm migrate:tasas
-```
-
 ### Paso 6 · Personalizar la marca del cliente
 
 | Archivo | Qué editar |
@@ -177,7 +171,9 @@ Abrí [http://localhost:4321](http://localhost:4321), iniciá sesión con el adm
 - [ ] Login y cierre de sesión
 - [ ] Tasa del día
 - [ ] Alta de producto y cliente
+- [ ] Registro de compra (manual o Excel con seriales)
 - [ ] Registro de venta (contado y crédito)
+- [ ] Devolución de venta (efectivo o nota de crédito)
 - [ ] Reportes (como admin)
 
 ### Paso 8 · Datos de demo *(recomendado)*
@@ -185,9 +181,10 @@ Abrí [http://localhost:4321](http://localhost:4321), iniciá sesión con el adm
 Entrá como admin y prepará el escenario:
 
 1. Ajustá la **tasa real** en *Tasa del Día*
-2. Cargá productos (manual o **carga masiva** `.xlsx` en *Productos*)
+2. Cargá productos (manual en *Productos* o importación masiva `.xlsx` en *Compras*)
 3. Creá 1–2 clientes de prueba
-4. Registrá una venta de ejemplo
+4. Registrá una compra con proveedor y costos
+5. Registrá una venta de ejemplo
 
 ### Paso 9 · Despliegue en Netlify
 
@@ -217,7 +214,9 @@ En Windows el proyecto usa el adapter **Node** en local; en Netlify usa **Netlif
 | `pnpm dev:force` | Dev forzando recompilación |
 | `pnpm build` | Build de producción en `./dist/` |
 | `pnpm preview` | Preview del build local |
-| `pnpm seed` | Aplica el esquema e inserta admin, tasas y cliente de mostrador |
+| `pnpm seed` | Aplica el esquema seguro e inserta admin, tasas y cliente de mostrador |
+| `pnpm migrate:compras` | Migra tablas de compras y seriales en BD existentes |
+| `pnpm migrate:devoluciones` | Migra tablas de devoluciones y detalle en BD existentes |
 | `pnpm migrate:movimientos` | Crea la tabla de historial de stock en BD existentes |
 | `pnpm astro ...` | CLI de Astro |
 
@@ -230,14 +229,21 @@ En Windows el proyecto usa el adapter **Node** en local; en Netlify usa **Netlif
 | Dashboard | `/` | Todos |
 | Tasa del día | `/tasa` | Todos |
 | Clientes | `/clientes` | Todos |
+| Productos | `/productos` | Admin |
+| Historial de stock | `/productos/historial` | Admin |
+| Compras | `/compras` | Admin |
+| Registrar compra | `/compras/nueva` | Admin |
+| Detalle compra | `/compras/[id]` | Admin |
 | Ventas | `/ventas` | Todos |
+| Registrar venta | `/ventas/agregarVentas` | Todos |
+| Detalle venta | `/ventas/[id]` | Todos |
+| Devoluciones | `/devoluciones` | Todos |
 | Créditos | `/creditos` | Todos |
+| Detalle crédito | `/creditos/[id]` | Todos |
+| Registrar abonos | `/creditos/agregarAbonos/[id]` | Todos |
 | Cotizaciones | `/cotizaciones` | Todos |
 | Agregar cotización | `/cotizaciones/agregar` | Todos |
 | Detalle cotización | `/cotizaciones/[id]` | Todos |
-| Productos | `/productos` | Admin |
-| Historial de stock | `/productos/historial` | Admin |
-| Cargas de factura | `/cargas` | Admin |
 | Reportes | `/reportes` | Admin |
 | Bitácora | `/bitacora` | Admin |
 | Usuarios | `/usuarios` | Admin |

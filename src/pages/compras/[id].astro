@@ -1,0 +1,143 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { verificarToken } from "@/utils/auth.js";
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect("/login");
+}
+if (usuario.rol !== "admin") {
+    return Astro.redirect("/");
+}
+
+const { id } = Astro.params;
+---
+
+<Layout>
+    <header class="page-header">
+        <p class="eyebrow">Gestión de compras</p>
+        <h1>Detalle de compra</h1>
+        <p class="page-intro">Revisa la información y productos de esta compra.</p>
+    </header>
+
+    <div class="btn-add_container">
+        <a class="btn-add" href="/compras">Regresar</a>
+    </div>
+
+    <div class="info-container" id="infoCompra" style="display: none;">
+        <div class="info-grid">
+            <p><strong>Fecha:</strong> <span id="lblFecha"></span></p>
+            <p><strong>Proveedor:</strong> <span id="lblProveedor"></span></p>
+            <p><strong>Monto Total:</strong> <span id="lblMonto"></span> USD</p>
+        </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top: 2rem;">
+        <table id="tablaDetalles" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th>Costo</th>
+                    <th>Cantidad</th>
+                    <th>Subtotal</th>
+                    <th>Seriales</th>
+                </tr>
+            </thead>
+            <tbody id="listaDetalles"> </tbody>
+        </table>
+    </div>
+
+    <div id="mensaje"></div>
+</Layout>
+
+<style>
+    .info-container {
+        background-color: rgba(var(--primary-rgb), 0.1);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid rgba(var(--primary-rgb), 0.2);
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    .info-grid p {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+    .seriales-list {
+        font-size: 0.85rem;
+        color: #555;
+        margin-top: 0.2rem;
+    }
+</style>
+
+<script>
+    import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
+    import { noRegistros } from "@/utils/helpers/mensajes.js";
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        const idCompra = window.location.pathname.split("/").pop() as string;
+
+        try {
+            const respuesta = await fetch(`/api/compras/${idCompra}`);
+
+            if (respuesta.status === 204) {
+                noRegistros("Compra no encontrada");
+                return;
+            }
+
+            const compra = await respuesta.json();
+
+            // Llenar cabecera
+            document.getElementById("infoCompra")!.style.display = "block";
+            document.getElementById("lblFecha")!.textContent = formatearFecha(
+                compra.fecha,
+            );
+            document.getElementById("lblProveedor")!.textContent =
+                compra.proveedor;
+            document.getElementById("lblMonto")!.textContent =
+                compra.monto_total.toFixed(2);
+
+            // Llenar detalles
+            const tabla = document.getElementById(
+                "tablaDetalles",
+            ) as HTMLTableElement;
+            const lista = document.getElementById(
+                "listaDetalles",
+            ) as HTMLTableSectionElement;
+
+            if (compra.detalles && compra.detalles.length > 0) {
+                tabla.style.display = "table";
+
+                compra.detalles.forEach((d: any) => {
+                    const tr = document.createElement("tr");
+
+                    let serialesHtml = "N/A";
+                    if (d.seriales && d.seriales.length > 0) {
+                        serialesHtml = `<div class="seriales-list">${d.seriales.join(", ")}</div>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td>${d.codigo_producto}</td>
+                        <td>${d.nombre_producto}</td>
+                        <td>${Number(d.costo).toFixed(2)}</td>
+                        <td>${d.cantidad}</td>
+                        <td>${Number(d.subtotal).toFixed(2)}</td>
+                        <td>${serialesHtml}</td>
+                    `;
+                    lista.appendChild(tr);
+                });
+            } else {
+                noRegistros(
+                    "No hay productos registrados en esta compra."
+                );
+            }
+        } catch (error) {
+            console.error("Error cargando detalles", error);
+            noRegistros("Ocurrió un error al cargar la compra.");
+        }
+    });
+</script>

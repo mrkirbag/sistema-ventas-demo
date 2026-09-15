@@ -1,0 +1,592 @@
+---
+/**
+ * ModalDevolucion.astro
+ * Modal para procesar la devolución de una venta.
+ * Muestra los productos de la venta y permite elegir qué devolver.
+ * Dos acciones: Reembolso en Efectivo o Generar Nota de Crédito.
+ *
+ * Se activa desde JS con: window.abrirModalDevolucion(ventaId, clienteId)
+ */
+---
+
+<div id="overlayDevolucion" class="overlay oculto">
+    <div class="modal modal-devolucion">
+        <!-- Header -->
+        <div class="devolucion-header">
+            <div class="devolucion-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+            </div>
+            <h3 class="modal-title">Procesar Devolución</h3>
+            <p class="devolucion-subtitle" id="devolucionSubtitle">Cargando datos de la venta...</p>
+        </div>
+
+        <!-- Productos -->
+        <div class="devolucion-productos" id="devolucionProductos">
+            <div class="devolucion-loading" id="devolucionLoading">
+                <div class="spinner"></div>
+                <span>Cargando productos...</span>
+            </div>
+        </div>
+
+        <!-- Total a devolver -->
+        <div class="devolucion-total" id="devolucionTotalBox" style="display: none;">
+            <span class="devolucion-total_label">Total a devolver</span>
+            <strong class="devolucion-total_value" id="devolucionTotalValue">$0.00</strong>
+        </div>
+
+        <!-- Motivo -->
+        <div class="devolucion-motivo" id="devolucionMotivoBox" style="display: none;">
+            <label for="devolucionMotivo" class="devolucion-motivo_label">Motivo (opcional)</label>
+            <textarea id="devolucionMotivo" rows="2" placeholder="Producto defectuoso, cambio de opinión..."></textarea>
+        </div>
+
+        <!-- Acciones -->
+        <div class="devolucion-actions" id="devolucionActions" style="display: none;">
+            <button type="button" class="devolucion-btn devolucion-btn--cancel" id="btnCerrarDevolucion">
+                Cancelar
+            </button>
+            <button type="button" class="devolucion-btn devolucion-btn--efectivo" id="btnReembolsoEfectivo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                Reembolso en Efectivo
+            </button>
+            <button type="button" class="devolucion-btn devolucion-btn--credito" id="btnNotaCredito">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                    <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+                Generar Nota de Crédito
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal-devolucion {
+        width: min(100%, 760px);
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 1.8rem;
+        text-align: left;
+    }
+
+    .devolucion-header {
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .devolucion-icon {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 0.65rem;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--secondary-color), var(--accent-brand));
+        color: #fff;
+    }
+
+    .devolucion-icon svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .devolucion-subtitle {
+        font-size: 0.88rem;
+        color: var(--text-muted);
+        margin: 0.25rem 0 0;
+    }
+
+    /* ── Productos ────────────────────────────────────────────────────── */
+    .devolucion-productos {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        max-height: 420px;
+        overflow-y: auto;
+        padding-right: 0.25rem;
+    }
+
+    .devolucion-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.65rem;
+        padding: 2rem;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+
+    .spinner {
+        width: 22px;
+        height: 22px;
+        border: 3px solid rgba(var(--secondary-rgb), 0.18);
+        border-top-color: var(--accent-brand);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    :global(.devolucion-item) {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.85rem 1rem;
+        border-radius: 12px;
+        background: rgba(var(--secondary-rgb), 0.03);
+        border: 1px solid rgba(var(--secondary-rgb), 0.08);
+        transition: background 180ms ease, border-color 180ms ease;
+    }
+    
+    :global(.devolucion-item input[type="checkbox"]) {
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+        accent-color: var(--accent-brand);
+    }
+
+    :global(.devolucion-item:has(input:checked)) {
+        background: rgba(var(--secondary-rgb), 0.10);
+        border-color: rgba(var(--accent-rgb), 0.28);
+    }
+
+    :global(.devolucion-item label) {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        cursor: pointer;
+    }
+
+    :global(.devolucion-item_nombre) {
+        font-weight: 700;
+        font-size: 0.92rem;
+        color: var(--primary-strong);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+    }
+
+    :global(.devolucion-item_detalle) {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+    }
+
+    :global(.devolucion-item_cantidad) {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    :global(.devolucion-item_cantidad input[type="number"]) {
+        width: 80px;
+        padding: 0.4rem 0.5rem;
+        border-radius: 8px;
+        border: 1px solid rgba(var(--secondary-rgb), 0.15);
+        background: #fff;
+        font-size: 0.95rem;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    :global(.devolucion-item_cantidad span) {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    /* ── Total ────────────────────────────────────────────────────────── */
+    .devolucion-total {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.85rem 1rem;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        margin-top: 0.35rem;
+    }
+
+    .devolucion-total_label {
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #1d4ed8;
+    }
+
+    .devolucion-total_value {
+        font-size: 1.2rem;
+        color: #0f172a;
+    }
+
+    /* ── Motivo ────────────────────────────────────────────────────────── */
+    .devolucion-motivo {
+        margin-top: 0.35rem;
+    }
+
+    .devolucion-motivo_label {
+        display: block;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
+        margin-bottom: 0.3rem;
+    }
+
+    .devolucion-motivo textarea {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border-radius: 12px;
+        border: 1px solid rgba(var(--secondary-rgb), 0.15);
+        background: rgba(var(--secondary-rgb), 0.03);
+        font-family: inherit;
+        font-size: 0.88rem;
+        resize: vertical;
+        color: var(--primary-strong);
+    }
+
+    .devolucion-motivo textarea:focus {
+        outline: none;
+        border-color: var(--accent-brand);
+        box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+    }
+
+    /* ── Acciones ──────────────────────────────────────────────────────── */
+    .devolucion-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        justify-content: center;
+        margin-top: 0.25rem;
+    }
+
+    .devolucion-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.65rem 1.1rem;
+        border-radius: 14px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    }
+
+    .devolucion-btn:active {
+        transform: scale(0.97);
+    }
+
+    .devolucion-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .devolucion-btn--cancel {
+        background: rgba(var(--secondary-rgb), 0.08);
+        color: var(--primary-strong);
+        border-color: rgba(var(--secondary-rgb), 0.12);
+    }
+
+    .devolucion-btn--efectivo {
+        background: linear-gradient(135deg, #16a34a, #22c55e);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(22, 163, 74, 0.22);
+    }
+
+    .devolucion-btn--efectivo:hover:not(:disabled) {
+        box-shadow: 0 10px 28px rgba(22, 163, 74, 0.32);
+    }
+
+    .devolucion-btn--credito {
+        background: linear-gradient(135deg, var(--secondary-color), var(--accent-brand));
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(var(--secondary-rgb), 0.22);
+    }
+
+    .devolucion-btn--credito:hover:not(:disabled) {
+        box-shadow: 0 10px 28px rgba(var(--secondary-rgb), 0.32);
+    }
+
+    @media (max-width: 768px) {
+        .modal-devolucion {
+            padding: 1.15rem;
+        }
+
+        .devolucion-actions {
+            flex-direction: column;
+        }
+
+        .devolucion-btn {
+            justify-content: center;
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    import { mostrarMensaje, mostrarError } from '@/utils/helpers/mensajes.js';
+
+    const overlay = document.getElementById('overlayDevolucion') as HTMLDivElement;
+    const loading = document.getElementById('devolucionLoading') as HTMLDivElement;
+    const productosContainer = document.getElementById('devolucionProductos') as HTMLDivElement;
+    const subtitle = document.getElementById('devolucionSubtitle') as HTMLParagraphElement;
+    const totalBox = document.getElementById('devolucionTotalBox') as HTMLDivElement;
+    const totalValue = document.getElementById('devolucionTotalValue') as HTMLElement;
+    const motivoBox = document.getElementById('devolucionMotivoBox') as HTMLDivElement;
+    const motivoInput = document.getElementById('devolucionMotivo') as HTMLTextAreaElement;
+    const actionsBox = document.getElementById('devolucionActions') as HTMLDivElement;
+    const btnCerrar = document.getElementById('btnCerrarDevolucion') as HTMLButtonElement;
+    const btnEfectivo = document.getElementById('btnReembolsoEfectivo') as HTMLButtonElement;
+    const btnCredito = document.getElementById('btnNotaCredito') as HTMLButtonElement;
+
+    interface ProductoVenta {
+        producto_id: number;
+        codigo_producto: string;
+        nombre_producto: string;
+        precio_unitario: number;
+        cantidad: number;
+        subtotal: number;
+    }
+
+    let ventaIdActual: number | null = null;
+    let clienteIdActual: number | null = null;
+    let productosVenta: ProductoVenta[] = [];
+
+    function cerrarModal() {
+        overlay.classList.remove('visible');
+        overlay.classList.add('oculto');
+        ventaIdActual = null;
+        clienteIdActual = null;
+        productosVenta = [];
+    }
+
+    function calcularTotal() {
+        const items = productosContainer.querySelectorAll('.devolucion-item');
+        let total = 0;
+
+        items.forEach((item) => {
+            const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement;
+            const cantidadInput = item.querySelector('input[type="number"]') as HTMLInputElement;
+
+            if (checkbox?.checked) {
+                const precio = Number(checkbox.dataset.precio || 0);
+                const cantidad = Number(cantidadInput?.value || 0);
+                total += precio * cantidad;
+            }
+        });
+
+        totalValue.textContent = `$${total.toFixed(2)}`;
+        return total;
+    }
+
+    function obtenerItemsSeleccionados() {
+        const items = productosContainer.querySelectorAll('.devolucion-item');
+        const seleccionados: any[] = [];
+
+        items.forEach((item) => {
+            const checkbox = item.querySelector('input[type="checkbox"]') as HTMLInputElement;
+            const cantidadInput = item.querySelector('input[type="number"]') as HTMLInputElement;
+
+            if (checkbox?.checked && Number(cantidadInput?.value) > 0) {
+                seleccionados.push({
+                    producto_id: checkbox.dataset.productoId,
+                    codigo: checkbox.dataset.codigo,
+                    nombre: checkbox.dataset.nombre,
+                    precio: Number(checkbox.dataset.precio),
+                    cantidad: Number(cantidadInput.value),
+                });
+            }
+        });
+
+        return seleccionados;
+    }
+
+    async function cargarProductosVenta(ventaId: number) {
+        loading.style.display = 'flex';
+        totalBox.style.display = 'none';
+        motivoBox.style.display = 'none';
+        actionsBox.style.display = 'none';
+
+        try {
+            const res = await fetch(`/api/ventas/${ventaId}`);
+            if (!res.ok) throw new Error('No se pudo obtener la venta');
+
+            const data = await res.json();
+            productosVenta = data.productos || [];
+
+            subtitle.textContent = `Venta #${ventaId} · ${data.cliente?.nombre?.toUpperCase() || 'Cliente'}`;
+
+            loading.style.display = 'none';
+
+            if (productosVenta.length === 0) {
+                productosContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">No se encontraron productos en esta venta.</p>';
+                return;
+            }
+
+            // Limpiar y renderizar productos
+            const fragment = document.createDocumentFragment();
+
+            productosVenta.forEach((producto, index) => {
+                const item = document.createElement('div');
+                item.className = 'devolucion-item';
+                item.innerHTML = `
+                    <input type="checkbox"
+                        id="devItem${index}"
+                        data-producto-id="${producto.producto_id}"
+                        data-codigo="${producto.codigo_producto}"
+                        data-nombre="${producto.nombre_producto}"
+                        data-precio="${producto.precio_unitario}"
+                        data-max="${producto.cantidad}"
+                        checked
+                    />
+                    <label for="devItem${index}">
+                        <span class="devolucion-item_nombre">${producto.codigo_producto.toUpperCase()} — ${producto.nombre_producto.toUpperCase()}</span>
+                        <span class="devolucion-item_detalle">P.U. $${producto.precio_unitario.toFixed(2)} · Vendido: ${producto.cantidad}</span>
+                    </label>
+                    <div class="devolucion-item_cantidad">
+                        <input type="number" id="devCant${index}" value="${producto.cantidad}" min="0.01" max="${producto.cantidad}" step="0.01" />
+                        <span>/ ${producto.cantidad}</span>
+                    </div>
+                `;
+                fragment.appendChild(item);
+            });
+
+            // Mantener solo el loading hidden, agregar items
+            productosContainer.innerHTML = '';
+            productosContainer.appendChild(fragment);
+
+            // Eventos de recalcular total
+            productosContainer.querySelectorAll('input').forEach((input) => {
+                input.addEventListener('change', calcularTotal);
+                input.addEventListener('input', calcularTotal);
+            });
+
+            calcularTotal();
+            totalBox.style.display = 'flex';
+            motivoBox.style.display = 'block';
+            actionsBox.style.display = 'flex';
+
+        } catch (err) {
+            loading.style.display = 'none';
+            productosContainer.innerHTML = '<p style="text-align: center; color: var(--danger-color, #c84c43); padding: 1rem;">Error al cargar los productos de la venta.</p>';
+            console.error('Error cargando productos:', err);
+        }
+    }
+
+    async function procesarDevolucion(tipoResolucion: 'EFECTIVO' | 'NOTA_CREDITO') {
+        const items = obtenerItemsSeleccionados();
+
+        if (items.length === 0) {
+            mostrarError('Selecciona al menos un producto para devolver');
+            return;
+        }
+
+        const total = calcularTotal();
+        if (total <= 0) {
+            mostrarError('El monto total de la devolución debe ser mayor a cero');
+            return;
+        }
+
+        // Deshabilitar botones
+        btnEfectivo.disabled = true;
+        btnCredito.disabled = true;
+        btnCerrar.disabled = true;
+
+        const textoOriginalEfectivo = btnEfectivo.innerHTML;
+        const textoOriginalCredito = btnCredito.innerHTML;
+
+        if (tipoResolucion === 'EFECTIVO') {
+            btnEfectivo.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Procesando...';
+        } else {
+            btnCredito.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Procesando...';
+        }
+
+        try {
+            const res = await fetch('/api/devoluciones', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id_venta: ventaIdActual,
+                    cliente_id: clienteIdActual,
+                    items_devueltos: items,
+                    tipo_resolucion: tipoResolucion,
+                    motivo: motivoInput.value.trim(),
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                mostrarError(data.error || 'Error procesando la devolución');
+                return;
+            }
+
+            cerrarModal();
+
+            const tipoTexto = tipoResolucion === 'NOTA_CREDITO' ? 'Nota de crédito generada' : 'Reembolso en efectivo procesado';
+            mostrarMensaje(`${tipoTexto} correctamente por $${total.toFixed(2)}`);
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 1600);
+
+        } catch (err) {
+            console.error('Error en devolución:', err);
+            mostrarError('Error de conexión al procesar la devolución');
+        } finally {
+            btnEfectivo.disabled = false;
+            btnCredito.disabled = false;
+            btnCerrar.disabled = false;
+            btnEfectivo.innerHTML = textoOriginalEfectivo;
+            btnCredito.innerHTML = textoOriginalCredito;
+        }
+    }
+
+    // ── Event Listeners ──────────────────────────────────────────────────
+    btnCerrar.addEventListener('click', cerrarModal);
+
+    btnEfectivo.addEventListener('click', () => procesarDevolucion('EFECTIVO'));
+    btnCredito.addEventListener('click', () => procesarDevolucion('NOTA_CREDITO'));
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) cerrarModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !overlay.classList.contains('oculto')) {
+            cerrarModal();
+        }
+    });
+
+    // ── API pública ──────────────────────────────────────────────────────
+    (window as any).abrirModalDevolucion = (ventaId: number, clienteId: number) => {
+        ventaIdActual = ventaId;
+        clienteIdActual = clienteId;
+
+        // Reset estado
+        productosContainer.innerHTML = '';
+        productosContainer.appendChild(loading);
+        loading.style.display = 'flex';
+        motivoInput.value = '';
+        subtitle.textContent = 'Cargando datos de la venta...';
+
+        overlay.classList.remove('oculto');
+        overlay.classList.add('visible');
+
+        cargarProductosVenta(ventaId);
+    };
+</script>

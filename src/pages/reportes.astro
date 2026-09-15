@@ -40,6 +40,7 @@ if (usuario.rol !== 'admin') {
             <button type="button" id="metodosPago" data-label="Métodos de pago">Métodos de pago</button>
             <button type="button" id="ventas" data-label="Ventas totales">Ventas Totales</button>
             <button type="button" id="anuladas" data-label="Ventas anuladas">Anuladas</button>
+            <button type="button" id="devoluciones" data-label="Devoluciones">Devoluciones</button>
             <button type="button" id="creditos" data-label="Ventas a crédito">Créditos</button>
         </nav>
     </section>
@@ -406,6 +407,7 @@ if (usuario.rol !== 'admin') {
     const metodosPagoBtn = document.querySelector('#metodosPago');
     const ventasBtn = document.querySelector('#ventas');    
     const creditosBtn = document.querySelector('#creditos');
+    const devolucionesBtn = document.querySelector('#devoluciones');
     const menuButtons = document.querySelectorAll('.menu-reportes button');
     const reportesContainer = document.getElementById('reportes') as HTMLDivElement;
     const reportesEmpty = document.getElementById('reportes-empty') as HTMLDivElement;
@@ -429,6 +431,18 @@ if (usuario.rol !== 'admin') {
         total_usd: number;
         tipo_pago: string;
         estado: string;
+    }
+
+    interface DevolucionReporte {
+        id: string;
+        id_venta: number;
+        monto_total: number;
+        tipo_resolucion: string;
+        saldo_disponible: number;
+        motivo: string;
+        fecha_creacion: string;
+        cliente_nombre: string;
+        cliente_cedula: string;
     }
 
     function setActiveButton(activeBtn: HTMLElement | null) {
@@ -673,18 +687,28 @@ if (usuario.rol !== 'admin') {
                     </div>
                     <div class="card highlight">
                         <h3>Total en Caja</h3>
-                        <p>${Number(ventas.resumen.total_ventas_contado + ventas.resumen.total_abonos_realizados).toFixed(2)} USD</p>
-                        <small>${Math.ceil((ventas.resumen.total_ventas_contado + ventas.resumen.total_abonos_realizados) * tasa)} COP</small>
+                        <p>${ventas.resumen.total_en_caja.toFixed(2)} USD</p>
+                        <small>${Math.ceil(ventas.resumen.total_en_caja * tasa)} COP</small>
                     </div>
                     <div class="card">
-                        <h3>Total de Contado</h3>
+                        <h3>Ventas de Contado (Efectivo/Transferencia)</h3>
                         <p>${ventas.resumen.total_ventas_contado.toFixed(2)} USD</p>
                         <small>${Math.ceil(ventas.resumen.total_ventas_contado * tasa)} COP</small>
                     </div>
                     <div class="card">
-                        <h3>Total de Abonos</h3>
+                        <h3>Abonos Recibidos</h3>
                         <p>${ventas.resumen.total_abonos_realizados.toFixed(2)} USD</p>
                         <small>${Math.ceil(ventas.resumen.total_abonos_realizados * tasa)} COP</small>
+                    </div>
+                    <div class="card">
+                        <h3>Pagado con Nota de Crédito</h3>
+                        <p>${(ventas.resumen.notas_usadas || 0).toFixed(2)} USD</p>
+                        <small>${Math.ceil((ventas.resumen.notas_usadas || 0) * tasa)} COP</small>
+                    </div>
+                    <div class="card">
+                        <h3>Salidas (Devoluciones)</h3>
+                        <p style="color: #ef4444;">-${ventas.resumen.salidas_efectivo.toFixed(2)} USD</p>
+                        <small>${Math.ceil(ventas.resumen.salidas_efectivo * tasa)} COP</small>
                     </div>
                     <div class="card">
                         <h3>Ganancia Neta de Contado</h3>
@@ -730,13 +754,17 @@ if (usuario.rol !== 'admin') {
             renderChart("Reporte de Caja en USD", [
                 "Contado",
                 "Crédito",
+                "Notas",
                 "Abonos",
-                "Total",
+                "Salidas",
+                "Caja Total",
                 "Ganancia"
             ], [
                 Math.ceil(ventas.resumen.total_ventas_contado),
                 Math.ceil(ventas.resumen.total_ventas_credito),
+                Math.ceil(ventas.resumen.notas_usadas || 0),
                 Math.ceil(ventas.resumen.total_abonos_realizados),
+                Math.ceil(ventas.resumen.salidas_efectivo),
                 Math.ceil(ventas.resumen.total_en_caja),
                 Math.ceil(ventas.resumen.margen_ganancia),
             ], {
@@ -1043,6 +1071,109 @@ if (usuario.rol !== 'admin') {
                                 <td data-label="Estado">${v.estado.toUpperCase()}</td>
                             </tr>
                         `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            reportesContainer.appendChild(tabla);
+
+        } catch (error) {
+            console.error('Error al generar reporte:', error);
+            restablecerVistaInicial();
+            mostrarError('No se pudo generar el reporte');
+        }
+    });
+
+    devolucionesBtn?.addEventListener('click', async (e: Event) => {
+
+        e.preventDefault();
+        const button = e.currentTarget as HTMLElement;
+        resetContenedor();
+        setActiveButton(button);
+
+        const desde = (document.querySelector("#desde") as HTMLInputElement)?.value;
+        const hasta = (document.querySelector("#hasta") as HTMLInputElement)?.value;
+
+        if (!validarFechas(desde, hasta)) {
+            restablecerVistaInicial();
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/reportes/ventasDevoluciones?desde=${desde}&hasta=${hasta}`);
+            if (!response.ok) throw new Error(`Error ${response.status}`);
+
+            const data = await response.json();
+            const devoluciones: DevolucionReporte[] = data.devoluciones || [];
+            const resumen = data.resumen || {};
+
+            if (devoluciones.length === 0) {
+                restablecerVistaInicial();
+                mostrarError('No hay devoluciones en ese rango de fecha');
+                return;
+            }
+
+            const tasa = await cambioUSDaCOP();
+            const meta = getButtonMeta(button);
+            mostrarResultados(meta.titulo, `${devoluciones.length} devolución(es) entre ${desde} y ${hasta}.`);
+
+            reportesContainer.innerHTML = `
+                <div class="grid-reportes">
+                    <div class="card highlight">
+                        <h3>Total Devuelto</h3>
+                        <p>${Number(resumen.monto_total_devuelto || 0).toFixed(2)} USD</p>
+                        <small>${Math.ceil(Number(resumen.monto_total_devuelto || 0) * tasa)} COP</small>
+                    </div>
+                    <div class="card">
+                        <h3>Reembolsos en Efectivo</h3>
+                        <p>${Number(resumen.total_efectivo || 0).toFixed(2)} USD</p>
+                    </div>
+                    <div class="card">
+                        <h3>Notas de Crédito Emitidas</h3>
+                        <p>${Number(resumen.total_notas_credito || 0).toFixed(2)} USD</p>
+                    </div>
+                    <div class="card">
+                        <h3>Saldo Pendiente en Notas</h3>
+                        <p>${Number(resumen.saldo_notas_pendiente || 0).toFixed(2)} USD</p>
+                    </div>
+                </div>
+            `;
+
+            const tabla = document.createElement('div');
+            tabla.className = 'tabla-wrapper';
+            tabla.innerHTML = `
+                <table class="tabla-reportes">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Venta</th>
+                            <th>Cliente</th>
+                            <th>Monto</th>
+                            <th>Tipo</th>
+                            <th>Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${devoluciones.map((d: DevolucionReporte) => {
+                            const tipoTexto = d.tipo_resolucion === 'NOTA_CREDITO' ? 'Nota de Crédito' : 'Efectivo';
+                            const saldoTexto = d.tipo_resolucion === 'NOTA_CREDITO' ? `${d.saldo_disponible.toFixed(2)} USD` : '—';
+                            return `
+                            <tr>
+                                <td data-label="Fecha">${d.fecha_creacion ? new Date(d.fecha_creacion).toLocaleDateString('es-VE') : '—'}</td>
+                                <td data-label="Venta">#${d.id_venta}</td>
+                                <td data-label="Cliente">
+                                    ${d.cliente_nombre.toUpperCase()}
+                                    <br />C.I. ${d.cliente_cedula}
+                                </td>
+                                <td data-label="Monto">
+                                    ${d.monto_total.toFixed(2)} USD
+                                    <br />${Math.ceil(d.monto_total * tasa)} COP
+                                </td>
+                                <td data-label="Tipo">${tipoTexto}</td>
+                                <td data-label="Saldo">${saldoTexto}</td>
+                            </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;

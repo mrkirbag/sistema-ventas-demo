@@ -32,11 +32,10 @@ export async function GET({ request }) {
                         FROM detalle_venta vd
                         JOIN ventas v ON v.id = vd.id_venta
                         JOIN productos p ON p.codigo = vd.codigo_producto
-                        WHERE v.estado = 'completado'
+                        WHERE v.estado IN ('completado', 'devuelto')
                             AND DATE(v.fecha) BETWEEN ? AND ?
                         GROUP BY vd.codigo_producto, p.nombre
-                        ORDER BY cantidad_total DESC
-                        LIMIT 5;
+                        ORDER BY cantidad_total DESC;
                     `;
 
     const queryBottom = `
@@ -48,11 +47,10 @@ export async function GET({ request }) {
                             FROM detalle_venta vd
                             JOIN ventas v ON v.id = vd.id_venta
                             JOIN productos p ON p.codigo = vd.codigo_producto
-                            WHERE v.estado = 'completado'
+                            WHERE v.estado IN ('completado', 'devuelto')
                                 AND DATE(v.fecha) BETWEEN ? AND ?
                             GROUP BY vd.codigo_producto, p.nombre
-                            ORDER BY cantidad_total ASC
-                            LIMIT 5;
+                            ORDER BY cantidad_total ASC;
                         `;
 
     try {

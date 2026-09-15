@@ -15,6 +15,7 @@ export async function GET({ request }) {
         const result = await db.execute(` SELECT
                                             v.id,
                                             v.fecha,
+                                            v.cliente_id,
                                             c.nombre AS cliente,
                                             c.cedula AS cedula_cliente,
                                             v.total,

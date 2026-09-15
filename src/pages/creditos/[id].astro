@@ -1,13 +1,13 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import { verificarToken } from '@/utils/auth.js';
+import Layout from "../../layouts/Layout.astro";
+import { verificarToken } from "@/utils/auth.js";
 
 const usuario = verificarToken(Astro.request);
 if (!usuario) {
-    return Astro.redirect('/login');
+    return Astro.redirect("/login");
 }
 
-const {id} = Astro.params;
+const { id } = Astro.params;
 ---
 
 <Layout>
@@ -18,7 +18,10 @@ const {id} = Astro.params;
     <header class="page-header credito-header">
         <p class="eyebrow">Detalle de crédito</p>
         <h1>Venta a crédito</h1>
-        <p class="page-intro">Consulta el saldo, los productos facturados y el historial de abonos de esta venta.</p>
+        <p class="page-intro">
+            Consulta el saldo, los productos facturados y el historial de abonos
+            de esta venta.
+        </p>
     </header>
 
     <main class="credito-page">
@@ -88,7 +91,14 @@ const {id} = Astro.params;
                 <span class="detail-label">Progreso de pago</span>
                 <strong id="progressLabel">0%</strong>
             </div>
-            <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack">
+            <div
+                class="progress-track"
+                role="progressbar"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+                id="progressTrack"
+            >
                 <div class="progress-bar" id="progressBar"></div>
             </div>
         </section>
@@ -99,7 +109,9 @@ const {id} = Astro.params;
                     <p class="eyebrow">Productos</p>
                     <h2>Detalle facturado</h2>
                 </div>
-                <p class="table-caption">Valores expresados en USD y referencia en COP.</p>
+                <p class="table-caption">
+                    Valores expresados en USD y referencia en COP.
+                </p>
             </div>
 
             <div class="table-wrap">
@@ -124,7 +136,9 @@ const {id} = Astro.params;
                     <h2>Abonos realizados</h2>
                 </div>
                 <div class="btn-add_container">
-                    <a class="btn-add" href={`/creditos/agregarAbonos/${id}`}>Agregar abono</a>
+                    <a class="btn-add" href={`/creditos/agregarAbonos/${id}`}
+                        >Agregar abono</a
+                    >
                 </div>
             </div>
 
@@ -228,22 +242,38 @@ const {id} = Astro.params;
     }
 
     .kpi-card--total {
-        background: linear-gradient(135deg, rgba(219, 234, 254, 0.9), rgba(191, 219, 254, 0.72));
+        background: linear-gradient(
+            135deg,
+            rgba(219, 234, 254, 0.9),
+            rgba(191, 219, 254, 0.72)
+        );
         border-color: rgba(37, 99, 235, 0.16);
     }
 
     .kpi-card--abonado {
-        background: linear-gradient(135deg, rgba(209, 250, 229, 0.9), rgba(167, 243, 208, 0.72));
+        background: linear-gradient(
+            135deg,
+            rgba(209, 250, 229, 0.9),
+            rgba(167, 243, 208, 0.72)
+        );
         border-color: rgba(5, 150, 105, 0.16);
     }
 
     .kpi-card--pendiente {
-        background: linear-gradient(135deg, rgba(254, 243, 199, 0.92), rgba(253, 230, 138, 0.72));
+        background: linear-gradient(
+            135deg,
+            rgba(254, 243, 199, 0.92),
+            rgba(253, 230, 138, 0.72)
+        );
         border-color: rgba(217, 119, 6, 0.18);
     }
 
     .kpi-card--abonos {
-        background: linear-gradient(135deg, rgba(237, 233, 254, 0.92), rgba(221, 214, 254, 0.72));
+        background: linear-gradient(
+            135deg,
+            rgba(237, 233, 254, 0.92),
+            rgba(221, 214, 254, 0.72)
+        );
         border-color: rgba(109, 40, 217, 0.16);
     }
 
@@ -370,7 +400,6 @@ const {id} = Astro.params;
 </style>
 
 <script>
-
     import { noRegistros } from "@/utils/helpers/mensajes.js";
     import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
     import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
@@ -395,17 +424,25 @@ const {id} = Astro.params;
     }
 
     function actualizarProgreso(total: number, abonado: number) {
-        const porcentaje = total > 0 ? Math.min(100, Math.round((abonado / total) * 100)) : 0;
-        const progressBar = document.getElementById('progressBar') as HTMLDivElement;
-        const progressLabel = document.getElementById('progressLabel') as HTMLElement;
-        const progressTrack = document.getElementById('progressTrack') as HTMLDivElement;
+        const porcentaje =
+            total > 0 ? Math.min(100, Math.round((abonado / total) * 100)) : 0;
+        const progressBar = document.getElementById(
+            "progressBar",
+        ) as HTMLDivElement;
+        const progressLabel = document.getElementById(
+            "progressLabel",
+        ) as HTMLElement;
+        const progressTrack = document.getElementById(
+            "progressTrack",
+        ) as HTMLDivElement;
 
         if (progressBar) progressBar.style.width = `${porcentaje}%`;
         if (progressLabel) progressLabel.textContent = `${porcentaje}%`;
-        if (progressTrack) progressTrack.setAttribute('aria-valuenow', porcentaje.toString());
+        if (progressTrack)
+            progressTrack.setAttribute("aria-valuenow", porcentaje.toString());
     }
 
-    document.addEventListener('DOMContentLoaded', rellenarCampos);
+    document.addEventListener("DOMContentLoaded", rellenarCampos);
 
     const id = location.pathname.split("/").pop();
 
@@ -415,29 +452,45 @@ const {id} = Astro.params;
             if (!response.ok) throw new Error("Error al obtener crédito");
             const data = await response.json();
 
-            (document.querySelector('#clienteNombre') as HTMLElement).textContent = data.cliente.nombre.toUpperCase();
-            (document.querySelector('#clienteCedula') as HTMLElement).textContent = data.cliente.cedula;
-            (document.querySelector('#clienteTelefono') as HTMLElement).textContent = data.cliente.telefono;
+            (
+                document.querySelector("#clienteNombre") as HTMLElement
+            ).textContent = data.cliente.nombre.toUpperCase();
+            (
+                document.querySelector("#clienteCedula") as HTMLElement
+            ).textContent = data.cliente.cedula;
+            (
+                document.querySelector("#clienteTelefono") as HTMLElement
+            ).textContent = data.cliente.telefono;
 
             const fechaFormateada = formatearFecha(data.venta.fecha);
-            (document.querySelector('#fecha') as HTMLElement).textContent = fechaFormateada;
-            (document.querySelector('#tipoPago') as HTMLElement).textContent = data.venta.tipo_pago.toUpperCase();
-            (document.querySelector('#estado') as HTMLElement).textContent = data.venta.estado.toUpperCase();
+            (document.querySelector("#fecha") as HTMLElement).textContent =
+                fechaFormateada;
+            (document.querySelector("#tipoPago") as HTMLElement).textContent =
+                data.venta.tipo_pago.toUpperCase();
+            (document.querySelector("#estado") as HTMLElement).textContent =
+                data.venta.estado.toUpperCase();
 
             const tasa = await cambioUSDaCOP();
             const montoTotal = Number(data.venta.monto_total);
 
-            (document.querySelector('#total') as HTMLElement).textContent = montoTotal.toFixed(2);
-            (document.querySelector('#totalCOP') as HTMLElement).textContent = Math.ceil(tasa * montoTotal).toString();
+            (document.querySelector("#total") as HTMLElement).textContent =
+                montoTotal.toFixed(2);
+            (document.querySelector("#totalCOP") as HTMLElement).textContent =
+                Math.ceil(tasa * montoTotal).toString();
 
             const saldoPendiente = Number(data.credito.saldo_pendiente);
-            (document.querySelector('#pendiente') as HTMLElement).textContent = saldoPendiente.toFixed(2);
-            (document.querySelector('#pendienteCOP') as HTMLElement).textContent = Math.ceil(tasa * saldoPendiente).toString();
+            (document.querySelector("#pendiente") as HTMLElement).textContent =
+                saldoPendiente.toFixed(2);
+            (
+                document.querySelector("#pendienteCOP") as HTMLElement
+            ).textContent = Math.ceil(tasa * saldoPendiente).toString();
 
             const dataProductos: Producto[] = data.productos;
-            const tbody = document.querySelector('#listaProductos') as HTMLTableSectionElement;
-            dataProductos.forEach(p => {
-                const tr = document.createElement('tr');
+            const tbody = document.querySelector(
+                "#listaProductos",
+            ) as HTMLTableSectionElement;
+            dataProductos.forEach((p) => {
+                const tr = document.createElement("tr");
                 const subtotalPesos = Math.ceil(tasa * p.subtotal);
                 tr.innerHTML = `
                     <td data-label="Código">${p.codigo_producto.toUpperCase()}</td>
@@ -451,11 +504,21 @@ const {id} = Astro.params;
                 tbody.appendChild(tr);
             });
 
-            const totalAbonadoText = document.querySelector('#abonado') as HTMLElement;
-            const totalAbonadoCopText = document.querySelector('#abonadoCOP') as HTMLElement;
-            const listaAbonosTbody = document.querySelector('#listaAbonos') as HTMLTableSectionElement;
-            const abonosThead = document.querySelector('#abonosThead') as HTMLTableSectionElement;
-            const nroAbonos = document.querySelector('#nroAbonos') as HTMLElement;
+            const totalAbonadoText = document.querySelector(
+                "#abonado",
+            ) as HTMLElement;
+            const totalAbonadoCopText = document.querySelector(
+                "#abonadoCOP",
+            ) as HTMLElement;
+            const listaAbonosTbody = document.querySelector(
+                "#listaAbonos",
+            ) as HTMLTableSectionElement;
+            const abonosThead = document.querySelector(
+                "#abonosThead",
+            ) as HTMLTableSectionElement;
+            const nroAbonos = document.querySelector(
+                "#nroAbonos",
+            ) as HTMLElement;
 
             const resAbonos = await fetch(`/api/abonos/${id}`);
             const dataAbonos: Abono[] = await resAbonos.json();
@@ -463,26 +526,33 @@ const {id} = Astro.params;
             let totalAbonadoUsd = 0;
 
             if (resAbonos.status === 202) {
-                listaAbonosTbody.innerHTML = '';
-                abonosThead.style.display = 'none';
-                noRegistros('No se han registrado abonos para esta venta a crédito');
+                listaAbonosTbody.innerHTML = "";
+                abonosThead.style.display = "none";
+                noRegistros(
+                    "No se han registrado abonos para esta venta a crédito",
+                );
             } else {
-                noRegistros('');
-                abonosThead.style.display = 'table-header-group';
+                noRegistros("");
+                abonosThead.style.display = "table-header-group";
 
-                dataAbonos.forEach(abono => {
+                dataAbonos.forEach((abono) => {
                     totalAbonadoUsd += abono.monto;
                     const fechaAbono = formatearFecha(abono.fecha);
                     const montoCop = Math.ceil(tasa * abono.monto);
 
-                    const metodoTexto = abono.moneda && abono.metodo
-                        ? etiquetaPago(abono.moneda, abono.metodo)
-                        : '—';
-                    const recibidoTexto = abono.monto_recibido && abono.moneda
-                        ? formatearMoneda(abono.monto_recibido, abono.moneda)
-                        : `${abono.monto.toFixed(2)} USD`;
+                    const metodoTexto =
+                        abono.moneda && abono.metodo
+                            ? etiquetaPago(abono.moneda, abono.metodo)
+                            : "—";
+                    const recibidoTexto =
+                        abono.monto_recibido && abono.moneda
+                            ? formatearMoneda(
+                                  abono.monto_recibido,
+                                  abono.moneda,
+                              )
+                            : `${abono.monto.toFixed(2)} USD`;
 
-                    const tr = document.createElement('tr');
+                    const tr = document.createElement("tr");
                     tr.innerHTML = `
                         <td data-label="Fecha">${fechaAbono}</td>
                         <td data-label="Método">${metodoTexto}</td>
@@ -496,13 +566,14 @@ const {id} = Astro.params;
             }
 
             totalAbonadoText.textContent = totalAbonadoUsd.toFixed(2);
-            totalAbonadoCopText.textContent = Math.ceil(totalAbonadoUsd * tasa).toString();
-            nroAbonos.textContent = resAbonos.status === 202 ? '0' : dataAbonos.length.toString();
+            totalAbonadoCopText.textContent = Math.ceil(
+                totalAbonadoUsd * tasa,
+            ).toString();
+            nroAbonos.textContent =
+                resAbonos.status === 202 ? "0" : dataAbonos.length.toString();
             actualizarProgreso(montoTotal, totalAbonadoUsd);
-
         } catch (error) {
-            console.error('Error al cargar crédito:', error);
+            console.error("Error al cargar crédito:", error);
         }
     }
-
 </script>

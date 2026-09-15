@@ -1,0 +1,341 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { verificarToken } from '@/utils/auth.js';
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect('/login');
+}
+
+const fechaActual = new Date().toLocaleDateString("es-VE", {
+    timeZone: "America/Caracas",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+}).split('/').reverse().join('-');
+---
+
+<Layout>
+    <header class="page-header">
+        <p class="eyebrow">Gestión comercial</p>
+        <h1>Devoluciones</h1>
+        <p class="page-intro">Historial inmutable de devoluciones y notas de crédito. Cada devolución queda registrada sin alterar el historial de ventas pasadas.</p>
+    </header>
+
+    <div class="page-toolbar devoluciones-toolbar">
+        <div class="filtro-fecha">
+            <label class="filtro-fecha_label" for="inputBusqueda">Fecha de consulta</label>
+            <div class="input-busqueda_container fecha-filtro">
+                <input type="date" id="inputBusqueda" value={fechaActual} />
+            </div>
+        </div>
+    </div>
+
+    <section class="devoluciones-summary-card" aria-live="polite">
+        <div class="summary-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+        </div>
+        <div>
+            <p class="summary-eyebrow">Devoluciones del día</p>
+            <p class="summary-text" id="resumenDevoluciones">Selecciona una fecha para ver las devoluciones registradas.</p>
+        </div>
+    </section>
+
+    <div class="table-wrap">
+        <table id="tabla">
+            <thead id="tablaHead" style="display: none;">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Venta</th>
+                    <th>Cliente</th>
+                    <th>Monto</th>
+                    <th>Tipo</th>
+                    <th>Saldo</th>
+                </tr>
+            </thead>
+            <tbody id="listaDevoluciones">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="mensaje"></div>
+    <div id="overlay" class="overlay oculto">
+        <div id="modal" class="modal"></div>
+    </div>
+</Layout>
+
+<style>
+    .filtro-fecha {
+        display: grid;
+        gap: 0.35rem;
+        flex: 0 0 auto;
+        min-width: min(100%, 220px);
+        justify-items: end;
+        margin-left: auto;
+        align-self: center;
+    }
+
+    .filtro-fecha_label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
+    }
+
+    .fecha-filtro {
+        margin: 0;
+        padding: 0;
+        justify-content: flex-end;
+        height: auto;
+        min-height: 0;
+        align-items: stretch;
+    }
+
+    .fecha-filtro input {
+        max-width: 220px;
+        margin: 0;
+    }
+
+    .devoluciones-summary-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.15rem;
+        border-radius: var(--radius-lg);
+        background: linear-gradient(135deg, rgba(234, 179, 8, 0.06), rgba(254, 243, 199, 0.42));
+        border: 1px solid rgba(234, 179, 8, 0.15);
+        box-shadow: var(--shadow-card);
+    }
+
+    .summary-icon {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--secondary-color), var(--accent-brand));
+        color: #fff;
+        flex-shrink: 0;
+        box-shadow: 0 10px 22px rgba(var(--primary-rgb), 0.2);
+    }
+
+    .summary-eyebrow {
+        margin: 0 0 0.2rem;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
+    }
+
+    .summary-text {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--primary-strong);
+        line-height: 1.5;
+    }
+
+    :global(.tipo-badge) {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.32rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+    }
+
+    :global(.tipo-badge--efectivo) {
+        background: rgba(0, 128, 0, 0.12);
+        color: #0b5f2b;
+        border-color: rgba(0, 128, 0, 0.2);
+    }
+
+    :global(.tipo-badge--credito) {
+        background: rgba(var(--secondary-rgb), 0.08);
+        color: var(--primary-strong);
+        border-color: rgba(var(--secondary-rgb), 0.12);
+    }
+
+    :global(.monto-usd) {
+        font-weight: 700;
+        color: var(--primary-strong);
+    }
+
+    :global(.monto-cop) {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+    }
+
+    :global(.saldo-activo) {
+        font-weight: 700;
+        color: #1d4ed8;
+    }
+
+    :global(.saldo-agotado) {
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+
+    @media (max-width: 768px) {
+        .page-header {
+            margin-bottom: 0.15rem;
+        }
+
+        .devoluciones-toolbar {
+            gap: 0.65rem;
+            padding-bottom: 0.15rem;
+        }
+
+        .devoluciones-toolbar .filtro-fecha {
+            order: -1;
+            width: 100%;
+            margin-left: 0;
+            align-self: stretch;
+            justify-items: stretch;
+            gap: 0.4rem;
+            padding-bottom: 0.2rem;
+        }
+
+        .devoluciones-toolbar .fecha-filtro {
+            justify-content: stretch;
+        }
+
+        .devoluciones-toolbar .fecha-filtro input {
+            display: block;
+            width: 100%;
+            max-width: none;
+            height: 36px;
+            min-height: 36px;
+            max-height: 36px;
+            padding: 0 0.7rem;
+            font-size: 16px;
+            line-height: normal;
+            box-sizing: border-box;
+        }
+
+        .devoluciones-toolbar + .devoluciones-summary-card {
+            margin-top: 0.35rem;
+        }
+
+        .devoluciones-summary-card {
+            align-items: flex-start;
+            padding: 0.9rem 1rem;
+        }
+
+        .devoluciones-summary-card + .table-wrap {
+            margin-top: 0.45rem;
+        }
+    }
+</style>
+
+<script>
+    import { noRegistros } from "@/utils/helpers/mensajes.js";
+    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
+    import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
+
+    interface Devolucion {
+        id: string;
+        id_venta: number;
+        monto_total: number;
+        tipo_resolucion: string;
+        saldo_disponible: number;
+        motivo: string;
+        fecha_creacion: string;
+        cliente_nombre: string;
+        cliente_cedula: string;
+    }
+
+    function actualizarResumen(cantidad: number, fecha: string) {
+        const resumen = document.getElementById('resumenDevoluciones') as HTMLParagraphElement;
+        if (!resumen) return;
+
+        if (cantidad === 0) {
+            resumen.textContent = `No hay devoluciones registradas para el ${fecha}.`;
+            return;
+        }
+
+        const texto = cantidad === 1 ? '1 devolución registrada' : `${cantidad} devoluciones registradas`;
+        resumen.textContent = `${texto} para el ${fecha}.`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputBusqueda = document.getElementById("inputBusqueda") as HTMLInputElement;
+        inputBusqueda.dispatchEvent(new Event('input'));
+    });
+
+    const inputBusqueda = document.getElementById("inputBusqueda") as HTMLInputElement;
+    inputBusqueda.addEventListener('input', async () => {
+
+        const tablaHead = document.getElementById('tablaHead') as HTMLTableSectionElement;
+        const tbody = document.getElementById('listaDevoluciones') as HTMLTableSectionElement;
+
+        tbody.innerHTML = "";
+
+        const fechaFormateadaResumen = formatearFecha(inputBusqueda.value);
+
+        try {
+            const res = await fetch(`/api/devoluciones?fecha=${inputBusqueda.value}`);
+            const devoluciones: Devolucion[] = await res.json();
+
+            if (res.status === 202 || !Array.isArray(devoluciones) || devoluciones.length === 0) {
+                tablaHead.style.display = 'none';
+                actualizarResumen(0, fechaFormateadaResumen);
+                noRegistros("No hay devoluciones registradas para esa fecha");
+                return;
+            } else {
+                tbody.innerHTML = "";
+                noRegistros("");
+            }
+
+            tablaHead.style.display = 'table-header-group';
+            actualizarResumen(devoluciones.length, fechaFormateadaResumen);
+
+            const tasa = await cambioUSDaCOP();
+
+            devoluciones.forEach(dev => {
+                const fechaCreacion = dev.fecha_creacion
+                    ? new Date(dev.fecha_creacion).toLocaleString('es-VE', { timeZone: 'America/Caracas', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : '—';
+
+                const totalCOP = Math.ceil(dev.monto_total * tasa);
+                const esCredito = dev.tipo_resolucion === 'NOTA_CREDITO';
+                const tipoClase = esCredito ? 'tipo-badge--credito' : 'tipo-badge--efectivo';
+                const tipoTexto = esCredito ? 'NOTA DE CRÉDITO' : 'EFECTIVO';
+
+                const saldoClase = dev.saldo_disponible > 0 ? 'saldo-activo' : 'saldo-agotado';
+                const saldoTexto = esCredito ? `$${dev.saldo_disponible.toFixed(2)}` : '—';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Fecha">${fechaCreacion}</td>
+                    <td data-label="Venta">#${dev.id_venta}</td>
+                    <td data-label="Cliente">
+                        <strong>${dev.cliente_nombre.toUpperCase()}</strong><br />
+                        <span class="monto-cop">C.I. ${dev.cliente_cedula}</span>
+                    </td>
+                    <td data-label="Monto">
+                        <span class="monto-usd">${dev.monto_total.toFixed(2)} USD</span><br />
+                        <span class="monto-cop">${totalCOP} COP</span>
+                    </td>
+                    <td data-label="Tipo">
+                        <span class="tipo-badge ${tipoClase}">${tipoTexto}</span>
+                    </td>
+                    <td data-label="Saldo">
+                        <span class="${saldoClase}">${saldoTexto}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error('Error al cargar devoluciones:', err);
+        }
+    });
+</script>

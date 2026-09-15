@@ -87,11 +87,11 @@ export async function POST({ request }) {
                 tx,
                 `INSERT INTO cotizaciones
                     (fecha, cliente_nombre, cliente_cedula_rif, cliente_telefono, cliente_direccion, total)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
                 [fecha, nombre, cedulaRif, telefono, direccion, totalCalculado]
             );
 
-            const idCotizacion = normalizarId(cotizacionResult.lastInsertRowid);
+            const idCotizacion = normalizarId(cotizacionResult.rows[0].id);
 
             for (const item of itemsConfirmados) {
                 await insertarDetalleCotizacion(tx, idCotizacion, item);

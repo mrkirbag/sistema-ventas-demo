@@ -47,12 +47,13 @@ if (usuario.rol !== 'admin') {
 
             <div class="form-field">
                 <label for="unidad_medida">Unidad de medida</label>
-                <input
-                    type="text"
-                    name="unidad_medida"
-                    id="unidad_medida"
-                    placeholder="Ej. kg, lt, und"
-                />
+                <select name="unidad_medida" id="unidad_medida">
+                    <option value="unidades">Unidades</option>
+                    <option value="litros">Litros</option>
+                    <option value="kilogramos">Kilogramos</option>
+                    <option value="cajas">Cajas</option>
+                    <option value="metros">Metros</option>
+                </select>
             </div>
 
             <div class="form-field">
@@ -64,6 +65,27 @@ if (usuario.rol !== 'admin') {
                     placeholder="Ej. 100"
                     min="0"
                 />
+            </div>
+
+            <div class="form-field toggle-field">
+                <label class="toggle-container" for="chkSeriales">
+                    <span class="toggle-label">¿El producto tiene números de serie?</span>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="chkSeriales" />
+                        <span class="slider round"></span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="form-field panel-seriales" id="panelSeriales" style="display: none;">
+                <div class="panel-seriales-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-barcode"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7v-1a2 2 0 0 1 2 -2h2" /><path d="M4 17v1a2 2 0 0 0 2 2h2" /><path d="M16 4h2a2 2 0 0 1 2 2v1" /><path d="M16 20h2a2 2 0 0 0 2 -2v-1" /><path d="M5 11h1v2h-1z" /><path d="M10 11l0 2" /><path d="M14 11h1v2h-1z" /><path d="M19 11l0 2" /></svg>
+                    <div>
+                        <p class="panel-title">Números de serie requeridos</p>
+                        <p class="panel-subtitle">Ingresa un serial por cada unidad en stock (máx 500).</p>
+                    </div>
+                </div>
+                <div id="inputsSeriales" class="inputs-grid"></div>
             </div>
 
             <div class="form-field">
@@ -100,11 +122,213 @@ if (usuario.rol !== 'admin') {
 
 </Layout>
 
+<style>
+    /* Estilos Premium para el switch */
+    .toggle-field {
+        grid-column: 1 / -1;
+        margin-top: 0.5rem;
+    }
+    .toggle-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(135deg, rgba(236, 231, 246, 0.4), rgba(243, 244, 246, 0.3));
+        border: 1px solid rgba(var(--secondary-rgb), 0.12);
+        padding: 1.15rem 1.4rem;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all 250ms ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.015);
+    }
+    .toggle-container:hover {
+        border-color: rgba(var(--primary-rgb), 0.3);
+        box-shadow: 0 6px 18px rgba(var(--primary-rgb), 0.06);
+        transform: translateY(-1px);
+    }
+    .toggle-label {
+        font-weight: 700;
+        color: var(--secondary-color);
+        font-size: 0.95rem;
+    }
+
+    /* Slider Switch */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 24px;
+    }
+    .toggle-switch input { 
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1;
+        transition: .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    input:checked + .slider {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    }
+    input:checked + .slider:before {
+        transform: translateX(24px);
+    }
+    .slider.round {
+        border-radius: 34px;
+    }
+    .slider.round:before {
+        border-radius: 50%;
+    }
+
+    /* Panel de Seriales Premium */
+    .panel-seriales {
+        grid-column: 1 / -1;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px dashed rgba(var(--primary-rgb), 0.3);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        margin-top: 0.25rem;
+        box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.015);
+        animation: fadeIn 300ms ease forwards;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel-seriales-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    .panel-seriales-header svg {
+        color: var(--primary-color);
+        background: rgba(var(--primary-rgb), 0.1);
+        padding: 0.45rem;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.15);
+    }
+    .panel-title {
+        margin: 0 0 0.15rem;
+        font-weight: 800;
+        color: var(--secondary-color);
+        font-size: 0.95rem;
+    }
+    .panel-subtitle {
+        margin: 0;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+    }
+
+    .inputs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.85rem;
+        max-height: 280px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    /* Scrollbar minimalista para el grid */
+    .inputs-grid::-webkit-scrollbar {
+        width: 6px;
+    }
+    .inputs-grid::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.02);
+        border-radius: 10px;
+    }
+    .inputs-grid::-webkit-scrollbar-thumb {
+        background: rgba(var(--primary-rgb), 0.2);
+        border-radius: 10px;
+    }
+    .inputs-grid::-webkit-scrollbar-thumb:hover {
+        background: rgba(var(--primary-rgb), 0.4);
+    }
+
+    /* Inputs de serial */
+    :global(.in-serial) {
+        border-radius: 8px !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 0.75rem 0.95rem !important;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.02em !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.015) !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+    }
+    :global(.in-serial:focus) {
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15), 0 4px 6px rgba(0,0,0,0.04) !important;
+        transform: translateY(-1px) !important;
+        background-color: #fff !important;
+    }
+    :global(.in-serial::placeholder) {
+        color: #94a3b8 !important;
+        font-weight: 500 !important;
+    }
+</style>
+
 <script>
 
     import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
 
     const formulario = document.getElementById('formulario') as HTMLFormElement;
+    const stockInput = document.getElementById('stock') as HTMLInputElement;
+    const chkSeriales = document.getElementById('chkSeriales') as HTMLInputElement;
+    const panelSeriales = document.getElementById('panelSeriales') as HTMLDivElement;
+    const inputsSeriales = document.getElementById('inputsSeriales') as HTMLDivElement;
+
+    function renderSerialInputs() {
+        if (!chkSeriales.checked) {
+            panelSeriales.style.display = "none";
+            return;
+        }
+        panelSeriales.style.display = "block";
+        
+        const normalizado = stockInput.value.replace(",", ".");
+        const qty = parseFloat(normalizado) || 0;
+        
+        if (qty > 500) {
+            inputsSeriales.innerHTML = `<p style="color: var(--error-color);">Demasiadas unidades para ingresar seriales manualmente.</p>`;
+            return;
+        }
+
+        inputsSeriales.innerHTML = "";
+        for (let i = 0; i < qty; i++) {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "in-serial";
+            input.placeholder = `Serial #${i + 1}`;
+            inputsSeriales.appendChild(input);
+        }
+    }
+
+    chkSeriales.addEventListener("change", renderSerialInputs);
+    stockInput.addEventListener("input", renderSerialInputs);
 
     formulario?.addEventListener('submit', async (event : SubmitEvent) => { 
         
@@ -145,6 +369,27 @@ if (usuario.rol !== 'admin') {
             return;
         }
 
+        let seriales: string[] = [];
+        if (chkSeriales.checked) {
+            if (stockNumero !== Math.floor(stockNumero)) {
+                mostrarError("El stock debe ser un número entero para ingresar seriales");
+                return;
+            }
+
+            const inps = inputsSeriales.querySelectorAll(".in-serial");
+            let vacios = false;
+            inps.forEach((el) => {
+                const i = el as HTMLInputElement;
+                const v = i.value.trim();
+                if (!v) vacios = true;
+                else seriales.push(v);
+            });
+            if (vacios || seriales.length !== stockNumero) {
+                mostrarError("Debe completar todos los números de serie ingresados.");
+                return;
+            }
+        }
+
         const stock = stockNumero;
         const costo = costoNum;
         const venta = ventaNum;
@@ -154,7 +399,7 @@ if (usuario.rol !== 'admin') {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ codigo, nombre, stock, costo, venta, unidad_medida })
+            body: JSON.stringify({ codigo, nombre, stock, costo, venta, unidad_medida, seriales })
         });
 
         if (!response.ok) {

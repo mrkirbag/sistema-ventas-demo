@@ -1,21 +1,21 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
-import { verificarToken } from '@/utils/auth.js';
+import Layout from "../../../layouts/Layout.astro";
+import { verificarToken } from "@/utils/auth.js";
 
 const usuario = verificarToken(Astro.request);
 if (!usuario) {
-    return Astro.redirect('/login');
+    return Astro.redirect("/login");
 }
 
-const {id} = Astro.params;
-const fechaVenezuela = new Intl.DateTimeFormat('es-VE', {
-        timeZone: 'America/Caracas',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    }).format(new Date());
+const { id } = Astro.params;
+const fechaVenezuela = new Intl.DateTimeFormat("es-VE", {
+    timeZone: "America/Caracas",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+}).format(new Date());
 
-const [dia, mes, ano] = fechaVenezuela.split('/');
+const [dia, mes, ano] = fechaVenezuela.split("/");
 const fechaCompleta = `${ano}-${mes}-${dia}`;
 ---
 
@@ -23,7 +23,10 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
     <header class="page-header">
         <p class="eyebrow">Cuentas por cobrar</p>
         <h1>Registrar abono</h1>
-        <p class="page-intro">Registra el pago con moneda, método y monto recibido para actualizar el saldo pendiente.</p>
+        <p class="page-intro">
+            Registra el pago con moneda, método y monto recibido para actualizar
+            el saldo pendiente.
+        </p>
     </header>
 
     <div class="btn-add_container">
@@ -45,7 +48,12 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         <form id="formulario">
             <div class="form-field">
                 <label for="fecha">Fecha del abono</label>
-                <input type="date" name="fecha" id="fecha" value={fechaCompleta} />
+                <input
+                    type="date"
+                    name="fecha"
+                    id="fecha"
+                    value={fechaCompleta}
+                />
             </div>
 
             <div class="form-field">
@@ -68,7 +76,9 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                     inputmode="decimal"
                     autocomplete="off"
                 />
-                <p class="field-hint" id="montoCopPreview">El equivalente se mostrará al ingresar el monto.</p>
+                <p class="field-hint" id="montoCopPreview">
+                    El equivalente se mostrará al ingresar el monto.
+                </p>
             </div>
 
             <div class="form-actions">
@@ -90,7 +100,11 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         gap: 1rem;
         padding: 1rem 1.15rem;
         border-radius: var(--radius-lg);
-        background: linear-gradient(135deg, rgba(254, 243, 199, 0.55), rgba(253, 230, 138, 0.35));
+        background: linear-gradient(
+            135deg,
+            rgba(254, 243, 199, 0.55),
+            rgba(253, 230, 138, 0.35)
+        );
         border: 1px solid rgba(217, 119, 6, 0.18);
         box-shadow: var(--shadow-card);
         max-width: 480px;
@@ -160,30 +174,44 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 </style>
 
 <script>
-    import { mostrarError, mostrarMensaje, confirmarAccion } from '@/utils/helpers/mensajes.js';
-    import { obtenerTasas } from '@/utils/helpers/cambioMoneda.js';
+    import {
+        mostrarError,
+        mostrarMensaje,
+        confirmarAccion,
+    } from "@/utils/helpers/mensajes.js";
+    import { obtenerTasas } from "@/utils/helpers/cambioMoneda.js";
     import {
         formatearMoneda,
         obtenerMonedaBase,
         textoTotal,
         toleranciaPago,
-    } from '@/utils/helpers/tasas.js';
+    } from "@/utils/helpers/tasas.js";
     import {
         etiquetaPago,
         metodosDeMoneda,
         montoRestanteEnMoneda,
         monedasPagoDisponibles,
         parsearLineaPago,
-    } from '@/utils/helpers/metodosPago.js';
+    } from "@/utils/helpers/metodosPago.js";
 
     const id = location.pathname.split("/").pop() as string;
-    const saldoPendiente = document.querySelector('#pendiente') as HTMLElement;
-    const saldoPendienteRef = document.querySelector('#pendienteRef') as HTMLElement;
-    const montoPreview = document.querySelector('#montoCopPreview') as HTMLParagraphElement;
-    const montoAbonoInput = document.querySelector('#montoAbono') as HTMLInputElement;
-    const pagoMonedaSelect = document.querySelector('#pagoMoneda') as HTMLSelectElement;
-    const pagoMetodoSelect = document.querySelector('#pagoMetodo') as HTMLSelectElement;
-    const formulario = document.getElementById('formulario') as HTMLFormElement;
+    const saldoPendiente = document.querySelector("#pendiente") as HTMLElement;
+    const saldoPendienteRef = document.querySelector(
+        "#pendienteRef",
+    ) as HTMLElement;
+    const montoPreview = document.querySelector(
+        "#montoCopPreview",
+    ) as HTMLParagraphElement;
+    const montoAbonoInput = document.querySelector(
+        "#montoAbono",
+    ) as HTMLInputElement;
+    const pagoMonedaSelect = document.querySelector(
+        "#pagoMoneda",
+    ) as HTMLSelectElement;
+    const pagoMetodoSelect = document.querySelector(
+        "#pagoMetodo",
+    ) as HTMLSelectElement;
+    const formulario = document.getElementById("formulario") as HTMLFormElement;
 
     const monedaBase = obtenerMonedaBase();
     let tasasActuales = { cop: 0, bs: 0 };
@@ -194,8 +222,11 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         const metodos = metodosDeMoneda(moneda);
         const actual = pagoMetodoSelect.value;
         pagoMetodoSelect.innerHTML = metodos
-            .map((metodo: { id: string; etiqueta: string }) => `<option value="${metodo.id}">${metodo.etiqueta}</option>`)
-            .join('');
+            .map(
+                (metodo: { id: string; etiqueta: string }) =>
+                    `<option value="${metodo.id}">${metodo.etiqueta}</option>`,
+            )
+            .join("");
         if (metodos.some((metodo: { id: string }) => metodo.id === actual)) {
             pagoMetodoSelect.value = actual;
         }
@@ -205,8 +236,11 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         const monedas = monedasPagoDisponibles(tasasActuales);
         const actual = pagoMonedaSelect.value;
         pagoMonedaSelect.innerHTML = monedas
-            .map((moneda: { id: string; etiqueta: string }) => `<option value="${moneda.id}">${moneda.etiqueta}</option>`)
-            .join('');
+            .map(
+                (moneda: { id: string; etiqueta: string }) =>
+                    `<option value="${moneda.id}">${moneda.etiqueta}</option>`,
+            )
+            .join("");
         if (monedas.some((moneda: { id: string }) => moneda.id === actual)) {
             pagoMonedaSelect.value = actual;
         } else if (monedas[0]) {
@@ -217,21 +251,32 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
     }
 
     function actualizarVistaMonto() {
-        const sugerido = montoRestanteEnMoneda(saldoMaximo, pagoMonedaSelect.value, monedaBase, tasasActuales);
-        montoAbonoInput.placeholder = pagoMonedaSelect.value === 'COP'
-            ? String(Math.round(sugerido) || 0)
-            : (sugerido || 0).toFixed(2);
+        const sugerido = montoRestanteEnMoneda(
+            saldoMaximo,
+            pagoMonedaSelect.value,
+            monedaBase,
+            tasasActuales,
+        );
+        montoAbonoInput.placeholder =
+            pagoMonedaSelect.value === "COP"
+                ? String(Math.round(sugerido) || 0)
+                : (sugerido || 0).toFixed(2);
 
-        const linea = parsearLineaPago({
-            moneda: pagoMonedaSelect.value,
-            metodo: pagoMetodoSelect.value,
-            monto: montoAbonoInput.value,
-        }, monedaBase, tasasActuales);
+        const linea = parsearLineaPago(
+            {
+                moneda: pagoMonedaSelect.value,
+                metodo: pagoMetodoSelect.value,
+                monto: montoAbonoInput.value,
+            },
+            monedaBase,
+            tasasActuales,
+        );
 
         if (!linea.ok) {
-            montoPreview.textContent = saldoMaximo > 0
-                ? `Saldo pendiente: ${formatearMoneda(saldoMaximo, monedaBase)}`
-                : 'El equivalente se mostrará al ingresar el monto.';
+            montoPreview.textContent =
+                saldoMaximo > 0
+                    ? `Saldo pendiente: ${formatearMoneda(saldoMaximo, monedaBase)}`
+                    : "El equivalente se mostrará al ingresar el monto.";
             return;
         }
 
@@ -239,38 +284,51 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         montoPreview.textContent = `Equivale a ${formatearMoneda(linea.pago.monto_base, monedaBase)}. Quedaría ${formatearMoneda(resto, monedaBase)} pendiente.`;
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener("DOMContentLoaded", async () => {
         try {
             const response = await fetch(`/api/creditos/${id}`);
             const data = await response.json();
             tasasActuales = await obtenerTasas();
             saldoMaximo = Number(data.credito.saldo_pendiente);
-            saldoPendiente.textContent = formatearMoneda(saldoMaximo, monedaBase);
-            saldoPendienteRef.textContent = textoTotal(saldoMaximo, monedaBase, tasasActuales);
+            saldoPendiente.textContent = formatearMoneda(
+                saldoMaximo,
+                monedaBase,
+            );
+            saldoPendienteRef.textContent = textoTotal(
+                saldoMaximo,
+                monedaBase,
+                tasasActuales,
+            );
             rellenarMonedas();
         } catch (error) {
-            console.error('Error al cargar datos de crédito o tasa:', error);
-            saldoPendiente.textContent = '—';
-            saldoPendienteRef.textContent = '—';
+            console.error("Error al cargar datos de crédito o tasa:", error);
+            saldoPendiente.textContent = "—";
+            saldoPendienteRef.textContent = "—";
         }
     });
 
-    pagoMonedaSelect.addEventListener('change', () => {
+    pagoMonedaSelect.addEventListener("change", () => {
         rellenarMetodos();
         actualizarVistaMonto();
     });
-    pagoMetodoSelect.addEventListener('change', actualizarVistaMonto);
-    montoAbonoInput.addEventListener('input', actualizarVistaMonto);
+    pagoMetodoSelect.addEventListener("change", actualizarVistaMonto);
+    montoAbonoInput.addEventListener("input", actualizarVistaMonto);
 
-    formulario.addEventListener('submit', async (event: Event) => {
+    formulario.addEventListener("submit", async (event: Event) => {
         event.preventDefault();
 
-        const fecha = (document.querySelector('#fecha') as HTMLInputElement).value?.trim();
-        const linea = parsearLineaPago({
-            moneda: pagoMonedaSelect.value,
-            metodo: pagoMetodoSelect.value,
-            monto: montoAbonoInput.value,
-        }, monedaBase, tasasActuales);
+        const fecha = (
+            document.querySelector("#fecha") as HTMLInputElement
+        ).value?.trim();
+        const linea = parsearLineaPago(
+            {
+                moneda: pagoMonedaSelect.value,
+                metodo: pagoMetodoSelect.value,
+                monto: montoAbonoInput.value,
+            },
+            monedaBase,
+            tasasActuales,
+        );
 
         if (!linea.ok) {
             mostrarError(linea.error);
@@ -278,35 +336,37 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         }
 
         if (linea.pago.monto_base > saldoMaximo + toleranciaPago(monedaBase)) {
-            mostrarError(`El abono no puede superar el saldo pendiente (${formatearMoneda(saldoMaximo, monedaBase)})`);
+            mostrarError(
+                `El abono no puede superar el saldo pendiente (${formatearMoneda(saldoMaximo, monedaBase)})`,
+            );
             return;
         }
 
         if (!fecha) {
-            mostrarError('Debe seleccionar una fecha válida');
+            mostrarError("Debe seleccionar una fecha válida");
             return;
         }
 
         if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-            mostrarError('El formato de fecha no es válido');
+            mostrarError("El formato de fecha no es válido");
             return;
         }
 
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = new Date().toISOString().split("T")[0];
         if (fecha > hoy) {
-            mostrarError('La fecha no puede ser futura');
+            mostrarError("La fecha no puede ser futura");
             return;
         }
 
         const confirmar = await confirmarAccion(
             `¿Registrar ${formatearMoneda(linea.pago.monto, linea.pago.moneda)} por ${etiquetaPago(linea.pago.moneda, linea.pago.metodo)}?`,
-            { titulo: 'Registrar abono', textoAceptar: 'Registrar' }
+            { titulo: "Registrar abono", textoAceptar: "Registrar" },
         );
         if (!confirmar) return;
 
         const response = await fetch("/api/abonos/agregarAbono", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 id,
                 fecha,
@@ -318,17 +378,24 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
         const raw = await response.text();
         let data: any = null;
-        try { data = raw ? JSON.parse(raw) : null; } catch {}
+        try {
+            data = raw ? JSON.parse(raw) : null;
+        } catch {}
 
         if (!response.ok) {
-            mostrarError(data?.message || data?.error || raw || `Error ${response.status}`);
+            mostrarError(
+                data?.message ||
+                    data?.error ||
+                    raw ||
+                    `Error ${response.status}`,
+            );
             return;
         }
 
         mostrarMensaje(data.message);
 
         if (data.venta_actualizada) {
-            mostrarMensaje('La venta fue completada con este abono');
+            mostrarMensaje("La venta fue completada con este abono");
             return setTimeout(() => {
                 window.location.href = `/creditos/`;
             }, 2000);

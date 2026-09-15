@@ -36,7 +36,7 @@ export async function POST({ request }) {
             usuario: sesion,
             accion: ACCIONES.LOGIN,
             entidad: 'usuarios',
-            entidadId: Number(user.id),
+            entidadId: user.id,
             detalle: `${user.nombre} (${user.usuario})`,
         });
     } catch (error) {

@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { verificarToken } from '@/utils/auth';
-import { ACCIONES, registrarBitacora } from '@/utils/bitacora.js';
+import { ACCIONES, registrarBitacora, registrarBitacoraEnTx } from '@/utils/bitacora.js';
+import { withTransaction, executeInTx } from '@/utils/dbTransaction.js';
 
 const LIMITE_BUSQUEDA = 50;
 const LIMITE_LISTA = 80;
@@ -25,7 +26,7 @@ export async function GET({ request }) {
             LIMITE_MAXIMO
         );
         const offset = (page - 1) * limit;
-        const columnasLista = 'id, codigo, nombre, stock, costo, venta, unidad_medida';
+        const columnasLista = 'id, codigo, nombre, descripcion, stock, costo, venta, unidad_medida';
 
         const query = search ? {
                                     sql: `
@@ -82,14 +83,22 @@ export async function POST({ request }) {
     try {
 
         const body = await request.json();
-        const { codigo, nombre, stock, costo, venta, unidad_medida } = body;
+        const { codigo, nombre, descripcion = '', stock, costo, venta, unidad_medida = 'UNIDAD', seriales } = body;
 
-        // Validaciones
+        // Validaciones y normalización
+        const stockStr = String(stock ?? '').trim().replace(',', '.');
+        const costoStr = String(costo ?? '').trim().replace(',', '.');
+        const ventaStr = String(venta ?? '').trim().replace(',', '.');
+
         const esDecimalPositivo = /^\d+(\.\d+)?$/;
 
-        const stockValido = esDecimalPositivo.test(stock) && parseFloat(stock) >= 0;
-        const costoValido = esDecimalPositivo.test(costo) && parseFloat(costo) >= 0;
-        const ventaValida = esDecimalPositivo.test(venta) && parseFloat(venta) >= 0;
+        const stockFinal = parseFloat(stockStr);
+        const costoFinal = parseFloat(costoStr);
+        const ventaFinal = parseFloat(ventaStr);
+
+        const stockValido = esDecimalPositivo.test(stockStr) && Number.isFinite(stockFinal) && stockFinal >= 0;
+        const costoValido = esDecimalPositivo.test(costoStr) && Number.isFinite(costoFinal) && costoFinal >= 0;
+        const ventaValida = esDecimalPositivo.test(ventaStr) && Number.isFinite(ventaFinal) && ventaFinal >= 0;
 
         if (!codigo || !nombre || !stockValido || !costoValido || !ventaValida) {
             return new Response('Faltan datos válidos del producto', { status: 400 });
@@ -102,20 +111,50 @@ export async function POST({ request }) {
             return new Response('Ya existe un producto con ese código', { status: 409 });
         }
 
-        // Parseo
-        const stockFinal = parseFloat(stock);
-        const costoFinal = parseFloat(costo);
-        const ventaFinal = parseFloat(venta);
+        // Si mandan seriales, validar
+        if (Array.isArray(seriales) && seriales.length > 0) {
+            if (seriales.length !== stockFinal) {
+                return new Response('La cantidad de seriales no coincide con el stock.', { status: 400 });
+            }
+            const vacios = seriales.some(s => !s || s.trim() === '');
+            if (vacios) {
+                return new Response('Hay seriales vacíos.', { status: 400 });
+            }
+        }
 
-        // Insertar el nuevo cliente en la base de datos
-        const result = await db.execute('INSERT INTO productos (codigo, nombre, stock, costo, venta, unidad_medida) VALUES (?, ?, ?, ?, ?, ?)',[codigo, nombre, stockFinal, costoFinal, ventaFinal, unidad_medida]);
+        await withTransaction(db, async (tx) => {
+            // Insertar el nuevo producto en la base de datos
+            const result = await executeInTx(tx, 'INSERT INTO productos (codigo, nombre, descripcion, stock, costo, venta, unidad_medida) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id',[codigo, nombre, descripcion, stockFinal, costoFinal, ventaFinal, unidad_medida]);
 
-        await registrarBitacora(db, {
-            usuario,
-            accion: ACCIONES.PRODUCTO_NUEVO,
-            entidad: 'productos',
-            entidadId: Number(result.lastInsertRowid || 0),
-            detalle: `${codigo} — ${nombre} · stock ${stockFinal} · venta ${ventaFinal}`,
+            const productoId = result.rows[0].id;
+
+            if (Array.isArray(seriales) && seriales.length > 0) {
+                for (const serial of seriales) {
+                    await executeInTx(tx, `INSERT INTO seriales (serial, producto_id, estado) VALUES (?, ?, 'disponible')`, [serial, productoId]);
+                }
+            }
+
+            if (stockFinal > 0) {
+                const fechaHoy = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Caracas' });
+                const horaHoy = new Date().toLocaleTimeString('en-US', { hour12: false, timeZone: 'America/Caracas' });
+
+                await executeInTx(tx, 
+                    `INSERT INTO movimientos_inventario (producto_id, codigo_producto, nombre_producto, tipo, cantidad, stock_antes, stock_despues, motivo, usuario_id, usuario_nombre, fecha, hora) 
+                     VALUES (?, ?, ?, 'entrada', ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        productoId, codigo, nombre, stockFinal, 0, stockFinal, 
+                        'Ajuste inicial de inventario (Creación)', usuario.id, usuario.nombre, fechaHoy, horaHoy
+                    ]
+                );
+            }
+
+            await registrarBitacoraEnTx(tx, {
+                usuario,
+                accion: ACCIONES.PRODUCTO_NUEVO,
+                entidad: 'productos',
+                entidadId: productoId,
+                detalle: `${codigo} — ${nombre} · stock ${stockFinal} · venta ${ventaFinal}`,
+            });
         });
 
         return new Response(JSON.stringify({ message: "Producto agregado exitosamente" }), { status: 201 });
@@ -178,7 +217,7 @@ export async function DELETE({ request }) {
             usuario,
             accion: ACCIONES.PRODUCTO_ELIMINAR,
             entidad: 'productos',
-            entidadId: Number(id),
+            entidadId: id,
             detalle: `Producto #${id} inactivado`,
         });
 
@@ -202,7 +241,7 @@ export async function PUT({ request }) {
 
     try {
         const body = await request.json();
-        const { id, codigo, nombre, stock, costo, venta, unidad_medida } = body;
+        const { id, codigo, nombre, descripcion = '', stock, costo, venta, unidad_medida, seriales } = body;
 
         // Validaciones
         const esDecimalPositivo = /^\d+(\.\d+)?$/;
@@ -228,21 +267,68 @@ export async function PUT({ request }) {
         const costoFinal = parseFloat(costo);
         const ventaFinal = parseFloat(venta);
 
-        // Actualizar el cliente en la base de datos
-        const result = await db.execute('UPDATE productos SET codigo = ?, nombre = ?, stock = ?, costo = ?, venta = ?, unidad_medida = ? WHERE id = ?', [codigo, nombre, stockFinal, costoFinal, ventaFinal, unidad_medida, id]);
-
-        // Validar si no se encuentra
-        if (result.affectedRows === 0) {
-            return new Response('Producto no encontrado', { status: 404 });
+        // Si mandan seriales, validar
+        if (Array.isArray(seriales)) {
+            if (seriales.length !== stockFinal) {
+                return new Response('La cantidad de seriales no coincide con el stock.', { status: 400 });
+            }
+            const vacios = seriales.some(s => !s || s.trim() === '');
+            if (vacios) {
+                return new Response('Hay seriales vacíos.', { status: 400 });
+            }
         }
 
-        await registrarBitacora(db, {
-            usuario,
-            accion: ACCIONES.PRODUCTO_EDITAR,
-            entidad: 'productos',
-            entidadId: Number(id),
-            detalle: `${codigo} — ${nombre} · stock ${stockFinal} · costo ${costoFinal} · venta ${ventaFinal}`,
+        let updated = false;
+
+        await withTransaction(db, async (tx) => {
+            // Actualizar el producto en la base de datos
+            const result = await executeInTx(tx, 'UPDATE productos SET codigo = ?, nombre = ?, descripcion = ?, stock = ?, costo = ?, venta = ?, unidad_medida = ? WHERE id = ?', [codigo, nombre, descripcion, stockFinal, costoFinal, ventaFinal, unidad_medida, id]);
+
+            if (result.affectedRows === 0) {
+                throw new Error('Producto no encontrado');
+            }
+            
+            updated = true;
+
+            // Logica de seriales
+            if (Array.isArray(seriales)) {
+                // Obtener seriales disponibles actuales
+                const actualesRes = await executeInTx(tx, 'SELECT serial FROM seriales WHERE producto_id = ? AND estado = "disponible"', [id]);
+                const actuales = actualesRes.rows.map(r => r.serial);
+                
+                const agregados = seriales.filter(s => !actuales.includes(s));
+                const eliminados = actuales.filter(s => !seriales.includes(s));
+                
+                for (const serial of eliminados) {
+                    await executeInTx(tx, 'DELETE FROM seriales WHERE serial = ? AND producto_id = ? AND estado = "disponible"', [serial, id]);
+                }
+                
+                for (const serial of agregados) {
+                    const existeRes = await executeInTx(tx, 'SELECT id, producto_id, estado FROM seriales WHERE serial = ?', [serial]);
+                    if (existeRes.rows && existeRes.rows.length > 0) {
+                        const row = existeRes.rows[0];
+                        if (row.producto_id !== id && row.estado === 'disponible') {
+                            throw Object.assign(new Error(`El serial ${serial} ya está registrado y activo en otro producto`), { status: 409 });
+                        }
+                        await executeInTx(tx, 'UPDATE seriales SET estado = "disponible", producto_id = ?, id_venta = NULL WHERE id = ?', [id, row.id]);
+                    } else {
+                        await executeInTx(tx, 'INSERT INTO seriales (serial, producto_id, estado) VALUES (?, ?, "disponible")', [serial, id]);
+                    }
+                }
+            }
+
+            await registrarBitacoraEnTx(tx, {
+                usuario,
+                accion: ACCIONES.PRODUCTO_EDITAR,
+                entidad: 'productos',
+                entidadId: id,
+                detalle: `${codigo} — ${nombre} · stock ${stockFinal} · costo ${costoFinal} · venta ${ventaFinal}`,
+            });
         });
+
+        if (!updated) {
+             return new Response('Producto no encontrado', { status: 404 });
+        }
 
         return new Response(JSON.stringify({ message: "Producto actualizado exitosamente" }), { status: 200 });
 

@@ -6,7 +6,7 @@ import Inicio from '../assets/icons/inicio.svg';
 import Tasa from '../assets/icons/tasa.svg';
 import Clientes from '../assets/icons/clientes.svg';
 import Ventas from '../assets/icons/ventas.svg';
-import Cargas from '../assets/icons/cargas.svg';
+import Compras from '../assets/icons/cargas.svg';
 import Creditos from '../assets/icons/creditos.svg';
 import Cotizaciones from '../assets/icons/cotizaciones.svg';
 import Productos from '../assets/icons/productos.svg';
@@ -17,21 +17,43 @@ import Bitacora from '../assets/icons/bitacora.svg';
 const usuario = verificarToken(Astro.request);
 const pathname = Astro.url.pathname;
 
-const linksBase = [
-    { href: '/', label: 'Inicio', Icon: Inicio },
-    { href: '/tasa', label: 'Tasa del Día', Icon: Tasa },
-    { href: '/clientes', label: 'Clientes', Icon: Clientes },
-    { href: '/ventas', label: 'Ventas', Icon: Ventas },
-    { href: '/creditos', label: 'Créditos', Icon: Creditos },
-    { href: '/cotizaciones', label: 'Cotizaciones', Icon: Cotizaciones },
-];
-
-const linksAdmin = [
-    { href: '/productos', label: 'Productos', Icon: Productos },
-    { href: '/cargas', label: 'Cargas', Icon: Cargas },
-    { href: '/reportes', label: 'Reportes', Icon: Reportes },
-    { href: '/bitacora', label: 'Bitácora', Icon: Bitacora },
-    { href: '/usuarios', label: 'Usuarios', Icon: Usuarios },
+const menuStructure = [
+    {
+        title: 'Panel',
+        adminOnly: false,
+        links: [
+            { href: '/', label: 'Inicio', Icon: Inicio, adminOnly: false },
+            { href: '/tasa', label: 'Tasa del Día', Icon: Tasa, adminOnly: false },
+        ]
+    },
+    {
+        title: 'Gestión',
+        adminOnly: false,
+        links: [
+            { href: '/clientes', label: 'Clientes', Icon: Clientes, adminOnly: false },
+            { href: '/productos', label: 'Inventario', Icon: Productos, adminOnly: true },
+            { href: '/cotizaciones', label: 'Cotizaciones', Icon: Cotizaciones, adminOnly: false },
+            { href: '/compras', label: 'Compras', Icon: Compras, adminOnly: true },
+            { href: '/ventas', label: 'Ventas', Icon: Ventas, adminOnly: false },
+            { href: '/devoluciones', label: 'Devoluciones', Icon: Ventas, adminOnly: false },
+            { href: '/creditos', label: 'Créditos', Icon: Creditos, adminOnly: false },
+        ]
+    },
+    {
+        title: 'Detalle',
+        adminOnly: true,
+        links: [
+            { href: '/reportes', label: 'Reportes y Estadísticas', Icon: Reportes, adminOnly: true },
+        ]
+    },
+    {
+        title: 'Configuraciones',
+        adminOnly: true,
+        links: [
+            { href: '/usuarios', label: 'Usuarios', Icon: Usuarios, adminOnly: true },
+            { href: '/bitacora', label: 'Bitácoras', Icon: Bitacora, adminOnly: true },
+        ]
+    }
 ];
 ---
 
@@ -48,31 +70,29 @@ const linksAdmin = [
             </div>
 
             <div class="sidebar-body">
-                <div class="sidebar-section">
-                    <p class="sidebar-title">Panel</p>
-                    <div class="sidebar-links">
-                        {linksBase.map(({ href, label, Icon }) => (
-                            <a href={href} class={pathname === href || (href !== '/' && pathname.startsWith(href)) ? 'active' : ''}>
-                                <Icon />
-                                <span>{label}</span>
-                            </a>
-                        ))}
-                    </div>
-                </div>
+                {menuStructure.map((section) => {
+                    // Si la seccion es adminOnly y el usuario no es admin, no renderizarla
+                    if (section.adminOnly && usuario?.rol !== 'admin') return null;
 
-                {usuario?.rol === 'admin' && (
-                    <div class="sidebar-section">
-                        <p class="sidebar-title">Gestión</p>
-                        <div class="sidebar-links">
-                            {linksAdmin.map(({ href, label, Icon }) => (
-                                <a href={href} class={pathname === href || pathname.startsWith(`${href}/`) ? 'active' : ''}>
-                                    <Icon />
-                                    <span>{label}</span>
-                                </a>
-                            ))}
+                    // Filtrar links internos por permisos
+                    const visibleLinks = section.links.filter(link => !link.adminOnly || usuario?.rol === 'admin');
+
+                    if (visibleLinks.length === 0) return null;
+
+                    return (
+                        <div class="sidebar-section">
+                            <p class="sidebar-title">{section.title}</p>
+                            <div class="sidebar-links">
+                                {visibleLinks.map(({ href, label, Icon }) => (
+                                    <a href={href} class={pathname === href || (href !== '/' && pathname.startsWith(href)) ? 'active' : ''}>
+                                        <Icon />
+                                        <span>{label}</span>
+                                    </a>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })}
             </div>
 
             <div class="sidebar-footer">

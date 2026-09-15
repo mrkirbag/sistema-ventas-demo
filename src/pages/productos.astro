@@ -23,9 +23,7 @@ if (usuario.rol !== 'admin') {
             <div class="btn-add_container">
                 <a class="btn-add" href="/productos/agregarProductos">Agregar producto</a>
             </div>
-            <div class="btn-add_container">
-                <a class="btn-add" href="/productos/cargaMasiva">Cargar de Excel</a>
-            </div>
+
             <div class="btn-add_container">
                 <a class="btn-add" id="exportarBtn">Exportar a Excel</a>
             </div>
@@ -65,6 +63,10 @@ if (usuario.rol !== 'admin') {
     </div>
 
     <div id="mensaje"></div>
+
+    <div id="overlay" class="overlay oculto"> 
+        <div id="modal" class="modal"></div>
+    </div>
 </Layout>
 
 <script>
@@ -162,6 +164,13 @@ if (usuario.rol !== 'admin') {
                 btnHistorial.classList.add('btn-historial');
                 ponerIcono(btnHistorial, 'historial');
                 tdAcciones.appendChild(btnHistorial);
+
+                const btnInfo = document.createElement('button');
+                btnInfo.type = 'button';
+                btnInfo.classList.add('btn-editar');
+                ponerIcono(btnInfo, 'info');
+                btnInfo.onclick = () => (window as any).abrirModalInfo(producto.id);
+                tdAcciones.appendChild(btnInfo);
 
                 // Boton de eliminar
                 const btnEliminar = document.createElement('button');
@@ -278,6 +287,133 @@ if (usuario.rol !== 'admin') {
         });
 
         cargarProductos();
+
+        function cerrarModal() {
+            const overlay = document.getElementById('overlay');
+            if (overlay) {
+                overlay.classList.add('oculto');
+                const modal = document.getElementById('modal');
+                if (modal) {
+                    modal.innerHTML = '';
+                    modal.removeAttribute('style');
+                }
+            }
+        }
+
+        (window as any).abrirModalInfo = async function(id: number) {
+            try {
+                const res = await fetch(`/api/productos/${id}`);
+                if (!res.ok) throw new Error('Error al obtener datos');
+                const p = await res.json();
+
+                const overlay = document.getElementById('overlay');
+                const modal = document.getElementById('modal');
+                if (!overlay || !modal) return;
+
+                // Anular los estilos base de la modal para inyectar nuestro layout sin doble padding
+                modal.style.padding = '0';
+                modal.style.background = 'transparent';
+                modal.style.boxShadow = 'none';
+                modal.style.border = 'none';
+                modal.style.width = 'min(100%, 540px)';
+
+                let serialesHtml = '';
+                if (p.usaSeriales) {
+                    const disponibles = p.serialesDisponibles || [];
+                    if (disponibles.length > 0) {
+                        serialesHtml = `
+                            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed rgba(var(--secondary-rgb), 0.2);">
+                                <h4 style="margin: 0 0 0.8rem 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--secondary-color);">Seriales en Stock <span style="background: var(--primary-color); color: #fff; padding: 0.1rem 0.4rem; border-radius: 12px; margin-left: 0.4rem; font-size: 0.7rem;">${disponibles.length}</span></h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 160px; overflow-y: auto; padding-right: 0.5rem;">
+                                    ${disponibles.map((s: string) => `<span style="display: inline-flex; align-items: center; background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.05), rgba(var(--primary-rgb), 0.12)); border: 1px solid rgba(var(--primary-rgb), 0.2); color: var(--secondary-color); font-family: monospace; font-size: 0.85rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 99px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">${s}</span>`).join('')}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        serialesHtml = `
+                            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed rgba(var(--secondary-rgb), 0.2);">
+                                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--secondary-color);">Seriales en Stock</h4>
+                                <div style="background: rgba(239, 68, 68, 0.05); border-left: 3px solid #ef4444; padding: 0.8rem; border-radius: 0 8px 8px 0;">
+                                    <p style="font-size: 0.85rem; color: #ef4444; margin: 0; font-weight: 500;">No hay seriales disponibles actualmente.</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                modal.innerHTML = `
+                    <style>
+                        .info-modal-scroll::-webkit-scrollbar {
+                            width: 6px;
+                        }
+                        .info-modal-scroll::-webkit-scrollbar-track {
+                            background: transparent;
+                            margin: 1rem 0;
+                        }
+                        .info-modal-scroll::-webkit-scrollbar-thumb {
+                            background: rgba(var(--secondary-rgb), 0.3);
+                            border-radius: 10px;
+                        }
+                        .info-modal-scroll::-webkit-scrollbar-thumb:hover {
+                            background: rgba(var(--secondary-rgb), 0.5);
+                        }
+                    </style>
+                    <div class="info-modal-scroll" style="position: relative; overflow-y: auto; overflow-x: hidden; border-radius: 24px; background: #fff; max-height: 90vh; box-shadow: 0 24px 48px rgba(var(--primary-rgb), 0.24);">
+                        <!-- Encabezado decorativo -->
+                        <div style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); padding: 2rem 1.5rem 3rem 1.5rem; position: relative;">
+                            <button id="btnCerrarModal" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255,255,255,0.2); border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">&times;</button>
+                            <span style="display: inline-block; background: rgba(255,255,255,0.2); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 99px; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-transform: uppercase;">${p.codigo}</span>
+                            <h2 style="margin: 0; font-size: 1.8rem; color: #fff; font-weight: 800; line-height: 1.2;">${p.nombre.toUpperCase()}</h2>
+                        </div>
+                        
+                        <!-- Cuerpo principal -->
+                        <div style="padding: 0 1.5rem 1.5rem 1.5rem; margin-top: -1.5rem; position: relative; z-index: 10;">
+                            
+                            <!-- Tarjetas de métricas -->
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin-bottom: 1.5rem;">
+                                <div style="background: #fff; padding: 1rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid rgba(var(--secondary-rgb), 0.08); text-align: center;">
+                                    <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem; letter-spacing: 0.05em;">Stock</div>
+                                    <div style="font-size: 1.3rem; font-weight: 800; color: var(--primary-strong); line-height: 1;">${p.stock} <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">${p.unidad_medida}</span></div>
+                                </div>
+                                <div style="background: #fff; padding: 1rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid rgba(var(--secondary-rgb), 0.08); text-align: center;">
+                                    <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem; letter-spacing: 0.05em;">Costo</div>
+                                    <div style="font-size: 1.1rem; font-weight: 800; color: var(--secondary-color); line-height: 1.2;">${htmlPrecio(p.costo || 0)}</div>
+                                </div>
+                                <div style="background: #fff; padding: 1rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid rgba(var(--secondary-rgb), 0.08); text-align: center;">
+                                    <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 0.3rem; letter-spacing: 0.05em;">Venta</div>
+                                    <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary-color); line-height: 1.2;">${htmlPrecio(p.venta || 0)}</div>
+                                </div>
+                            </div>
+
+                            <!-- Descripción -->
+                            <div style="background: var(--surface-soft); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(var(--secondary-rgb), 0.05);">
+                                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Descripción</h4>
+                                <p style="margin: 0; font-size: 0.95rem; color: var(--text-color); line-height: 1.5; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;">${p.descripcion || '<span style="color: var(--text-muted); font-style: italic;">Sin descripción detallada.</span>'}</p>
+                            </div>
+                            
+                            ${serialesHtml}
+
+                            <div style="margin-top: 1.8rem; display: flex; justify-content: flex-end;">
+                                <a href="/productos/${p.id}" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.5rem; background: linear-gradient(135deg, var(--secondary-color), var(--primary-strong)); color: #fff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(var(--secondary-rgb), 0.25); transition: transform 0.2s, box-shadow 0.2s;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    Editar Producto
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                overlay.classList.remove('oculto');
+                document.getElementById('btnCerrarModal')?.addEventListener('click', cerrarModal);
+
+                // Cerrar al clickear fuera
+                overlay.onclick = (e) => {
+                    if (e.target === overlay) cerrarModal();
+                };
+            } catch (err) {
+                mostrarError('No se pudo cargar la información del producto');
+            }
+        };
     });
 
     const exportarBtn = document.getElementById('exportarBtn' ) as HTMLAnchorElement;

@@ -361,7 +361,9 @@ export function crearModuloProductos({
             onNoEncontrado?.('Error al cargar los productos.');
         });
 
-    return {};
+    return {
+        obtenerProducto: productoPorId
+    };
 }
 
 export function enfocarBusquedaProductos() {

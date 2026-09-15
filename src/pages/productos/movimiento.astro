@@ -63,7 +63,31 @@ const esSalida = tipo === 'salida';
                     placeholder={esSalida ? 'Ej. Merma, uso interno, ajuste' : 'Ej. Compra a proveedor'}
                 />
             </div>
-            <div class="form-actions">
+            <div id="seriales-entrada-container" style="display: none; margin-top: 1rem;">
+                <label>Seriales a ingresar</label>
+                <p class="page-intro" style="font-size: 0.85rem; margin-bottom: 0.5rem;">Ingresa los seriales para las nuevas unidades.</p>
+                <div id="seriales-entrada-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+            </div>
+
+            <div id="seriales-salida-container" style="display: none; margin-top: 1rem; grid-column: 1 / -1;">
+                <label style="display: block; margin-bottom: 0.5rem;">Selecciona los seriales a retirar</label>
+                <p class="page-intro" style="font-size: 0.85rem; margin-bottom: 0.8rem;" id="seriales-salida-ayuda">Debes seleccionar exactamente N seriales.</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: end; margin-bottom: 0.5rem;">
+                    <div class="form-field" style="margin-bottom: 0;">
+                        <label for="busquedaSeriales" style="font-size: 0.8rem;">Filtro de búsqueda</label>
+                        <input type="text" id="busquedaSeriales" placeholder="Ej. ABC12..." autocomplete="off">
+                    </div>
+                    <div class="form-field" style="margin-bottom: 0; position: relative;">
+                        <label for="dropdownSeriales" style="font-size: 0.8rem;">Seleccionar serial</label>
+                        <select id="dropdownSeriales"></select>
+                    </div>
+                </div>
+
+                <div id="listaSerialesSalida" class="serial-tags-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem;"></div>
+            </div>
+
+            <div class="form-actions" style="margin-top: 1.5rem;">
                 <button type="submit">{esSalida ? 'Registrar salida' : 'Agregar al inventario'}</button>
             </div>
         </form>
@@ -76,6 +100,7 @@ const esSalida = tipo === 'salida';
 
 <script>
     import { mostrarError, mostrarMensaje, confirmarAccion } from '@/utils/helpers/mensajes.js';
+    import { crearModuloSeriales } from '@/utils/helpers/seleccionSerial.js';
 
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
@@ -87,7 +112,56 @@ const esSalida = tipo === 'salida';
     const stock = document.querySelector('#stockViejo') as HTMLElement;
     const unidadMedida = document.querySelector('#unidadMedida') as HTMLElement;
 
-    document.addEventListener('DOMContentLoaded', rellenarCampos);
+    let usaSeriales = false;
+    let serialesDisponibles: string[] = [];
+    let serialesSeleccionadosMemoria: string[] = [];
+    let moduloSeriales: any = null;
+
+    const cantidadInput = document.querySelector('#cantidad') as HTMLInputElement;
+    const serialesEntradaContainer = document.querySelector('#seriales-entrada-container') as HTMLElement;
+    const serialesEntradaList = document.querySelector('#seriales-entrada-list') as HTMLElement;
+    const serialesSalidaContainer = document.querySelector('#seriales-salida-container') as HTMLElement;
+    const serialesSalidaAyuda = document.querySelector('#seriales-salida-ayuda') as HTMLElement;
+    const listaSerialesSalida = document.getElementById("listaSerialesSalida") as HTMLDivElement;
+    const selectSeriales = document.getElementById("dropdownSeriales") as HTMLSelectElement;
+    const busquedaSeriales = document.getElementById("busquedaSeriales") as HTMLInputElement;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        rellenarCampos();
+        moduloSeriales = crearModuloSeriales({
+            serialSelect: selectSeriales,
+            busquedaInput: busquedaSeriales
+        });
+    });
+
+    cantidadInput.addEventListener('input', () => {
+        if (!usaSeriales) return;
+        const cantidadStr = cantidadInput.value.replace(',', '.');
+        const cantidad = parseInt(cantidadStr, 10);
+        
+        if (isNaN(cantidad) || cantidad <= 0) {
+            if (!esSalida) serialesEntradaList.innerHTML = '';
+            return;
+        }
+
+        if (!esSalida) {
+            // Generar inputs para entrada
+            const currentInputs = serialesEntradaList.querySelectorAll('input').length;
+            if (currentInputs !== cantidad) {
+                serialesEntradaList.innerHTML = '';
+                for (let i = 0; i < cantidad; i++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.placeholder = `Serial para unidad ${i + 1}`;
+                    input.className = 'serial-nuevo-input';
+                    input.required = true;
+                    serialesEntradaList.appendChild(input);
+                }
+            }
+        } else {
+            serialesSalidaAyuda.textContent = `Debes seleccionar exactamente ${cantidad} serial(es).`;
+        }
+    });
 
     async function rellenarCampos() {
         const response = await fetch(`/api/productos/${id}`);
@@ -102,6 +176,77 @@ const esSalida = tipo === 'salida';
         nombre.textContent = String(producto.nombre || '').toUpperCase();
         stock.textContent = producto.stock;
         unidadMedida.textContent = producto.unidad_medida;
+
+        usaSeriales = producto.usaSeriales || false;
+        serialesDisponibles = producto.serialesDisponibles || [];
+
+        if (usaSeriales) {
+            if (!esSalida) {
+                serialesEntradaContainer.style.display = 'block';
+            } else {
+                serialesSalidaContainer.style.display = 'block';
+                serialesSeleccionadosMemoria = [];
+                renderizarTagsSeriales();
+                actualizarOpcionesSeriales();
+            }
+        }
+    }
+
+    selectSeriales?.addEventListener("change", () => {
+        const serial = selectSeriales.value;
+        const cantidadStr = cantidadInput.value.replace(',', '.');
+        const cantidad = parseInt(cantidadStr, 10);
+        
+        if (isNaN(cantidad) || cantidad <= 0) {
+            mostrarError("Primero ingresa la cantidad de unidades a sacar.");
+            selectSeriales.value = "";
+            if (moduloSeriales) moduloSeriales.reset();
+            return;
+        }
+
+        if (serialesSeleccionadosMemoria.length >= cantidad) {
+            mostrarError(`Ya has seleccionado los ${cantidad} seriales necesarios.`);
+            selectSeriales.value = "";
+            if (moduloSeriales) moduloSeriales.reset();
+            return;
+        }
+
+        if (serial && !serialesSeleccionadosMemoria.includes(serial)) {
+            serialesSeleccionadosMemoria.push(serial);
+            renderizarTagsSeriales();
+            actualizarOpcionesSeriales();
+            if (moduloSeriales) {
+                moduloSeriales.reset();
+            }
+        }
+    });
+
+    function actualizarOpcionesSeriales() {
+        if (!moduloSeriales) return;
+        const disponibles = serialesDisponibles.filter(s => !serialesSeleccionadosMemoria.includes(s));
+        moduloSeriales.cargarSeriales(disponibles);
+    }
+
+    function renderizarTagsSeriales() {
+        if (!listaSerialesSalida) return;
+        
+        listaSerialesSalida.innerHTML = serialesSeleccionadosMemoria.map(s => 
+            `<div class="serial-tag">
+                ${s}
+                <div class="serial-tag-remove" data-serial="${s}" title="Remover serial">✕</div>
+            </div>`
+        ).join('');
+
+        listaSerialesSalida.querySelectorAll(".serial-tag-remove").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                const s = (e.target as HTMLElement).getAttribute("data-serial");
+                if (s) {
+                    serialesSeleccionadosMemoria = serialesSeleccionadosMemoria.filter(item => item !== s);
+                    renderizarTagsSeriales();
+                    actualizarOpcionesSeriales();
+                }
+            });
+        });
     }
 
     const formulario = document.getElementById('formulario') as HTMLFormElement;
@@ -132,6 +277,31 @@ const esSalida = tipo === 'salida';
             return;
         }
 
+        let serialesPayload: string[] | undefined = undefined;
+        
+        if (usaSeriales) {
+            if (!esSalida) {
+                const inputs = serialesEntradaList.querySelectorAll('.serial-nuevo-input') as NodeListOf<HTMLInputElement>;
+                serialesPayload = Array.from(inputs).map(i => i.value.trim());
+                
+                if (serialesPayload.length !== cantidad) {
+                    mostrarError(`Debes ingresar exactamente ${cantidad} seriales.`);
+                    return;
+                }
+                if (serialesPayload.some(s => !s)) {
+                    mostrarError('Todos los seriales deben ser completados.');
+                    return;
+                }
+            } else {
+                serialesPayload = [...serialesSeleccionadosMemoria];
+                
+                if (serialesPayload.length !== cantidad) {
+                    mostrarError(`Debes seleccionar exactamente ${cantidad} serial(es) para retirar. Llevas ${serialesPayload.length}.`);
+                    return;
+                }
+            }
+        }
+
         const confirmar = await confirmarAccion(
             esSalida
                 ? `¿Sacar ${cantidadTexto} unidades del inventario?`
@@ -146,7 +316,7 @@ const esSalida = tipo === 'salida';
         const response = await fetch('/api/productos/movimientos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ productoId: id, tipo, cantidad, motivo }),
+            body: JSON.stringify({ productoId: id, tipo, cantidad, motivo, seriales: serialesPayload }),
         });
 
         const data = await response.json().catch(() => ({}));
@@ -196,8 +366,47 @@ const esSalida = tipo === 'salida';
         margin: 0;
     }
 
-    .informacion .span {
-        font-size: 1.1rem;
-        font-weight: 700;
+    /* Estilos de las etiquetas (tags) de los seriales seleccionados */
+    :global(.serial-tag) {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--primary-rgb), 0.2));
+        border: 1px solid rgba(var(--primary-rgb), 0.3);
+        color: var(--secondary-color);
+        font-family: monospace;
+        font-size: 0.9rem;
+        font-weight: 600;
+        padding: 0.3rem 0.6rem 0.3rem 0.85rem;
+        border-radius: 99px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        animation: scaleIn 200ms ease forwards;
+    }
+
+    :global(.serial-tag-remove) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: bold;
+        line-height: 1;
+        transition: all 150ms ease;
+        margin-left: 0.2rem;
+    }
+    :global(.serial-tag-remove:hover) {
+        background: #ef4444;
+        color: #fff;
+        transform: scale(1.15);
+    }
+
+    @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
     }
 </style>

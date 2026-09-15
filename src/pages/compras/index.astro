@@ -1,0 +1,161 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { verificarToken } from "@/utils/auth.js";
+
+const usuario = verificarToken(Astro.request);
+if (!usuario) {
+    return Astro.redirect("/login");
+}
+if (usuario.rol !== "admin") {
+    return Astro.redirect("/");
+}
+---
+
+<Layout>
+    <header class="page-header">
+        <p class="eyebrow">Gestión de inventario</p>
+        <h1>Compras</h1>
+        <p class="page-intro">Visualiza y gestiona las compras realizadas a proveedores.</p>
+    </header>
+    <div class="page-toolbar">
+        <div class="toolbar-actions">
+            <div class="btn-add_container">
+                <a class="btn-add" href="/compras/nueva">Registrar compra</a>
+            </div>
+            <div class="btn-add_container">
+                <a class="btn-add" id="btnImportarExcel" style="cursor: pointer;">Importar desde Excel</a>
+            </div>
+        </div>
+        <input
+            type="file"
+            id="archivoExcel"
+            accept=".xlsx, .xls"
+            style="display: none;"
+        />
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead id="thead">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Proveedor</th>
+                    <th>Monto Total</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="lista"> </tbody>
+        </table>
+    </div>
+
+    <div id="mensaje"></div>
+</Layout>
+
+<script>
+    // @ts-nocheck
+    import { noRegistros } from "@/utils/helpers/mensajes.js";
+    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
+    import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        const thead = document.getElementById("thead");
+        const lista = document.getElementById("lista");
+
+        // Cargar datos
+        try {
+            const respuesta = await fetch("/api/compras/");
+
+            if (respuesta.status === 202) {
+                thead.style.display = "none";
+                noRegistros(
+                    "No hay compras registradas",
+                    document.getElementById("mensaje"),
+                );
+                return;
+            }
+
+            const datos = await respuesta.json();
+            const tasaCambio = await cambioUSDaCOP();
+
+            thead.style.display = "table-header-group";
+
+            datos.forEach((compra) => {
+                const fila = document.createElement("tr");
+
+                fila.innerHTML = `
+                    <td data-label="Fecha">${formatearFecha(compra.fecha)}</td>
+                    <td data-label="Proveedor">${compra.proveedor.toUpperCase()}</td>
+                    <td data-label="Monto Total">
+                        ${compra.monto_total.toFixed(2)} USD
+                        <br />
+                        <small>${(compra.monto_total * tasaCambio).toFixed(2)} COP</small>
+                    </td>
+                `;
+
+                const tdAcciones = document.createElement("td");
+                tdAcciones.classList.add("acciones");
+
+                const btnDetalles = document.createElement("button");
+                btnDetalles.type = "button";
+                btnDetalles.classList.add("btn-detalles");
+                btnDetalles.textContent = "Ver Detalles";
+                btnDetalles.onclick = () => {
+                    window.location.href = `/compras/${compra.id}`;
+                };
+
+                tdAcciones.appendChild(btnDetalles);
+                fila.appendChild(tdAcciones);
+                lista.appendChild(fila);
+            });
+        } catch (error) {
+            console.error(error);
+        }
+
+        // Importación Excel
+        const btnImportarExcel = document.getElementById("btnImportarExcel");
+        const archivoExcel = document.getElementById("archivoExcel");
+
+        btnImportarExcel.addEventListener("click", () => {
+            archivoExcel.click();
+        });
+
+        archivoExcel.addEventListener("change", async (e) => {
+            const target = e.target;
+            if (!target.files || target.files.length === 0) return;
+
+            const file = target.files[0];
+            const formData = new FormData();
+            formData.append("archivo", file);
+
+            const proveedor =
+                prompt(
+                    "Ingrese el nombre del proveedor para esta importación:",
+                ) || "Desconocido";
+            formData.append("proveedor", proveedor);
+
+            try {
+                btnImportarExcel.textContent = "Importando...";
+                btnImportarExcel.disabled = true;
+
+                const res = await fetch("/api/compras/excel", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (res.ok) {
+                    alert("Importación completada con éxito");
+                    window.location.reload();
+                } else {
+                    const data = await res.json();
+                    alert(data.error || "Error al importar");
+                }
+            } catch (err) {
+                alert("Error de red al importar");
+            } finally {
+                btnImportarExcel.textContent = "Importar desde Excel";
+                btnImportarExcel.disabled = false;
+                target.value = ""; // Reset
+            }
+        });
+    });
+</script>

@@ -131,7 +131,7 @@ export async function POST({ request }) {
                 usuario,
                 accion: ACCIONES.ABONO,
                 entidad: 'abonos_credito',
-                entidadId: Number(id),
+                entidadId: id,
                 detalle: `Crédito #${id} · abono ${montoBase} ${pago.moneda_base} · saldo ${nuevoSaldo}`,
             });
 

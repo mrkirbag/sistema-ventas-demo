@@ -1,22 +1,20 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import EmpresaEncabezado from '../../components/EmpresaEncabezado.astro';
-import { verificarToken } from '@/utils/auth.js';
+import Layout from "../../layouts/Layout.astro";
+import EmpresaEncabezado from "../../components/EmpresaEncabezado.astro";
+import { verificarToken } from "@/utils/auth.js";
 
 const usuario = verificarToken(Astro.request);
 if (!usuario) {
-    return Astro.redirect('/login');
+    return Astro.redirect("/login");
 }
 
-const {id} = Astro.params;
+const { id } = Astro.params;
 ---
 
 <Layout>
-
     <div class="btn-add_container actions-top">
         <a class="btn-add" href="/ventas">Regresar</a>
     </div>
-
 
     <EmpresaEncabezado id="headerImp" />
 
@@ -54,7 +52,9 @@ const {id} = Astro.params;
                     <p class="eyebrow">Productos</p>
                     <h2>Detalle facturado</h2>
                 </div>
-                <p class="table-caption">Valores expresados en USD y referencia en COP.</p>
+                <p class="table-caption">
+                    Valores expresados en USD y referencia en COP.
+                </p>
             </div>
 
             <div class="table-wrap">
@@ -115,7 +115,7 @@ const {id} = Astro.params;
     </div>
 
     <div id="mensaje"></div>
-    <div id="overlay" class="overlay oculto"> 
+    <div id="overlay" class="overlay oculto">
         <div id="modal" class="modal"></div>
     </div>
 </Layout>
@@ -292,18 +292,15 @@ const {id} = Astro.params;
             max-width: none;
         }
     }
-
-
 </style>
 
 <script>
-
-    import { mostrarError } from '@/utils/helpers/mensajes.js';
-    import { cambioUSDaCOP } from '@/utils/helpers/cambioMoneda.js';
-    import { formatearFecha } from '@/utils/helpers/formateoFecha.js';
-    import { imprimir } from '@/utils/helpers/imprimir.js';
-    import { formatearMoneda } from '@/utils/helpers/tasas.js';
-    import { etiquetaPago } from '@/utils/helpers/metodosPago.js';
+    import { mostrarError } from "@/utils/helpers/mensajes.js";
+    import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
+    import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
+    import { imprimir } from "@/utils/helpers/imprimir.js";
+    import { formatearMoneda } from "@/utils/helpers/tasas.js";
+    import { etiquetaPago } from "@/utils/helpers/metodosPago.js";
 
     interface Producto {
         codigo_producto: string;
@@ -311,35 +308,42 @@ const {id} = Astro.params;
         precio_unitario: number;
         cantidad: number;
         subtotal: number;
+        seriales?: string[];
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-
+    document.addEventListener("DOMContentLoaded", async () => {
         const id = location.pathname.split("/").pop() as string;
         //Datos a rellenar del cliente
-        const clienteNombre = document.querySelector('#clienteNombre') as HTMLElement;
-        const clienteCedula = document.querySelector('#clienteCedula') as HTMLElement;
-        const clienteTelefono = document.querySelector('#clienteTelefono') as HTMLElement;
+        const clienteNombre = document.querySelector(
+            "#clienteNombre",
+        ) as HTMLElement;
+        const clienteCedula = document.querySelector(
+            "#clienteCedula",
+        ) as HTMLElement;
+        const clienteTelefono = document.querySelector(
+            "#clienteTelefono",
+        ) as HTMLElement;
         //Datos a rellenar de la venta
-        const fecha = document.querySelector('#fecha') as HTMLElement;
-        const tipoPago = document.querySelector('#tipoPago') as HTMLElement;
-        const estado = document.querySelector('#estado') as HTMLElement;
-        const total = document.querySelector('#total') as HTMLElement;
+        const fecha = document.querySelector("#fecha") as HTMLElement;
+        const tipoPago = document.querySelector("#tipoPago") as HTMLElement;
+        const estado = document.querySelector("#estado") as HTMLElement;
+        const total = document.querySelector("#total") as HTMLElement;
 
-        const totalCOP = document.querySelector('#totalCOP') as HTMLElement;
-        const listaProductos = document.querySelector('#listaProductos') as HTMLElement;
+        const totalCOP = document.querySelector("#totalCOP") as HTMLElement;
+        const listaProductos = document.querySelector(
+            "#listaProductos",
+        ) as HTMLElement;
 
         try {
-
             const res = await fetch(`/api/ventas/${id}`);
 
             if (!res.ok) {
-                mostrarError('Error al obtener los datos de la venta');
+                mostrarError("Error al obtener los datos de la venta");
                 const errorText = await res.text();
                 throw new Error(`Status ${res.status} Mensaje ${errorText}`);
             }
 
-            const data : any = await res.json();
+            const data: any = await res.json();
 
             // Cliente
             clienteNombre.textContent = data.cliente.nombre.toUpperCase();
@@ -353,25 +357,46 @@ const {id} = Astro.params;
             fecha.textContent = fechaFormateada;
             tipoPago.textContent = data.venta.tipo_pago.toUpperCase();
             estado.textContent = data.venta.estado.toUpperCase();
+            const estadoNorm = data.venta.estado.toLowerCase();
+            if (estadoNorm === 'devuelto') {
+                estado.style.color = '#854d0e';
+            } else if (estadoNorm === 'anulado') {
+                estado.style.color = '#9f1f1f';
+            }
             total.textContent = data.venta.monto_total.toFixed(2);
 
             //Traer la tasa para los precios:
             const tasa = await cambioUSDaCOP();
 
-            totalCOP.textContent = Math.ceil(Number(data.venta.monto_total) * Number(tasa)).toString();
+            totalCOP.textContent = Math.ceil(
+                Number(data.venta.monto_total) * Number(tasa),
+            ).toString();
 
             // Productos
-            listaProductos.innerHTML = '';
+            listaProductos.innerHTML = "";
 
             const dataProductos = data.productos as Producto[];
 
-            dataProductos.forEach(p => {
-                const row = document.createElement('tr');
+            dataProductos.forEach((p) => {
+                const row = document.createElement("tr");
                 const pUnitarioPesos = p.precio_unitario * tasa;
-                const subtotalPesos = p.subtotal * tasa
+                const subtotalPesos = p.subtotal * tasa;
+
+                let serialesHTML = "";
+                if (p.seriales && p.seriales.length > 0) {
+                    serialesHTML = `
+                        <div style="margin-top: 0.4rem; font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">
+                            S/N: ${p.seriales.join(", ")}
+                        </div>
+                    `;
+                }
+
                 row.innerHTML = `
                                     <td data-label="Código">${p.codigo_producto.toUpperCase()}</td>
-                                    <td data-label="Producto">${p.nombre_producto.toUpperCase()}</td>
+                                    <td data-label="Producto">
+                                        ${p.nombre_producto.toUpperCase()}
+                                        ${serialesHTML}
+                                    </td>
                                     <td data-label="P. Unitario">
                                         ${p.precio_unitario.toFixed(2)} USD
                                         <br />
@@ -389,38 +414,51 @@ const {id} = Astro.params;
             });
 
             const pagos = Array.isArray(data.pagos) ? data.pagos : [];
-            const pagosCard = document.getElementById('pagosVentaCard') as HTMLElement | null;
-            const listaPagos = document.getElementById('listaPagosVenta') as HTMLTableSectionElement | null;
+            const pagosCard = document.getElementById(
+                "pagosVentaCard",
+            ) as HTMLElement | null;
+            const listaPagos = document.getElementById(
+                "listaPagosVenta",
+            ) as HTMLTableSectionElement | null;
             if (pagosCard && listaPagos) {
                 pagosCard.hidden = pagos.length === 0;
-                listaPagos.innerHTML = '';
-                pagos.forEach((pago: { moneda: string; metodo: string; monto: number; monto_base: number; moneda_base?: string }) => {
-                    const fila = document.createElement('tr');
-                    fila.innerHTML = `
+                listaPagos.innerHTML = "";
+                pagos.forEach(
+                    (pago: {
+                        moneda: string;
+                        metodo: string;
+                        monto: number;
+                        monto_base: number;
+                        moneda_base?: string;
+                    }) => {
+                        const fila = document.createElement("tr");
+                        fila.innerHTML = `
                         <td data-label="Método">${etiquetaPago(pago.moneda, pago.metodo)}</td>
                         <td data-label="Recibido">${formatearMoneda(pago.monto, pago.moneda)}</td>
-                        <td data-label="Equivalente">${formatearMoneda(pago.monto_base, pago.moneda_base || 'USD')}</td>
+                        <td data-label="Equivalente">${formatearMoneda(pago.monto_base, pago.moneda_base || "USD")}</td>
                     `;
-                    listaPagos.appendChild(fila);
-                });
+                        listaPagos.appendChild(fila);
+                    },
+                );
             }
-
-        }catch(error){
-            console.error(error)
+        } catch (error) {
+            console.error(error);
         }
     });
 
-    const btnImprimir = document.querySelector('#imprimir') as HTMLAnchorElement;
+    const btnImprimir = document.querySelector(
+        "#imprimir",
+    ) as HTMLAnchorElement;
 
-    btnImprimir.addEventListener('click', () => {
-        const datosClienteImp = document.querySelector('#datosClienteImp');
-        const table = document.querySelector('#table');
-        const totalImp = document.querySelector('#totalImp');
+    btnImprimir.addEventListener("click", () => {
+        const datosClienteImp = document.querySelector("#datosClienteImp");
+        const table = document.querySelector("#table");
+        const totalImp = document.querySelector("#totalImp");
 
         imprimir({
-            titulo: 'Impresion de Venta',
-            tituloDocumento: 'DETALLE DE VENTA',
-            pageSize: '5.5in 8.5in',
+            titulo: "Impresion de Venta",
+            tituloDocumento: "DETALLE DE VENTA",
+            pageSize: "5.5in 8.5in",
             estilosExtra: `
                 .datos-cliente {
                     display: grid;
@@ -468,9 +506,9 @@ const {id} = Astro.params;
                 }
             `,
             contenido: `
-                ${datosClienteImp?.outerHTML || '<p>Datos del cliente no disponibles</p>'}
-                ${table?.outerHTML || '<p>Tabla no disponible</p>'}
-                ${totalImp?.outerHTML || '<p>Total no disponible</p>'}
+                ${datosClienteImp?.outerHTML || "<p>Datos del cliente no disponibles</p>"}
+                ${table?.outerHTML || "<p>Tabla no disponible</p>"}
+                ${totalImp?.outerHTML || "<p>Total no disponible</p>"}
             `,
         });
     });

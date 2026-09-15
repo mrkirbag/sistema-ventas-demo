@@ -22,6 +22,7 @@ export async function PUT({ request }) {
             cantidad: stockNumero,
             motivo,
             usuario,
+            seriales: body.seriales,
         });
 
         return new Response(JSON.stringify({ message: 'Stock actualizado correctamente', stock: resultado.stock }), {

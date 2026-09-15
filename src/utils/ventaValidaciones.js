@@ -1,7 +1,7 @@
 const esDecimalPositivo = /^\d+(\.\d+)?$/;
 
 export function parsearItemVenta(item) {
-    const { idProducto, id, codigo, nombre, precio, cantidad } = item;
+    const { idProducto, id, codigo, nombre, precio, cantidad, seriales } = item;
     const productoId = idProducto ?? id;
 
     const cantidadStr = String(cantidad);
@@ -22,6 +22,7 @@ export function parsearItemVenta(item) {
             nombre,
             precio: parseFloat(precioStr).toFixed(2),
             cantidad: parseFloat(cantidadStr).toFixed(2),
+            seriales: Array.isArray(seriales) ? seriales : undefined,
         },
     };
 }
@@ -58,14 +59,19 @@ export async function verificarProductoDisponible(tx, codigo, cantidadRequerida)
 export async function descontarStock(tx, codigo, cantidad) {
     const result = await tx.execute({
         sql: `UPDATE productos SET stock = stock - ?
-         WHERE codigo = ? AND estatus = 'activo' AND stock >= ?`,
+         WHERE codigo = ? AND estatus = 'activo' AND stock >= ? RETURNING stock`,
         args: [cantidad, codigo, cantidad],
     });
 
     const afectadas = result.rowsAffected ?? result.affectedRows ?? 0;
-    if (afectadas === 0) {
+    if (afectadas === 0 && (!result.rows || result.rows.length === 0)) {
         throw new Error(`No se pudo descontar stock de ${codigo}`);
     }
+
+    const stockDespues = Number(result.rows[0].stock);
+    const stockAntes = stockDespues + Number(cantidad);
+
+    return { stockAntes, stockDespues };
 }
 
 export async function insertarDetalleVenta(tx, ventaId, item) {

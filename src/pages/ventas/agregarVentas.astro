@@ -76,6 +76,24 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                             <span id="precioReferencia" class="precio-referencia">Referencia: —</span>
                         </div>
 
+                        <div class="form-field" id="panelSerialesVenta" style="display: none; grid-column: 1 / -1;">
+                            <label>Seleccionar Seriales</label>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.5rem;">Busca y selecciona los seriales (se irán agregando abajo).</p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: end; margin-bottom: 0.5rem;">
+                                <div class="form-field" style="margin-bottom: 0;">
+                                    <label for="busquedaSeriales" style="font-size: 0.8rem;">Filtro de búsqueda</label>
+                                    <input type="text" id="busquedaSeriales" placeholder="Ej. ABC12..." autocomplete="off">
+                                </div>
+                                <div class="form-field" style="margin-bottom: 0; position: relative;">
+                                    <label for="dropdownSeriales" style="font-size: 0.8rem;">Seleccionar serial</label>
+                                    <select id="dropdownSeriales"></select>
+                                </div>
+                            </div>
+
+                            <div id="listaSerialesVenta" class="serial-tags-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem;"></div>
+                        </div>
+
                         <div class="form-actions producto-module_actions">
                             <button type="button" id="agregarProducto">Agregar producto</button>
                         </div>
@@ -134,6 +152,10 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                     <label for="cliente">Cliente</label>
                     <select name="cliente" id="cliente"></select>
                     <span class="btn-cliente" id="abrirMenuClienteNuevo" title="Registrar nuevo cliente">+</span>
+                </div>
+                
+                <div id="infoCreditoCliente" style="display: none; grid-column: 1 / -1; padding: 0.8rem; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px; color: #854d0e; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    El cliente tiene un saldo a favor de <strong id="montoCreditoCliente">0.00</strong> en notas de crédito. Puedes usarlo en la sección de pagos seleccionando "Nota de crédito" en USD.
                 </div>
 
                 <div id="moduloAgregarClienteNuevo" class="cliente-nuevo-panel" style="display: none;">
@@ -576,11 +598,60 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             width: 100%;
         }
     }
+
+    /* Estilos de las etiquetas (tags) de los seriales seleccionados */
+    :global(.serial-tag) {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--primary-rgb), 0.2));
+        border: 1px solid rgba(var(--primary-rgb), 0.3);
+        color: var(--secondary-color);
+        font-family: monospace;
+        font-size: 0.9rem;
+        font-weight: 600;
+        padding: 0.3rem 0.6rem 0.3rem 0.85rem;
+        border-radius: 99px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        animation: scaleIn 200ms ease forwards;
+    }
+
+    :global(.serial-tag-remove) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: bold;
+        line-height: 1;
+        transition: all 150ms ease;
+        margin-left: 0.2rem;
+    }
+    :global(.serial-tag-remove:hover) {
+        background: #ef4444;
+        color: #fff;
+        transform: scale(1.15);
+    }
+
+    @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
 </style>
 
 <script>
 
     import { mostrarError, mostrarMensaje } from '@/utils/helpers/mensajes.js';
+    import { crearModuloSeriales } from '@/utils/helpers/seleccionSerial.js';
+    
+    let serialesDisponiblesMemoria: string[] = [];
+    let serialesSeleccionadosMemoria: string[] = [];
+    let moduloSeriales: any = null;
     import { obtenerTasas } from '@/utils/helpers/cambioMoneda.js';
     import { ponerIcono } from '@/utils/helpers/iconosAccion.js';
     import { validarCliente } from '@/utils/clienteValidaciones.js';
@@ -652,6 +723,13 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             cantidadInput,
             onNoEncontrado: mostrarError,
         });
+        
+        const busquedaSeriales = document.getElementById("busquedaSeriales") as HTMLInputElement;
+        const serialSelect = document.getElementById("dropdownSeriales") as HTMLSelectElement;
+        moduloSeriales = crearModuloSeriales({
+            serialSelect,
+            busquedaInput: busquedaSeriales
+        });
     }
 
     function iniciarPagina() {
@@ -677,6 +755,8 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         costo: number;
         venta: number;
         unidad_medida: string;
+        serialesDisponibles?: string[];
+        serialesSeleccionados?: string[];
     }
 
     const btnAbrirMenuClienteNuevo = document.getElementById("abrirMenuClienteNuevo") as HTMLSpanElement;
@@ -695,8 +775,8 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
     let registrandoCliente = false;
 
     function idCliente(valor: unknown) {
-        const id = Number.parseInt(String(valor ?? ''), 10);
-        return Number.isFinite(id) && id > 0 ? String(id) : '';
+        if (!valor) return '';
+        return String(valor).trim();
     }
 
     function textoOpcionCliente(cliente: Cliente) {
@@ -770,7 +850,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         }
 
         clienteDeLaVenta = {
-            id: Number(cliente.id),
+            id: cliente.id,
             nombre: cliente.nombre,
             cedula: cliente.cedula,
             telefono: cliente.telefono,
@@ -788,6 +868,7 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
         cargaClientesSeq += 1;
         renderOpcionesClientes(clientesListados);
         selectClientes.value = id;
+        selectClientes.dispatchEvent(new Event('change'));
     }
 
     function cerrarPanelClienteNuevo() {
@@ -804,9 +885,16 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
     productoSelect.addEventListener("change", async () => {
         const productoId = productoSelect.value;
+        const panelSeriales = document.getElementById("panelSerialesVenta") as HTMLDivElement;
+        const listaSeriales = document.getElementById("listaSerialesVenta") as HTMLDivElement;
+        const cantidadInput = document.getElementById("cantidad") as HTMLInputElement;
 
         if (!productoId) {
             precioInput.value = "";
+            panelSeriales.style.display = "none";
+            listaSeriales.innerHTML = "";
+            cantidadInput.readOnly = false;
+            cantidadInput.value = "";
             await actualizarReferenciaPrecio();
             return;
         }
@@ -817,16 +905,42 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             if (!response.ok) {
                 console.error("Error al obtener el producto:", response.status);
                 precioInput.value = "";
+                panelSeriales.style.display = "none";
+                listaSeriales.innerHTML = "";
+                cantidadInput.readOnly = false;
                 await actualizarReferenciaPrecio();
                 return;
             }
 
             const producto = await response.json();
-            await aplicarPrecioProducto(producto);
+            aplicarPrecioProducto(producto);
 
+            if (producto.serialesDisponibles && producto.serialesDisponibles.length > 0) {
+                panelSeriales.style.display = "grid";
+                serialesDisponiblesMemoria = [...producto.serialesDisponibles];
+                serialesSeleccionadosMemoria = [];
+                listaSeriales.innerHTML = "";
+                moduloSeriales.cargarSeriales(serialesDisponiblesMemoria);
+                cantidadInput.readOnly = true;
+                cantidadInput.value = "0";
+            } else {
+                panelSeriales.style.display = "none";
+                const ls = document.getElementById("dropdownSeriales");
+                if (ls) ls.innerHTML = "";
+                cantidadInput.readOnly = false;
+                cantidadInput.value = "";
+                serialesDisponiblesMemoria = [];
+                serialesSeleccionadosMemoria = [];
+                if (moduloSeriales) {
+                    moduloSeriales.cargarSeriales([]);
+                }
+            }
         } catch (error) {
             console.error("Error de red o parsing:", error);
             precioInput.value = "";
+            panelSeriales.style.display = "none";
+            listaSeriales.innerHTML = "";
+            cantidadInput.readOnly = false;
             await actualizarReferenciaPrecio();
         }
     });
@@ -858,6 +972,20 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             if (!producto || !producto.stock) {
                 mostrarError('Producto no encontrado o sin stock disponible');
                 return;
+            }
+
+            let serialesSeleccionados: string[] = [];
+            if (producto.serialesDisponibles && producto.serialesDisponibles.length > 0) {
+                serialesSeleccionados = [...serialesSeleccionadosMemoria];
+                
+                if (serialesSeleccionados.length === 0) {
+                    mostrarError("Debe seleccionar al menos un serial para vender este producto.");
+                    return;
+                }
+                if (serialesSeleccionados.length !== cantidad) {
+                    mostrarError("La cantidad no coincide con los seriales seleccionados.");
+                    return;
+                }
             }
 
             if (isNaN(cantidad) || Number(cantidad) <= 0) {
@@ -955,7 +1083,8 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                 stock: producto.stock,
                 costo: producto.costo,
                 venta: producto.venta,
-                unidad_medida: producto.unidad_medida
+                unidad_medida: producto.unidad_medida,
+                serialesSeleccionados: serialesSeleccionados
             });
 
         } catch (error) {
@@ -1133,12 +1262,35 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
     });
 
-    selectClientes.addEventListener("change", () => {
+    const infoCreditoCliente = document.getElementById("infoCreditoCliente") as HTMLDivElement;
+    const montoCreditoCliente = document.getElementById("montoCreditoCliente") as HTMLElement;
+
+    selectClientes.addEventListener("change", async () => {
         const id = idCliente(selectClientes.value);
-        if (!id) return;
+        if (!id) {
+            infoCreditoCliente.style.display = "none";
+            return;
+        }
 
         const encontrado = clientesParaSelect(clientesListados).find(cliente => idCliente(cliente.id) === id) || null;
         clienteDeLaVenta = encontrado;
+
+        // Buscar si tiene notas de crédito
+        try {
+            const res = await fetch(`/api/devoluciones/notasCredito?cliente_id=${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.saldo_total > 0) {
+                    montoCreditoCliente.textContent = `${data.saldo_total.toFixed(2)} USD`;
+                    infoCreditoCliente.style.display = "block";
+                } else {
+                    infoCreditoCliente.style.display = "none";
+                }
+            }
+        } catch (e) {
+            console.error("Error buscando notas de crédito", e);
+            infoCreditoCliente.style.display = "none";
+        }
     });
 
     busquedaClientes.addEventListener("input", () => {
@@ -1242,9 +1394,9 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
 
         const fecha = (document.getElementById('fecha') as HTMLInputElement).value;
         const tipoPago = (document.getElementById('tipoPago') as HTMLSelectElement).value;
-        const clienteId = Number.parseInt(idCliente(clienteDeLaVenta?.id) || idCliente(selectClientes.value), 10);
+        const clienteId = idCliente(clienteDeLaVenta?.id) || idCliente(selectClientes.value);
 
-        if (!fecha || !tipoPago || !Number.isFinite(clienteId) || clienteId <= 0) {
+        if (!fecha || !tipoPago || !clienteId) {
             mostrarError("Todos los campos son obligatorios");
             return;
         }
@@ -1285,12 +1437,13 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
                     clienteId,
                     totalDeVenta,
                     pagos: pagosValidados.pagos,
-                    productos: productosSeleccionados.map(({ codigo, nombre, precio, cantidad, id }) => ({
+                    productos: productosSeleccionados.map(({ codigo, nombre, precio, cantidad, id, serialesSeleccionados }) => ({
                         idProducto: id,
                         codigo,
                         nombre,
                         precio,
-                        cantidad
+                        cantidad,
+                        seriales: serialesSeleccionados
                     }))
                 })
             });
@@ -1314,5 +1467,58 @@ const fechaCompleta = `${ano}-${mes}-${dia}`;
             return;
         }
     });
+
+    // --- Lógica del Buscador/Multiselect de Seriales ---
+    const selectSeriales = document.getElementById("dropdownSeriales") as HTMLSelectElement;
+    const listaSerialesVenta = document.getElementById("listaSerialesVenta") as HTMLDivElement;
+
+    selectSeriales?.addEventListener("change", () => {
+        const serial = selectSeriales.value;
+        if (serial && !serialesSeleccionadosMemoria.includes(serial)) {
+            serialesSeleccionadosMemoria.push(serial);
+            renderizarTagsSeriales();
+            actualizarOpcionesSeriales();
+            
+            // Hacer reset visual en el trigger
+            if (moduloSeriales) {
+                moduloSeriales.reset();
+            }
+        }
+    });
+
+    function actualizarOpcionesSeriales() {
+        if (!moduloSeriales) return;
+        const disponibles = serialesDisponiblesMemoria.filter(s => !serialesSeleccionadosMemoria.includes(s));
+        moduloSeriales.cargarSeriales(disponibles);
+    }
+
+    function renderizarTagsSeriales() {
+        if (!listaSerialesVenta) return;
+        
+        listaSerialesVenta.innerHTML = serialesSeleccionadosMemoria.map(s => 
+            `<div class="serial-tag">
+                ${s}
+                <div class="serial-tag-remove" data-serial="${s}" title="Remover serial">✕</div>
+            </div>`
+        ).join('');
+
+        // Actualizar la cantidad visual
+        const cantidadInput = document.getElementById("cantidad") as HTMLInputElement;
+        if (cantidadInput && cantidadInput.readOnly) {
+            cantidadInput.value = serialesSeleccionadosMemoria.length.toString();
+        }
+
+        // Agregar eventos de eliminar
+        listaSerialesVenta.querySelectorAll(".serial-tag-remove").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                const s = (e.target as HTMLElement).getAttribute("data-serial");
+                if (s) {
+                    serialesSeleccionadosMemoria = serialesSeleccionadosMemoria.filter(item => item !== s);
+                    renderizarTagsSeriales();
+                    actualizarOpcionesSeriales();
+                }
+            });
+        });
+    }
 
 </script>

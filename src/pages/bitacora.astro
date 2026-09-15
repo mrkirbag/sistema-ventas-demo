@@ -9,6 +9,13 @@ if (!usuario) {
 if (usuario.rol !== 'admin') {
     return Astro.redirect('/');
 }
+
+const fechaActual = new Date().toLocaleDateString("es-ES", {
+    timeZone: "America/Caracas",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+}).split('/').reverse().join('-');
 ---
 
 <Layout>
@@ -18,9 +25,22 @@ if (usuario.rol !== 'admin') {
         <p class="page-intro">Quién inició sesión y quién registró ventas, abonos, créditos, clientes, tasas y cambios de inventario.</p>
     </header>
 
-    <div class="page-toolbar">
-        <div class="input-busqueda_container">
-            <input type="text" id="inputBusqueda" placeholder="Buscar por usuario, acción o detalle..." />
+    <div class="page-toolbar bitacora-toolbar">
+        <div class="toolbar-actions">
+            <button type="button" id="btnTodasLasFechas" class="btn-historial-todas" title="Mostrar todos los movimientos registrados">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <polyline points="12 7 12 12 15 15"></polyline>
+                </svg>
+                <span>Ver todo el historial</span>
+            </button>
+        </div>
+
+        <div class="filtro-fecha">
+            <label class="filtro-fecha_label" for="inputFecha">Filtrar por fecha</label>
+            <div class="input-busqueda_container fecha-filtro">
+                <input type="date" id="inputFecha" value={fechaActual} />
+            </div>
         </div>
     </div>
 
@@ -50,15 +70,16 @@ if (usuario.rol !== 'admin') {
     import { noRegistros } from '@/utils/helpers/mensajes.js';
     import { formatearFecha } from '@/utils/helpers/formateoFecha.js';
 
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', () => {
         const thead = document.getElementById('thead') as HTMLTableSectionElement;
         const tbody = document.getElementById('listaBitacora') as HTMLTableSectionElement;
         const btnVerMas = document.getElementById('btnVerMas') as HTMLButtonElement;
         const btnVerAnterior = document.getElementById('btnVerAnterior') as HTMLButtonElement;
-        const busqueda = document.getElementById('inputBusqueda') as HTMLInputElement;
+        const inputFecha = document.getElementById('inputFecha') as HTMLInputElement;
+        const btnTodasLasFechas = document.getElementById('btnTodasLasFechas') as HTMLButtonElement;
 
-        let registros = [] as any[];
-        let filtrados = [] as any[];
+        let registros: any[] = [];
+        let filtrados: any[] = [];
         let paginaActual = 1;
         const porPagina = 14;
 
@@ -71,7 +92,10 @@ if (usuario.rol !== 'admin') {
 
             if (lote.length === 0) {
                 thead.style.display = 'none';
-                noRegistros('No hay movimientos en la bitácora');
+                const fechaSeleccionada = inputFecha?.value;
+                noRegistros(fechaSeleccionada 
+                    ? `No hay registros en la bitácora para el ${formatearFecha(fechaSeleccionada)}`
+                    : 'No hay movimientos en la bitácora');
                 btnVerMas.style.display = 'none';
                 btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
                 return;
@@ -99,40 +123,57 @@ if (usuario.rol !== 'admin') {
             btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
         }
 
-        function aplicarFiltro(texto: string) {
-            if (!texto.trim()) return [...registros];
-            const filtro = texto.toLowerCase();
-            return registros.filter((item) =>
-                String(item.usuario_nombre || '').toLowerCase().includes(filtro)
-                || String(item.etiqueta || '').toLowerCase().includes(filtro)
-                || String(item.accion || '').toLowerCase().includes(filtro)
-                || String(item.detalle || '').toLowerCase().includes(filtro)
-            );
-        }
+        async function cargarBitacora(fecha = '') {
+            try {
+                const url = fecha ? `/api/bitacora?fecha=${encodeURIComponent(fecha)}` : '/api/bitacora';
+                const response = await fetch(url);
+                const data = await response.json();
 
-        try {
-            const response = await fetch('/api/bitacora');
-            const data = await response.json();
+                if (!response.ok) {
+                    thead.style.display = 'none';
+                    noRegistros(data.error || 'Error al cargar la bitácora');
+                    btnVerMas.style.display = 'none';
+                    btnVerAnterior.style.display = 'none';
+                    return;
+                }
 
-            if (!response.ok) {
+                registros = Array.isArray(data) ? data : [];
+                // Ordenar siempre por fecha y hora descendente (las más recientes arriba)
+                registros.sort((a, b) => {
+                    const dtA = `${a.fecha || ''} ${a.hora || ''}`;
+                    const dtB = `${b.fecha || ''} ${b.hora || ''}`;
+                    return dtB.localeCompare(dtA);
+                });
+
+                filtrados = [...registros];
+                paginaActual = 1;
+                if (btnTodasLasFechas) {
+                    btnTodasLasFechas.classList.toggle('is-active', !fecha);
+                }
+                mostrarPagina(paginaActual);
+            } catch (error) {
+                console.error('Error al cargar bitácora:', error);
                 thead.style.display = 'none';
-                noRegistros(data.error || 'Error al cargar la bitácora');
-                return;
+                noRegistros('Error al cargar la bitácora');
+                btnVerMas.style.display = 'none';
+                btnVerAnterior.style.display = 'none';
             }
-
-            registros = Array.isArray(data) ? data : [];
-            filtrados = [...registros];
-            mostrarPagina(paginaActual);
-        } catch (error) {
-            console.error('Error al cargar bitácora:', error);
-            thead.style.display = 'none';
-            noRegistros('Error al cargar la bitácora');
         }
 
-        busqueda.addEventListener('input', () => {
-            paginaActual = 1;
-            filtrados = aplicarFiltro(busqueda.value);
-            mostrarPagina(paginaActual);
+        // Cargar inicialmente con la fecha del selector (por defecto hoy)
+        cargarBitacora(inputFecha.value);
+
+        inputFecha.addEventListener('input', () => {
+            cargarBitacora(inputFecha.value);
+        });
+
+        inputFecha.addEventListener('change', () => {
+            cargarBitacora(inputFecha.value);
+        });
+
+        btnTodasLasFechas?.addEventListener('click', () => {
+            inputFecha.value = '';
+            cargarBitacora('');
         });
 
         btnVerMas.addEventListener('click', () => {
@@ -150,6 +191,107 @@ if (usuario.rol !== 'admin') {
 </script>
 
 <style>
+    .bitacora-toolbar {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .toolbar-actions {
+        display: flex;
+        align-items: flex-end;
+    }
+
+    .btn-historial-todas {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        min-height: 42px;
+        padding: 0.55rem 1.35rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.88);
+        border: 1.5px solid rgba(var(--primary-rgb), 0.24);
+        color: var(--secondary-color);
+        font-family: inherit;
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(var(--primary-rgb), 0.08);
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    .btn-historial-todas svg {
+        color: var(--primary-color);
+        flex-shrink: 0;
+        transition: transform 220ms ease, color 200ms ease;
+    }
+
+    .btn-historial-todas:hover {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border-color: transparent;
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 22px rgba(var(--primary-rgb), 0.25);
+    }
+
+    .btn-historial-todas:hover svg {
+        color: #ffffff;
+        transform: rotate(-35deg);
+    }
+
+    .btn-historial-todas:active {
+        transform: translateY(0);
+        box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.15);
+    }
+
+    .btn-historial-todas.is-active {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border-color: transparent;
+        color: #ffffff;
+        box-shadow: 0 6px 18px rgba(var(--primary-rgb), 0.22);
+    }
+
+    .btn-historial-todas.is-active svg {
+        color: #ffffff;
+    }
+
+    .filtro-fecha {
+        display: grid;
+        gap: 0.35rem;
+        flex: 0 0 auto;
+        min-width: min(100%, 220px);
+        justify-items: end;
+        margin-left: auto;
+        align-self: center;
+    }
+
+    .filtro-fecha_label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--secondary-color);
+    }
+
+    .fecha-filtro {
+        margin: 0;
+        padding: 0;
+        justify-content: flex-end;
+        height: auto;
+        min-height: 0;
+        align-items: stretch;
+    }
+
+    .fecha-filtro input {
+        max-width: 220px;
+        margin: 0;
+    }
+
     .hora {
         font-size: 0.78rem;
         color: var(--text-muted);
@@ -167,5 +309,49 @@ if (usuario.rol !== 'admin') {
         text-transform: uppercase;
         background: rgba(var(--accent-rgb), 0.14);
         color: var(--secondary-color);
+    }
+
+    @media (max-width: 768px) {
+        .bitacora-toolbar {
+            gap: 0.75rem;
+            padding-bottom: 0.15rem;
+        }
+
+        .bitacora-toolbar .toolbar-actions {
+            width: 100%;
+        }
+
+        .btn-historial-todas {
+            width: 100%;
+            justify-content: center;
+            min-height: 40px;
+        }
+
+        .bitacora-toolbar .filtro-fecha {
+            order: -1;
+            width: 100%;
+            margin-left: 0;
+            align-self: stretch;
+            justify-items: stretch;
+            gap: 0.4rem;
+            padding-bottom: 0.2rem;
+        }
+
+        .bitacora-toolbar .fecha-filtro {
+            justify-content: stretch;
+        }
+
+        .bitacora-toolbar .fecha-filtro input {
+            display: block;
+            width: 100%;
+            max-width: none;
+            height: 36px;
+            min-height: 36px;
+            max-height: 36px;
+            padding: 0 0.7rem;
+            font-size: 16px;
+            line-height: normal;
+            box-sizing: border-box;
+        }
     }
 </style>

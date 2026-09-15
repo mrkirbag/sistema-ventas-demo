@@ -20,7 +20,7 @@ export async function GET({ request }) {
     try {
 
         const url = new URL(request.url);
-        const ventaId = parseInt(url.searchParams.get('ventaId'));
+        const ventaId = url.searchParams.get('ventaId');
 
         const productosSeleccionados = await db.execute('SELECT * FROM detalle_venta WHERE id_venta = ?', [ventaId]);
 

@@ -29,8 +29,12 @@ const productoId = Astro.url.searchParams.get('id');
             </div>
         </div>
 
-        <div class="input-busqueda_container">
-            <input type="text" id="inputBusqueda" placeholder="Buscar por producto, usuario o motivo..." />
+        <div class="input-busqueda_container" style="display: flex; gap: 0.5rem; width: 100%; max-width: 500px;">
+            <select id="selectOrigen" style="padding: 0.5rem 1rem; border: 1px solid rgba(var(--secondary-rgb), 0.3); border-radius: 999px; background: rgba(255, 255, 255, 0.6); color: var(--secondary-color); font-weight: 500; font-size: 0.85rem; outline: none;">
+                <option value="todos">Todos los orígenes</option>
+                <option value="ventas">Ventas y Devoluciones</option>
+                <option value="otros">Movimientos en inventario</option>
+            </select>
         </div>
     </div>
 
@@ -70,7 +74,7 @@ const productoId = Astro.url.searchParams.get('id');
         const tbody = document.getElementById('listaMovimientos') as HTMLTableSectionElement;
         const btnVerMas = document.getElementById('btnVerMas') as HTMLButtonElement;
         const btnVerAnterior = document.getElementById('btnVerAnterior') as HTMLButtonElement;
-        const busqueda = document.getElementById('inputBusqueda') as HTMLInputElement;
+        const selectOrigen = document.getElementById('selectOrigen') as HTMLSelectElement;
         const pageIntro = document.getElementById('pageIntro') as HTMLParagraphElement;
 
         let movimientos = [] as any[];
@@ -133,50 +137,48 @@ const productoId = Astro.url.searchParams.get('id');
             btnVerAnterior.style.display = pagina > 1 ? 'block' : 'none';
         }
 
-        function aplicarFiltro(texto: string) {
-            if (!texto.trim()) return [...movimientos];
+        async function cargarHistorial() {
+            try {
+                let url = productoId
+                    ? `/api/productos/movimientos?productoId=${encodeURIComponent(productoId)}`
+                    : '/api/productos/movimientos';
+                
+                const origen = selectOrigen.value;
+                if (origen && origen !== 'todos') {
+                    url += (url.includes('?') ? '&' : '?') + `origen=${origen}`;
+                }
 
-            const filtro = texto.toLowerCase();
-            return movimientos.filter((movimiento) =>
-                String(movimiento.codigo_producto || '').toLowerCase().includes(filtro)
-                || String(movimiento.nombre_producto || '').toLowerCase().includes(filtro)
-                || String(movimiento.usuario_nombre || '').toLowerCase().includes(filtro)
-                || String(movimiento.motivo || '').toLowerCase().includes(filtro)
-                || etiquetaTipo(movimiento.tipo).toLowerCase().includes(filtro)
-            );
-        }
+                const response = await fetch(url);
+                const data = await response.json();
 
-        try {
-            const url = productoId
-                ? `/api/productos/movimientos?productoId=${encodeURIComponent(productoId)}`
-                : '/api/productos/movimientos';
-            const response = await fetch(url);
-            const data = await response.json();
+                if (!response.ok) {
+                    thead.style.display = 'none';
+                    noRegistros(data.error || 'Error al cargar el historial');
+                    return;
+                }
 
-            if (!response.ok) {
+                movimientos = Array.isArray(data) ? data : (data.movimientos || []);
+                filtrados = [...movimientos];
+
+                if (productoId && movimientos[0]) {
+                    pageIntro.textContent = `Movimientos de ${String(movimientos[0].codigo_producto).toUpperCase()} — ${String(movimientos[0].nombre_producto).toUpperCase()}.`;
+                }
+
+                paginaActual = 1;
+                
+                thead.style.display = 'table-header-group';
+                mostrarPagina(paginaActual);
+            } catch (error) {
+                console.error('Error al cargar historial:', error);
                 thead.style.display = 'none';
-                noRegistros(data.error || 'Error al cargar el historial');
-                return;
+                noRegistros('Error al cargar el historial');
             }
-
-            movimientos = Array.isArray(data) ? data : (data.movimientos || []);
-            filtrados = [...movimientos];
-
-            if (productoId && movimientos[0]) {
-                pageIntro.textContent = `Movimientos de ${String(movimientos[0].codigo_producto).toUpperCase()} — ${String(movimientos[0].nombre_producto).toUpperCase()}.`;
-            }
-
-            mostrarPagina(paginaActual);
-        } catch (error) {
-            console.error('Error al cargar historial:', error);
-            thead.style.display = 'none';
-            noRegistros('Error al cargar el historial');
         }
 
-        busqueda.addEventListener('input', () => {
-            paginaActual = 1;
-            filtrados = aplicarFiltro(busqueda.value);
-            mostrarPagina(paginaActual);
+        await cargarHistorial();
+
+        selectOrigen.addEventListener('change', () => {
+            cargarHistorial();
         });
 
         btnVerMas.addEventListener('click', () => {

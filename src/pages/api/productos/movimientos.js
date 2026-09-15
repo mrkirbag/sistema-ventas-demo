@@ -22,6 +22,8 @@ export async function GET({ request }) {
             LIMITE_MAXIMO
         );
 
+        const origen = url.searchParams.get('origen');
+
         const filtros = [];
         const args = [];
 
@@ -35,9 +37,15 @@ export async function GET({ request }) {
             args.push(tipo);
         }
 
+        if (origen === 'ventas') {
+            filtros.push(`(motivo LIKE 'Venta #%' OR motivo LIKE 'Devolución de venta #%')`);
+        } else if (origen === 'otros') {
+            filtros.push(`(motivo NOT LIKE 'Venta #%' AND motivo NOT LIKE 'Devolución de venta #%')`);
+        }
+
         const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
         const result = await db.execute({
-            sql: `SELECT * FROM movimientos_inventario ${where} ORDER BY id DESC LIMIT ?`,
+            sql: `SELECT * FROM movimientos_inventario ${where} ORDER BY fecha DESC, hora DESC LIMIT ?`,
             args: [...args, limit],
         });
 
@@ -77,6 +85,7 @@ export async function POST({ request }) {
             cantidad: body.cantidad ?? body.stockNumero,
             motivo: body.motivo,
             usuario,
+            seriales: body.seriales,
         });
 
         const mensaje = resultado.tipo === 'salida'

@@ -20,6 +20,7 @@ export const METODOS_POR_MONEDA = Object.freeze({
         { id: 'efectivo', etiqueta: 'Efectivo' },
         { id: 'zelle', etiqueta: 'Zelle' },
         { id: 'binance', etiqueta: 'Binance' },
+        { id: 'nota_credito', etiqueta: 'Nota de crédito' },
     ]),
     COP: Object.freeze([
         { id: 'efectivo', etiqueta: 'Efectivo' },

@@ -11,6 +11,7 @@ import {
 import { obtenerMonedaBase } from '@/utils/helpers/tasas.js';
 import { validarPagosVenta } from '@/utils/helpers/metodosPago.js';
 import { ACCIONES, registrarBitacoraEnTx } from '@/utils/bitacora.js';
+import { fechaHoraVenezuela } from '@/utils/helpers/formateoFecha.js';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
@@ -24,9 +25,8 @@ async function tasasDelDia() {
 }
 
 function idClienteValido(valor) {
-    if (typeof valor === 'bigint') return Number(valor);
-    const id = Number.parseInt(String(valor ?? ''), 10);
-    return Number.isFinite(id) && id > 0 ? id : null;
+    if (!valor) return null;
+    return String(valor).trim() || null;
 }
 
 export async function POST({ request }) {
@@ -116,11 +116,11 @@ export async function POST({ request }) {
 
             const ventaResult = await executeInTx(
                 tx,
-                'INSERT INTO ventas (fecha, cliente_id, total, estado, tipo_pago) VALUES (?, ?, ?, ?, ?)',
+                'INSERT INTO ventas (fecha, cliente_id, total, estado, tipo_pago) VALUES (?, ?, ?, ?, ?) RETURNING id',
                 [fecha, clienteId, totalDeVenta, estado, tipoPago]
             );
 
-            const idVenta = normalizarId(ventaResult.lastInsertRowid);
+            const idVenta = normalizarId(ventaResult.rows[0].id);
 
             if (tipoPago === 'credito') {
                 await executeInTx(
@@ -147,11 +147,78 @@ export async function POST({ request }) {
                         pago.tasa_bs,
                     ]
                 );
+
+                if (pago.metodo === 'nota_credito') {
+                    let restante = pago.monto_base;
+                    const notasResult = await executeInTx(
+                        tx,
+                        `SELECT id, saldo_disponible
+                         FROM devoluciones
+                         WHERE cliente_id = ?
+                           AND tipo_resolucion = 'NOTA_CREDITO'
+                           AND saldo_disponible > 0
+                         ORDER BY fecha_creacion ASC`,
+                        [clienteId]
+                    );
+
+                    for (const nota of (notasResult.rows || [])) {
+                        if (restante <= 0) break;
+                        const saldoNota = Number(nota.saldo_disponible);
+                        const consumir = Math.min(saldoNota, restante);
+                        const nuevoSaldo = +(saldoNota - consumir).toFixed(2);
+                        
+                        await executeInTx(
+                            tx,
+                            'UPDATE devoluciones SET saldo_disponible = ? WHERE id = ?',
+                            [nuevoSaldo, nota.id]
+                        );
+                        restante = +(restante - consumir).toFixed(2);
+                    }
+
+                    if (restante > 0.01) {
+                        throw Object.assign(new Error(`El cliente no tiene saldo suficiente en notas de crédito (faltan ${restante.toFixed(2)} USD)`), { status: 400 });
+                    }
+                }
             }
+
+            const { fecha: fechaMov, hora: horaMov } = fechaHoraVenezuela();
+            const usuarioNombre = usuario.nombre || usuario.usuario || 'Usuario';
 
             for (const item of itemsParseados) {
                 await insertarDetalleVenta(tx, idVenta, item);
-                await descontarStock(tx, item.codigo, item.cantidad);
+                const { stockAntes, stockDespues } = await descontarStock(tx, item.codigo, item.cantidad);
+
+                // Registrar el movimiento de salida
+                await executeInTx(
+                    tx,
+                    `INSERT INTO movimientos_inventario (
+                        producto_id, codigo_producto, nombre_producto, tipo, cantidad,
+                        stock_antes, stock_despues, motivo, usuario_id, usuario_nombre, fecha, hora
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        item.productoId,
+                        item.codigo,
+                        item.nombre,
+                        'salida',
+                        item.cantidad,
+                        stockAntes,
+                        stockDespues,
+                        `Venta #${idVenta}`,
+                        usuario.id,
+                        usuarioNombre,
+                        fechaMov,
+                        horaMov,
+                    ]
+                );
+                
+                if (item.seriales && item.seriales.length > 0) {
+                    for (const serial of item.seriales) {
+                        await executeInTx(tx, 
+                            `UPDATE seriales SET estado = 'vendido', id_venta = ? WHERE serial = ? AND producto_id = ?`,
+                            [idVenta, serial, item.productoId]
+                        );
+                    }
+                }
             }
 
             await registrarBitacoraEnTx(tx, {

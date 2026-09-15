@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import ModalDevolucion from '../components/ModalDevolucion.astro';
 import { verificarToken } from '@/utils/auth.js';
 
 const usuario = verificarToken(Astro.request);
@@ -72,6 +73,8 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
     <div id="overlay" class="overlay oculto"> 
         <div id="modal" class="modal"></div>
     </div>
+
+    <ModalDevolucion />
 </Layout>
 
 <style>
@@ -177,6 +180,12 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
         border-color: rgba(255, 77, 77, 0.22);
     }
 
+    :global(.status-badge--devuelta) {
+        background: rgba(234, 179, 8, 0.12);
+        color: #854d0e;
+        border-color: rgba(234, 179, 8, 0.22);
+    }
+
     :global(.pago-badge) {
         display: inline-flex;
         align-items: center;
@@ -263,7 +272,7 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
 
 <script>
 
-    import { noRegistros, mostrarMensaje, mostrarError, confirmarAccion } from "@/utils/helpers/mensajes.js";
+    import { noRegistros } from "@/utils/helpers/mensajes.js";
     import { cambioUSDaCOP } from "@/utils/helpers/cambioMoneda.js";
     import { formatearFecha } from "@/utils/helpers/formateoFecha.js";
     import { imprimir } from '@/utils/helpers/imprimir.js';
@@ -273,6 +282,7 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
     interface Venta {
         id: number;
         fecha: string;
+        cliente_id: number;
         cliente: string;
         cedula_cliente: string;
         total: number;
@@ -282,7 +292,9 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
 
     function obtenerClaseEstado(estado: string) {
         const normalizado = estado.toLowerCase();
-        return normalizado.includes('anul') ? 'status-badge--anulada' : 'status-badge--activa';
+        if (normalizado.includes('anul')) return 'status-badge--anulada';
+        if (normalizado.includes('devuel')) return 'status-badge--devuelta';
+        return 'status-badge--activa';
     }
 
     function actualizarResumen(cantidad: number, fecha: string) {
@@ -365,46 +377,17 @@ const fechaActual = new Date().toLocaleDateString("es-VE", {
                 const tdAcciones = document.createElement('td');
                 tdAcciones.classList.add('acciones');
 
-                if (esAdmin && ventas.estado.toLowerCase() !== 'anulado') {
-                    const btnEliminar = document.createElement('button');
-                    btnEliminar.type = 'button';
-                    btnEliminar.classList.add('btn-eliminar');
-                    btnEliminar.textContent = 'ANULAR';
+                const estadoNorm = ventas.estado.toLowerCase();
+                if (esAdmin && estadoNorm !== 'anulado' && estadoNorm !== 'devuelto') {
+                    const btnDevolver = document.createElement('button');
+                    btnDevolver.type = 'button';
+                    btnDevolver.classList.add('btn-eliminar');
+                    btnDevolver.textContent = 'DEVOLVER';
 
-                    btnEliminar.onclick = async () => {
-
-                        const confirmar = await confirmarAccion(`¿Deseas anular la venta del cliente ${ventas.cliente.toUpperCase()} C.I. ${ventas.cedula_cliente} con fecha ${fechaFormateada}?`, {
-                            titulo: 'Anular venta',
-                            textoAceptar: 'Anular',
-                        });
-                        if (!confirmar) return;
-
-                        try {
-                            const res = await fetch(`/api/ventas/anularVenta`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ id: ventas.id })
-                            });
-
-                            const data = await res.json();
-
-                            if (!res.ok) {
-                                mostrarError(data.error || data.message || 'No se pudo anular la venta');
-                                return;
-                            }
-
-                            mostrarMensaje(data.message);
-
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1500);
-
-                        } catch(error) {
-                            mostrarError('Error anulando venta');
-                            console.error("Error anulando ventas:", error);
-                        }
-                    }
-                    tdAcciones.appendChild(btnEliminar);
+                    btnDevolver.onclick = () => {
+                        (window as any).abrirModalDevolucion(ventas.id, ventas.cliente_id);
+                    };
+                    tdAcciones.appendChild(btnDevolver);
                 }
 
                 const btnVerInfo = document.createElement('button');

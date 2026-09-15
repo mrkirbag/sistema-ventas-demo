@@ -34,7 +34,7 @@ export async function GET({ request }) {
                     FROM ventas v
                     JOIN clientes c ON c.id = v.cliente_id
                     WHERE DATE(v.fecha) BETWEEN ? AND ?
-                    AND v.estado IN ('completado')
+                    AND v.estado IN ('completado', 'devuelto')
                     AND v.tipo_pago IN ('contado', 'credito')
                     ORDER BY v.fecha ASC;
                 `;

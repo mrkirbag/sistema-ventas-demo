@@ -12,7 +12,7 @@ const CLIENTE_ACTIVO = `IFNULL(estatus, 'activo') = 'activo'`;
 function serializarCliente(row) {
     if (!row) return null;
     return {
-        id: Number(row.id),
+        id: row.id,
         nombre: row.nombre,
         telefono: row.telefono,
         cedula: row.cedula,
@@ -21,9 +21,7 @@ function serializarCliente(row) {
 }
 
 function idNumerico(valor) {
-    if (typeof valor === 'bigint') return Number(valor);
-    const id = Number.parseInt(String(valor ?? ''), 10);
-    return Number.isFinite(id) && id > 0 ? id : null;
+    return valor ? String(valor) : null;
 }
 
 async function marcarClienteActivo(id) {
@@ -47,7 +45,7 @@ async function insertarClienteActivo(nombre, telefono, cedula) {
         });
 
         const fila = insert.rows?.[0];
-        const id = idNumerico(fila?.id) ?? idNumerico(insert.lastInsertRowid);
+        const id = idNumerico(fila?.id);
         if (!id) {
             throw new Error('No se obtuvo el ID del cliente insertado');
         }
@@ -63,10 +61,10 @@ async function insertarClienteActivo(nombre, telefono, cedula) {
         }
 
         const insert = await db.execute({
-            sql: 'INSERT INTO clientes (nombre, telefono, cedula) VALUES (?, ?, ?)',
+            sql: 'INSERT INTO clientes (nombre, telefono, cedula) VALUES (?, ?, ?) RETURNING id',
             args: [nombre, telefono, cedula],
         });
-        const id = idNumerico(insert.lastInsertRowid)
+        const id = idNumerico(insert.rows?.[0]?.id)
             ?? idNumerico((await db.execute({
                 sql: 'SELECT id FROM clientes WHERE cedula = ?',
                 args: [cedula],
@@ -276,7 +274,7 @@ export async function DELETE({ request }) {
             usuario,
             accion: ACCIONES.CLIENTE_ELIMINAR,
             entidad: 'clientes',
-            entidadId: Number(id),
+            entidadId: id,
             detalle: `${datos?.nombre || 'Cliente'} · ${datos?.cedula || id}`,
         });
 
@@ -330,7 +328,7 @@ export async function PUT({ request }) {
             usuario,
             accion: ACCIONES.CLIENTE_EDITAR,
             entidad: 'clientes',
-            entidadId: Number(idCliente),
+            entidadId: idCliente,
             detalle: `${nombre} · ${cedula}`,
         });
 

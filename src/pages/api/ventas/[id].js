@@ -38,6 +38,7 @@ export async function GET({ request, params }) {
 
         const productosResult = await db.execute(`
                                                     SELECT
+                                                        producto_id,
                                                         codigo_producto,
                                                         nombre_producto,
                                                         precio_unitario,
@@ -69,6 +70,27 @@ export async function GET({ request, params }) {
         }
 
 
+        let serialesResult = { rows: [] };
+        try {
+            serialesResult = await db.execute(`
+                SELECT serial, producto_id
+                FROM seriales
+                WHERE id_venta = ?
+            `, [id]);
+        } catch (error) {
+            console.warn('No se pudieron leer los seriales de la venta:', error);
+        }
+
+        const productosFinales = productosResult.rows.map(prod => {
+            const serialesAsociados = serialesResult.rows
+                .filter(s => s.producto_id === prod.producto_id)
+                .map(s => s.serial);
+            return {
+                ...prod,
+                seriales: serialesAsociados
+            };
+        });
+
         const result = {
                             cliente: {
                                 nombre: ventaData.nombre_cliente,
@@ -81,7 +103,7 @@ export async function GET({ request, params }) {
                                 tipo_pago: ventaData.tipo_pago,
                                 estado: ventaData.estado
                             },
-                            productos: productosResult.rows,
+                            productos: productosFinales,
                             pagos: pagosResult.rows || []
                         };
 

@@ -21,6 +21,7 @@ export async function registrarMovimientoInventario(db, {
     cantidad,
     motivo,
     usuario,
+    seriales = [],
 }) {
     if (!TIPOS.has(tipo)) {
         const error = new Error('El tipo de movimiento no es válido');
@@ -33,6 +34,20 @@ export async function registrarMovimientoInventario(db, {
         const error = new Error('La cantidad debe ser un número positivo mayor a 0');
         error.status = 400;
         throw error;
+    }
+
+    if (Array.isArray(seriales) && seriales.length > 0) {
+        if (seriales.length !== cantidadNum) {
+            const error = new Error(`La cantidad de seriales (${seriales.length}) no coincide con la cantidad de stock a mover (${cantidadNum}).`);
+            error.status = 400;
+            throw error;
+        }
+        const vacios = seriales.some(s => !s || String(s).trim() === '');
+        if (vacios) {
+            const error = new Error('Hay seriales vacíos.');
+            error.status = 400;
+            throw error;
+        }
     }
 
     const motivoFinal = String(motivo ?? '').trim()
@@ -113,16 +128,39 @@ export async function registrarMovimientoInventario(db, {
             ]
         );
 
+        if (Array.isArray(seriales) && seriales.length > 0) {
+            if (tipo === 'entrada') {
+                for (const serial of seriales) {
+                    const existeRes = await executeInTx(tx, 'SELECT id, producto_id, estado FROM seriales WHERE serial = ?', [serial]);
+                    if (existeRes.rows && existeRes.rows.length > 0) {
+                        const row = existeRes.rows[0];
+                        if (row.producto_id !== productoId && row.estado === 'disponible') {
+                            const err = new Error(`El serial ${serial} ya está registrado y activo en otro producto`);
+                            err.status = 409;
+                            throw err;
+                        }
+                        await executeInTx(tx, `UPDATE seriales SET estado = 'disponible', producto_id = ?, id_venta = NULL WHERE id = ?`, [productoId, row.id]);
+                    } else {
+                        await executeInTx(tx, `INSERT INTO seriales (serial, producto_id, estado) VALUES (?, ?, 'disponible')`, [serial, productoId]);
+                    }
+                }
+            } else if (tipo === 'salida') {
+                for (const serial of seriales) {
+                    await executeInTx(tx, `DELETE FROM seriales WHERE serial = ? AND producto_id = ? AND estado = 'disponible'`, [serial, productoId]);
+                }
+            }
+        }
+
         await registrarBitacoraEnTx(tx, {
             usuario,
             accion: tipo === 'salida' ? ACCIONES.STOCK_SALIDA : ACCIONES.STOCK_ENTRADA,
             entidad: 'productos',
-            entidadId: Number(fila.id),
+            entidadId: fila.id,
             detalle: `${fila.codigo} — ${fila.nombre} · ${tipo} ${cantidadNum} · stock ${stockAntes} → ${stockDespues} · ${motivoFinal}`,
         });
 
         return {
-            movimientoId: Number(insert.lastInsertRowid ?? 0),
+            movimientoId: insert.lastInsertRowid ? String(insert.lastInsertRowid) : fila.id,
             stock: stockDespues,
             tipo,
             cantidad: cantidadNum,

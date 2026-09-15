@@ -13,6 +13,8 @@
     "migrate:movimientos": "node scripts/migrate-movimientos-inventario.js",
     "migrate:pagos": "node scripts/migrate-pagos-venta.js",
     "migrate:abonos": "node scripts/migrate-abonos-pago.js",
+    "migrate:compras": "node scripts/migrate-compras.js",
+    "migrate:devoluciones": "node scripts/migrate-devoluciones.js",
     "astro": "astro"
   },
   "dependencies": {
@@ -30,7 +32,9 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "electron": "^44.0.0",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "typescript": "^7.0.2"
   }
 }

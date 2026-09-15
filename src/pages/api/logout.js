@@ -11,7 +11,7 @@ export async function POST({ request }) {
                 usuario,
                 accion: ACCIONES.LOGOUT,
                 entidad: 'usuarios',
-                entidadId: Number(usuario.id) || null,
+                entidadId: usuario.id || null,
                 detalle: `${usuario.nombre || usuario.usuario} (${usuario.usuario})`,
             });
         } catch (error) {

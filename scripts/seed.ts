@@ -46,7 +46,7 @@ function statementsFromSql(sql: string) {
         .join('\n')
         .split(';')
         .map((statement) => statement.trim())
-        .filter((statement) => /^(PRAGMA|CREATE|ALTER|INSERT|UPDATE|DELETE)\b/i.test(statement));
+        .filter((statement) => /^(PRAGMA|DROP|CREATE|ALTER|INSERT|UPDATE|DELETE)\b/i.test(statement));
 }
 
 async function applySchema(client: Client) {

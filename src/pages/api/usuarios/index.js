@@ -56,7 +56,7 @@ export async function DELETE({ request }) {
             });
         }
 
-        if (Number(id) === Number(usuario.id)) {
+        if (String(id) === String(usuario.id)) {
             return new Response(JSON.stringify({ message: 'No puedes eliminar tu propia cuenta' }), {
                 status: 403,
                 headers: { 'Content-Type': 'application/json' }
@@ -94,7 +94,7 @@ export async function DELETE({ request }) {
             usuario,
             accion: ACCIONES.USUARIO_ELIMINAR,
             entidad: 'usuarios',
-            entidadId: Number(id),
+            entidadId: id,
             detalle: `${fila.nombre} (${fila.usuario}) · ${fila.rol}`,
         });
 
