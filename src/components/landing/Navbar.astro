@@ -1,0 +1,64 @@
+<header
+    class="fixed top-0 z-50 w-full border-b border-white/10 bg-background-dark/80 backdrop-blur-md"
+>
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div class="flex items-center gap-3">
+            <img src="/landing/logo.png" class="max-w-25" alt="Logo" />
+        </div>
+
+        <button
+            id="menu-btn"
+            class="block md:hidden text-text-muted hover:text-accent focus:outline-none"
+        >
+            <svg
+                class="w-7 h-7"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 6h16M4 12h16m-7 6h7"></path>
+            </svg>
+        </button>
+
+        <nav
+            id="menu"
+            class="hidden absolute top-full left-0 w-full bg-primary/95 backdrop-blur-xl flex-col items-center gap-6 py-8 border-b border-white/10 z-50 md:static md:flex md:w-auto md:flex-row md:gap-8 md:py-0 md:border-none md:bg-transparent md:backdrop-blur-none origin-top"
+        >
+            <a href="#hero" class="nav-link">Inicio</a>
+            <a href="#beneficios" class="nav-link">Beneficios</a>
+            <a href="#planes" class="nav-link">Planes</a>
+            <a href="#contacto" class="nav-link">Contacto</a>
+        </nav>
+    </div>
+</header>
+
+<script>
+    const btn = document.getElementById("menu-btn") as HTMLButtonElement;
+    const menu = document.getElementById("menu") as HTMLElement;
+
+    btn.addEventListener("click", () => {
+        // Si el menú está oculto, lo mostramos y animamos
+        if (menu.classList.contains("hidden")) {
+            menu.classList.remove("hidden");
+            menu.classList.add("flex", "animate-menu-open");
+        } else {
+            // Al cerrar, quitamos la animación y volvemos a ocultar
+            menu.classList.add("hidden");
+            menu.classList.remove("flex", "animate-menu-open");
+        }
+    });
+
+    // Cerrar el menú al hacer clic en un enlace (Mobile)
+    document.querySelectorAll(".nav-link").forEach((link) => {
+        link.addEventListener("click", () => {
+            if (window.innerWidth < 768) {
+                menu.classList.add("hidden");
+                menu.classList.remove("flex", "animate-menu-open");
+            }
+        });
+    });
+</script>

@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@config "../../tailwind.config.mjs";
+
+:root {
+    --color-primary: #0F0529;
+    --color-secondary: #1F0A52;
+    --color-accent: #A855F7;
+    --color-custom-gray: #F1F5F9;
+    --color-tertiary: #6366F1;
+    --font-display: "Roboto", sans-serif;
+    --radius: 0.25rem;
+    --radius-default: 0.25rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+        clip-path: inset(0 0 100% 0);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        clip-path: inset(0 0 0 0);
+    }
+}
+
+.nav-link {
+    position: relative;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+@media (min-width: 768px) {
+    .nav-link {
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+    }
+}
+
+.nav-link:hover {
+    color: var(--color-accent);
+}
+
+.nav-link::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    width: 0;
+    background-color: var(--color-accent);
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover::before {
+    width: 100%;
+}
+
+.animate-menu-open {
+    animation: slideDown 0.4s ease-out forwards;
+    display: flex !important;
+}

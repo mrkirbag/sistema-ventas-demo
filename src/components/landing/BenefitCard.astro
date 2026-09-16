@@ -1,0 +1,29 @@
+---
+interface Props {
+    title: string;
+    description: string;
+    class?: string;
+}
+
+const { title, description, class: className } = Astro.props;
+---
+
+<div class={`group relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/15 bg-linear-to-br from-white/10 via-white/5 to-transparent p-px transition-all duration-500 hover:scale-[1.01] hover:shadow-2xl hover:shadow-accent/25 flex flex-col h-full ${className}`}>
+    <div class="relative h-full w-full rounded-[15px] md:rounded-[23px] bg-linear-to-br from-card-dark/95 to-card-dark/85 p-5 sm:p-6 lg:p-7 backdrop-blur-md flex flex-col justify-between overflow-hidden">
+        
+        <div class="pointer-events-none absolute -left-2 -top-2 h-44 w-44 bg-accent/20 blur-3xl transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
+
+        <div class="relative z-10 shrink-0">
+            <h3 class="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white transition-colors duration-300 group-hover:text-accent group-hover:text-glow">
+                {title}
+            </h3>
+            <p class="mt-1.5 text-xs sm:text-sm md:text-base leading-relaxed text-text-muted/85">
+                {description}
+            </p>
+        </div>
+
+        <div class="relative z-10 w-full flex-1 flex items-center justify-center mt-5 sm:mt-6 overflow-hidden min-h-[220px] sm:min-h-[260px] md:min-h-[280px] lg:min-h-[310px]">
+            <slot />
+        </div>
+    </div>
+</div>

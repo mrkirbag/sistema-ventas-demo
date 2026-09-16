@@ -7,7 +7,7 @@ if (!usuario) {
     return Astro.redirect("/login");
 }
 if (usuario.rol !== "admin") {
-    return Astro.redirect("/");
+    return Astro.redirect("/dashboard");
 }
 
 const { id } = Astro.params;

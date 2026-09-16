@@ -1,0 +1,111 @@
+---
+import "@/styles/global.css";
+
+interface Props {
+    title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es" class="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="description"
+            content="Sistema administrativo de control de ventas e inventario"
+        />
+        <meta name="viewport" content="width=device-width" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <title>{title}</title>
+
+        <!-- SEO Meta Tags -->
+        <meta
+            name="keywords"
+            content="sistema administrativo, ventas, inventario, reportes, SaaS, gestión financiera, plataforma empresarial"
+        />
+        <meta name="author" content="Fadi Kirbag" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://savi.fadikirbag.dev" />
+
+        <!-- Open Graph Meta Tags -->
+        <meta
+            property="og:title"
+            content="SAVI - Gestión Financiera con Precisión Absoluta"
+        />
+        <meta
+            property="og:description"
+            content="La plataforma definitiva para gestionar inventarios, reportes e ingresos en tiempo real. Potencia tu eficiencia operativa."
+        />
+        <meta property="og:image" content="/favicon.svg" />
+        <meta property="og:url" content="https://savi.fadikirbag.dev" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="SAVI" />
+
+        <!-- Twitter Card Meta Tags -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+            name="twitter:title"
+            content="SAVI - Gestión Financiera con Precisión Absoluta"
+        />
+        <meta
+            name="twitter:description"
+            content="La plataforma definitiva para gestionar inventarios, reportes e ingresos en tiempo real. Potencia tu eficiencia operativa."
+        />
+        <meta name="twitter:image" content="/favicon.png" />
+    </head>
+    <body class="bg-primary font-display text-white antialiased">
+        <slot />
+    </body>
+</html>
+
+<style is:global>
+    .glass-nav {
+        background: color-mix(in srgb, var(--color-primary), transparent 20%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .glow-effect {
+        box-shadow:
+            0 0 25px color-mix(in srgb, var(--color-accent), transparent 60%),
+            0 0 50px color-mix(in srgb, var(--color-tertiary), transparent 80%);
+    }
+
+    .text-glow {
+        text-shadow:
+            0 0 20px color-mix(in srgb, var(--color-accent), transparent 40%),
+            0 0 40px color-mix(in srgb, var(--color-tertiary), transparent 60%);
+    }
+
+    .hero-gradient {
+        background: linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--color-accent), transparent 90%) 0%,
+            color-mix(in srgb, var(--color-tertiary), transparent 95%) 50%,
+            var(--color-primary) 100%
+        );
+    }
+
+    .bg-radial-at-t {
+        background: radial-gradient(
+            ellipse at top,
+            color-mix(in srgb, var(--color-accent), transparent 85%) 0%,
+            var(--color-primary) 70%
+        );
+    }
+
+    html {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        scroll-behavior: smooth;
+    }
+
+    body {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+</style>

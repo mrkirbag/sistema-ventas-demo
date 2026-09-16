@@ -21,6 +21,7 @@
     "@astrojs/netlify": "^6.6.3",
     "@astrojs/node": "9.5.5",
     "@libsql/client": "^0.15.15",
+    "@tailwindcss/vite": "^4.3.3",
     "astro": "^5.16.4",
     "bcrypt": "^6.0.0",
     "chart.js": "^4.5.1",
@@ -29,6 +30,7 @@
     "dotenv": "^17.2.3",
     "html-to-image": "^1.11.13",
     "jsonwebtoken": "^9.0.3",
+    "tailwindcss": "^4.3.3",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

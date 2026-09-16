@@ -2,6 +2,8 @@ import { defineConfig } from 'astro/config';
 import netlify from '@astrojs/netlify';
 import node from '@astrojs/node';
 
+import tailwindcss from '@tailwindcss/vite';
+
 const isNetlifyDeploy = process.env.NETLIFY === 'true' || process.env.CONTEXT === 'production' || process.env.CONTEXT === 'deploy-preview';
 const useNodeAdapter = process.platform === 'win32' && !isNetlifyDeploy;
 
@@ -18,11 +20,13 @@ export default defineConfig({
         : netlify(),
 
     vite: {
-        resolve: {
-            alias: {
-                '@': '/src'
-            }
-        }
+      resolve: {
+          alias: {
+              '@': '/src'
+          }
+      },
+
+      plugins: [tailwindcss()]
     }
 
 });

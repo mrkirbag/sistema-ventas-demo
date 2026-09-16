@@ -1,0 +1,249 @@
+---
+interface FeatureItem {
+    text: string;
+    highlight?: boolean;
+}
+
+interface HighlightBox {
+    title: string;
+    desc: string;
+    isGift?: boolean;
+}
+
+interface Props {
+    title: string;
+    planTag?: string;
+    suscripcion: string;
+    price: string;
+    time: string;
+    periodNote?: string;
+    savingsBadge?: string;
+    description: string;
+    popular?: boolean;
+    features: (string | FeatureItem)[];
+    highlightBox?: HighlightBox;
+    ctaText?: string;
+}
+
+const { 
+    title, 
+    planTag,
+    suscripcion,
+    price,
+    time, 
+    periodNote,
+    savingsBadge,
+    description, 
+    popular = false,
+    features,
+    highlightBox,
+    ctaText,
+} = Astro.props;
+
+const phoneNumber = "584247217176";
+let defaultMessage = "";
+
+if (popular) {
+    defaultMessage = `Hola! 👋 Me interesa contratar el *Plan ${title}* de SAVI ($${price}/${time}).\n\n🎁 Vi que incluye la promoción de *Landing Page + Dominio .com* de regalo.\n\n¿Me podrían dar los detalles para la activación?`;
+} else {
+    defaultMessage = `Hola! 👋 Me interesa contratar el *Plan ${title}* de SAVI ($${price}/${time}).\n\n¿Me podrían dar más información para la activación?`;
+}
+
+const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(defaultMessage)}`;
+---
+
+<div class={`relative group flex flex-col w-full max-w-md h-full transition-all duration-500 rounded-3xl ${
+    popular 
+        ? "p-[1.5px] bg-linear-to-b from-accent via-purple-500/50 to-tertiary shadow-[0_0_50px_-10px_rgba(168,85,247,0.4)] hover:shadow-[0_0_75px_rgba(168,85,247,0.65)] hover:-translate-y-2.5 z-10" 
+        : "p-[1px] bg-linear-to-b from-white/20 via-white/10 to-transparent hover:from-accent/60 hover:via-accent/20 hover:to-transparent shadow-[0_10px_35px_rgba(0,0,0,0.5)] hover:shadow-[0_20px_50px_rgba(168,85,247,0.2)] hover:-translate-y-2"
+}`}>
+    
+    {popular && (
+        <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20">
+            <span class="inline-flex items-center gap-1.5 px-4 py-1 rounded-full bg-linear-to-r from-accent via-purple-600 to-tertiary text-white text-[11px] font-black uppercase tracking-wider shadow-[0_0_20px_rgba(168,85,247,0.8)] border border-white/30 whitespace-nowrap">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-amber-300 fill-amber-300" viewBox="0 0 24 24">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                Recomendado • Mayor Ahorro
+            </span>
+        </div>
+    )}
+
+    <!-- Card Inner Content Container -->
+    <div class={`relative flex flex-col justify-between h-full rounded-[23px] p-6 sm:p-8 backdrop-blur-xl overflow-hidden ${
+        popular
+            ? "bg-linear-to-b from-[#1F0A52]/95 via-[#16063D]/95 to-[#0F0529]/98"
+            : "bg-linear-to-b from-[#19083B]/90 via-[#12052C]/90 to-[#0F0529]/95"
+    }`}>
+
+        <!-- Ambient Spotlights within card -->
+        {popular ? (
+            <>
+                <div class="pointer-events-none absolute -top-16 -right-16 w-56 h-56 bg-accent/20 rounded-full blur-3xl group-hover:bg-accent/30 transition-all duration-500"></div>
+                <div class="pointer-events-none absolute -bottom-16 -left-16 w-56 h-56 bg-tertiary/20 rounded-full blur-3xl group-hover:bg-tertiary/30 transition-all duration-500"></div>
+            </>
+        ) : (
+            <div class="pointer-events-none absolute -top-16 -right-16 w-44 h-44 bg-purple-900/15 rounded-full blur-3xl group-hover:bg-accent/15 transition-all duration-500"></div>
+        )}
+
+        <!-- Top Section: Header & Pricing -->
+        <div class="relative z-10">
+            <div class="flex items-center justify-between gap-2">
+                <span class={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase ${
+                    popular
+                        ? "bg-accent/20 text-purple-200 border border-accent/40 shadow-[0_0_12px_rgba(168,85,247,0.3)]"
+                        : "bg-white/10 text-white/80 border border-white/10"
+                }`}>
+                    {planTag || (popular ? "Plan Anual Completo" : "Plan Mensual Flexible")}
+                </span>
+
+                {savingsBadge && (
+                    <span class="inline-flex items-center text-[11px] font-extrabold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                        {savingsBadge}
+                    </span>
+                )}
+            </div>
+
+            <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight mt-3.5 group-hover:text-glow transition-all">
+                {title}
+            </h3>
+
+            <!-- Pricing Display -->
+            <div class="mt-4 flex flex-col gap-1.5">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl sm:text-3xl font-bold text-accent/90">$</span>
+                    <span class="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
+                        {price}
+                    </span>
+                    <span class="text-sm sm:text-base font-semibold text-text-muted">
+                        /{time}
+                    </span>
+                </div>
+
+                {periodNote && (
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="text-xs font-semibold text-purple-300/90 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                            {periodNote}
+                        </span>
+                    </div>
+                )}
+
+                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-white/5">
+                    <span class="text-[11px] font-bold text-white uppercase tracking-wider px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                        +{suscripcion} de activación
+                    </span>
+                    <span class="h-1 w-1 rounded-full bg-white/30"></span>
+                    <span class="text-[11px] text-text-muted italic">pago único de setup</span>
+                </div>
+            </div>
+
+            <p class="mt-4 text-xs sm:text-[13px] text-text-muted/90 leading-relaxed min-h-[40px]">
+                {description}
+            </p>
+
+            <div class={`w-full h-px my-5 ${
+                popular 
+                    ? "bg-linear-to-r from-transparent via-accent/40 to-transparent" 
+                    : "bg-linear-to-r from-transparent via-white/15 to-transparent"
+            }`}></div>
+
+            <!-- Features List -->
+            <ul class="flex flex-col gap-3.5 mb-6">
+                {features.map((feature) => {
+                    const isObj = typeof feature === "object" && feature !== null;
+                    const text = isObj ? feature.text : feature;
+                    const isHighlight = isObj ? feature.highlight : false;
+
+                    return (
+                        <li class="flex items-start gap-3 text-xs sm:text-[13px] group/item transition-colors">
+                            <span class={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full mt-0.5 transition-all ${
+                                popular
+                                    ? "bg-accent/25 text-accent border border-accent/45 shadow-[0_0_10px_rgba(168,85,247,0.35)] group-hover/item:scale-110"
+                                    : "bg-white/10 text-purple-300 border border-white/15 group-hover/item:scale-110 group-hover/item:border-accent/40"
+                            }`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </span>
+                            <span class={`leading-snug ${
+                                isHighlight 
+                                    ? "text-white font-semibold" 
+                                    : "text-gray-300 group-hover/item:text-white transition-colors"
+                            }`}>
+                                {text}
+                            </span>
+                        </li>
+                    );
+                })}
+            </ul>
+        </div>
+
+        <!-- Bottom Section: Highlight Box & CTA Button -->
+        <div class="relative z-10 pt-2 flex flex-col justify-end">
+            <!-- Highlight/Bonus Box -->
+            {highlightBox && (
+                <div class={`mb-6 rounded-2xl p-3.5 sm:p-4 border relative overflow-hidden transition-all duration-300 ${
+                    highlightBox.isGift
+                        ? "bg-linear-to-r from-accent/20 via-tertiary/20 to-accent/15 border-accent/40 shadow-[0_0_25px_rgba(168,85,247,0.2)]"
+                        : "bg-white/[0.04] border-white/10"
+                }`}>
+                    {highlightBox.isGift && (
+                        <div class="pointer-events-none absolute -right-6 -bottom-6 w-24 h-24 bg-accent/30 rounded-full blur-xl"></div>
+                    )}
+                    <div class="flex items-center gap-3 relative z-10">
+                        <div class={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+                            highlightBox.isGift
+                                ? "bg-accent/30 border-accent/50 text-amber-300 shadow-[0_0_12px_rgba(168,85,247,0.5)]"
+                                : "bg-white/5 border-white/10 text-purple-300"
+                        }`}>
+                            {highlightBox.isGift ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                                    <rect x="2" y="7" width="20" height="5"></rect>
+                                    <line x1="12" y1="22" x2="12" y2="7"></line>
+                                    <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+                                    <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+                                </svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                            )}
+                        </div>
+                        <div class="flex flex-col">
+                            <span class={`text-[11px] font-black uppercase tracking-wider ${
+                                highlightBox.isGift
+                                    ? "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.4)]"
+                                    : "text-white/90"
+                            }`}>
+                                {highlightBox.title}
+                            </span>
+                            <span class="text-xs text-text-muted mt-0.5 leading-snug">
+                                {highlightBox.desc}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <!-- CTA Button -->
+            <a 
+                href={whatsappUrl}
+                target="_blank" 
+                rel="noopener noreferrer"
+                class={`group/btn relative flex h-12 w-full items-center justify-center rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-300 overflow-hidden active:scale-[0.98] ${
+                    popular
+                        ? "bg-linear-to-r from-accent via-purple-600 to-tertiary text-white shadow-[0_0_30px_rgba(168,85,247,0.45)] hover:shadow-[0_0_40px_rgba(168,85,247,0.7)] hover:brightness-110"
+                        : "bg-white/[0.07] hover:bg-accent/20 border border-white/15 hover:border-accent/50 text-white hover:shadow-[0_0_25px_rgba(168,85,247,0.25)]"
+                }`}
+            >
+                <span class="relative z-10 flex items-center gap-2">
+                    {ctaText || (popular ? "Elegir Plan Pro" : "Elegir Plan Básico")}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </span>
+            </a>
+        </div>
+    </div>
+</div>

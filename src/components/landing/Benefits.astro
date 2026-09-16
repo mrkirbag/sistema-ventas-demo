@@ -1,0 +1,285 @@
+---
+import BenefitCard from "@/components/landing/BenefitCard.astro";
+---
+
+<section
+    class="relative flex flex-col justify-center items-center w-full py-20 sm:py-24 lg:py-32 px-4 sm:px-6 lg:px-8 scroll-mt-20"
+    id="beneficios"
+>
+    <!-- Background Ambient Glows -->
+    <div class="pointer-events-none absolute inset-0 overflow-hidden">
+        <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-accent/10 blur-[140px] rounded-full"></div>
+        <div class="absolute bottom-1/4 left-1/3 -translate-x-1/2 w-[550px] h-[350px] bg-tertiary/10 blur-[130px] rounded-full"></div>
+    </div>
+
+    <div class="mx-auto max-w-6xl w-full flex flex-col justify-center items-center relative z-10">
+        <!-- Section Title & Subtitle -->
+        <div class="mb-10 sm:mb-16 text-center">
+            <div
+                class="inline-flex items-center gap-2 px-4 py-1.5 mb-3 rounded-full border border-accent/40 bg-accent/10 backdrop-blur-md shadow-[0_0_20px_rgba(168,85,247,0.25)]"
+            >
+                <span class="w-2 h-2 rounded-full bg-accent animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.8)]"></span>
+                <span class="text-xs sm:text-sm font-bold uppercase tracking-wider text-accent drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]">
+                    Ventajas Exclusivas
+                </span>
+            </div>
+            <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
+                Potencia tu <span class="text-transparent bg-clip-text bg-linear-to-r from-accent via-purple-300 to-tertiary drop-shadow-[0_0_25px_rgba(168,85,247,0.5)]">eficiencia operativa</span>
+            </h2>
+            <p class="text-sm sm:text-base md:text-lg text-text-muted/90 mt-3 max-w-2xl mx-auto">
+                Herramientas diseñadas para agilizar cada proceso de tu negocio
+            </p>
+        </div>
+
+        <!-- Cards Grid: 1 column on mobile (stacked), 2 columns on md+ -->
+        <div
+            class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 w-full touch-manipulation"
+        >
+            <!-- Card 1: Acceso Multiplataforma (Laptop, Tablet, Mobile) -->
+            <BenefitCard
+                title="Acceso Multiplataforma"
+                description="Gestiona tu empresa desde cualquier lugar y dispositivo."
+                class="active:scale-[0.99] transition-transform"
+            >
+                <div class="relative w-full h-full flex items-end justify-center pb-1 group/card1 min-h-[220px] sm:min-h-[260px] md:min-h-[280px]">
+                    <!-- Laptop (Center/Back) -->
+                    <div
+                        class="relative z-10 h-[88%] sm:h-[90%] max-h-full flex items-end justify-center transition-all duration-500 group-hover:scale-[1.03] drop-shadow-[0_15px_30px_rgba(0,0,0,0.85)] cursor-zoom-in"
+                        data-zoom-img="/landing/img/mockuplaptop.png"
+                        data-zoom-title="SAVI en Laptop - Versión de Escritorio"
+                    >
+                        <img
+                            class="h-full w-auto object-contain select-none"
+                            src="/landing/img/mockuplaptop.png"
+                            alt="SAVI en Laptop"
+                        />
+                    </div>
+
+                    <!-- Tablet (Overlapping Left Foreground) -->
+                    <div
+                        class="absolute z-20 bottom-0 left-1/2 -translate-x-[118%] h-[65%] sm:h-[68%] flex items-end transition-all duration-500 group-hover:-translate-y-2 group-hover:-rotate-2 drop-shadow-[0_14px_24px_rgba(0,0,0,0.85)] cursor-zoom-in"
+                        data-zoom-img="/landing/img/mockuptablet.png"
+                        data-zoom-title="SAVI en Tablet - Punto de Venta"
+                    >
+                        <img
+                            class="h-full w-auto object-contain select-none"
+                            src="/landing/img/mockuptablet.png"
+                            alt="SAVI en Tablet"
+                        />
+                    </div>
+
+                    <!-- Phone (Overlapping Right Foreground) -->
+                    <div
+                        class="absolute z-30 bottom-0 left-1/2 translate-x-[68%] h-[74%] sm:h-[78%] flex items-end transition-all duration-500 group-hover:-translate-y-2 group-hover:rotate-2 group-hover:scale-105 drop-shadow-[0_16px_28px_rgba(0,0,0,0.9)] cursor-zoom-in"
+                        data-zoom-img="/landing/img/mockupcelular.png"
+                        data-zoom-title="SAVI en Celular - App Móvil"
+                    >
+                        <img
+                            class="h-full w-auto object-contain select-none"
+                            src="/landing/img/mockupcelular.png"
+                            alt="SAVI en Celular"
+                        />
+                    </div>
+
+                    <div class="pointer-events-none absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-black/75 border border-white/20 text-xs text-white/90 opacity-0 group-hover/card1:opacity-100 transition-opacity flex items-center gap-1.5 backdrop-blur-xs">
+                        <svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path></svg>
+                        <span>Click para ampliar</span>
+                    </div>
+                </div>
+            </BenefitCard>
+
+            <!-- Card 2: Control en Tiempo Real (Dashboard completo) -->
+            <BenefitCard
+                title="Control de tu negocio en tiempo real"
+                description="Visualiza cada transacción, alerta y estadística en vivo."
+                class="active:scale-[0.99] transition-transform"
+            >
+                <div class="relative w-full h-full flex items-center justify-center p-1 group/zoom cursor-zoom-in min-h-[220px] sm:min-h-[260px] md:min-h-[280px]"
+                     data-zoom-img="/landing/img/dashboard.png"
+                     data-zoom-title="Panel de Control en Tiempo Real - SAVI">
+                    <img
+                        class="max-h-full max-w-full w-auto h-auto object-contain rounded-xl border border-white/15 shadow-2xl transition-transform duration-500 group-hover:scale-[1.03] select-none"
+                        src="/landing/img/dashboard.png"
+                        alt="Panel de Control en Vivo"
+                    />
+                    <div class="pointer-events-none absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-black/75 border border-white/20 text-xs text-white/90 opacity-0 group-hover/zoom:opacity-100 transition-opacity flex items-center gap-1.5 backdrop-blur-xs">
+                        <svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path></svg>
+                        <span>Click para ampliar</span>
+                    </div>
+                </div>
+            </BenefitCard>
+
+            <!-- Card 3: Inventario Inteligente (Inventario completo) -->
+            <BenefitCard
+                title="Inventario Inteligente"
+                description="Mantén al día toda tu mercancía, stock crítico y precios."
+                class="active:scale-[0.99] transition-transform"
+            >
+                <div class="relative w-full h-full flex items-center justify-center p-1 group/zoom cursor-zoom-in min-h-[220px] sm:min-h-[260px] md:min-h-[280px]"
+                     data-zoom-img="/landing/img/inventario.png"
+                     data-zoom-title="Gestión de Catálogo e Inventario - SAVI">
+                    <img
+                        class="max-h-full max-w-full w-auto h-auto object-contain rounded-xl border border-white/15 shadow-2xl transition-transform duration-500 group-hover:scale-[1.03] select-none"
+                        src="/landing/img/inventario.png"
+                        alt="Gestión de Inventario"
+                    />
+                    <div class="pointer-events-none absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-black/75 border border-white/20 text-xs text-white/90 opacity-0 group-hover/zoom:opacity-100 transition-opacity flex items-center gap-1.5 backdrop-blur-xs">
+                        <svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path></svg>
+                        <span>Click para ampliar</span>
+                    </div>
+                </div>
+            </BenefitCard>
+
+            <!-- Card 4: Finanzas y Créditos vigilados (Créditos y Reportes) -->
+            <BenefitCard
+                title="Finanzas y Créditos vigilados"
+                description="Monitorea cuentas por cobrar, abonos y balances de caja."
+                class="active:scale-[0.99] transition-transform"
+            >
+                <div class="relative w-full h-full flex items-center justify-center p-1 group/card4 min-h-[220px] sm:min-h-[260px] md:min-h-[280px]">
+                    <!-- Créditos (Left/Back) -->
+                    <div
+                        class="relative z-10 w-[60%] sm:w-[58%] -mr-8 sm:-mr-10 transition-all duration-500 group-hover:-translate-x-3 group-hover:-rotate-1 cursor-zoom-in"
+                        data-zoom-img="/landing/img/creditos.png"
+                        data-zoom-title="Módulo de Créditos y Cobranzas - SAVI"
+                    >
+                        <img
+                            class="w-full h-auto object-contain rounded-xl border border-white/15 shadow-xl select-none"
+                            src="/landing/img/creditos.png"
+                            alt="Control de Créditos"
+                        />
+                    </div>
+
+                    <!-- Reportes (Right/Front) -->
+                    <div
+                        class="relative z-20 w-[60%] sm:w-[58%] transition-all duration-500 group-hover:translate-x-3 group-hover:rotate-1 group-hover:scale-[1.03] cursor-zoom-in"
+                        data-zoom-img="/landing/img/reportes.png"
+                        data-zoom-title="Reportes Financieros y Cierre de Caja - SAVI"
+                    >
+                        <img
+                            class="w-full h-auto object-contain rounded-xl border border-white/20 shadow-2xl select-none"
+                            src="/landing/img/reportes.png"
+                            alt="Reportes Financieros"
+                        />
+                    </div>
+
+                    <div class="pointer-events-none absolute bottom-2 right-2 px-2.5 py-1 rounded-md bg-black/75 border border-white/20 text-xs text-white/90 opacity-0 group-hover/card4:opacity-100 transition-opacity flex items-center gap-1.5 backdrop-blur-xs">
+                        <svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path></svg>
+                        <span>Click para ampliar</span>
+                    </div>
+                </div>
+            </BenefitCard>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div
+        id="benefits-image-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300"
+        role="dialog"
+        aria-modal="true"
+        aria-hidden="true"
+    >
+        <div class="relative max-w-5xl w-full max-h-[92vh] flex flex-col items-center justify-center">
+            <!-- Close Button -->
+            <button
+                id="close-benefits-modal"
+                class="absolute -top-11 right-0 sm:-top-12 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full py-1.5 px-3.5 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold backdrop-blur-md border border-white/15 shadow-lg"
+                aria-label="Cerrar vista previa"
+            >
+                <span>Cerrar</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+
+            <!-- Image Card Preview -->
+            <div
+                id="modal-card-container"
+                class="relative overflow-hidden rounded-2xl border border-white/20 bg-linear-to-b from-card-dark/95 to-primary/95 shadow-[0_25px_60px_rgba(0,0,0,0.95)] p-2 sm:p-3 flex flex-col items-center max-h-[85vh] w-full"
+            >
+                <div class="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+                    <img
+                        id="benefits-modal-img"
+                        src=""
+                        alt="Vista ampliada"
+                        class="max-w-full max-h-[75vh] w-auto h-auto object-contain rounded-xl shadow-2xl transition-transform duration-300 scale-95"
+                    />
+                </div>
+                <div class="mt-2 text-center shrink-0">
+                    <p id="benefits-modal-title" class="text-xs sm:text-sm text-white font-semibold tracking-wide"></p>
+                    <p class="text-[11px] text-text-muted/70 mt-0.5">Presiona ESC o haz click afuera para cerrar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    function setupLightbox() {
+        const modal = document.getElementById("benefits-image-modal");
+        const modalImg = document.getElementById("benefits-modal-img") as HTMLImageElement | null;
+        const modalTitle = document.getElementById("benefits-modal-title");
+        const closeBtn = document.getElementById("close-benefits-modal");
+
+        if (!modal || !modalImg) return;
+
+        function openModal(src: string, alt: string, title?: string) {
+            if (!modal || !modalImg) return;
+            modalImg.src = src;
+            modalImg.alt = alt;
+            if (modalTitle) modalTitle.textContent = title || alt || "";
+            modal.classList.remove("opacity-0", "pointer-events-none");
+            modal.classList.add("opacity-100", "pointer-events-auto");
+            modal.setAttribute("aria-hidden", "false");
+            setTimeout(() => {
+                modalImg?.classList.remove("scale-95");
+                modalImg?.classList.add("scale-100");
+            }, 10);
+        }
+
+        function closeModal() {
+            if (!modal || !modalImg) return;
+            modalImg.classList.remove("scale-100");
+            modalImg.classList.add("scale-95");
+            modal.classList.remove("opacity-100", "pointer-events-auto");
+            modal.classList.add("opacity-0", "pointer-events-none");
+            modal.setAttribute("aria-hidden", "true");
+            setTimeout(() => {
+                if (modal.classList.contains("opacity-0") && modalImg) {
+                    modalImg.src = "";
+                }
+            }, 300);
+        }
+
+        document.querySelectorAll("[data-zoom-img]").forEach((el) => {
+            el.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const target = el as HTMLElement;
+                const src = target.getAttribute("data-zoom-img");
+                const title = target.getAttribute("data-zoom-title");
+                if (src) {
+                    openModal(src, title || "", title || "");
+                }
+            });
+        });
+
+        closeBtn?.addEventListener("click", closeModal);
+        modal.addEventListener("click", (e) => {
+            const target = e.target as HTMLElement;
+            if (target === modal || target.closest("#close-benefits-modal")) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && !modal.classList.contains("opacity-0")) {
+                closeModal();
+            }
+        });
+    }
+
+    // Initialize on load and on Astro page swaps if view transitions are enabled
+    setupLightbox();
+    document.addEventListener("astro:page-load", setupLightbox);
+</script>

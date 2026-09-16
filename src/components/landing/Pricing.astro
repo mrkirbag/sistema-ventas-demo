@@ -1,0 +1,112 @@
+---
+import PricingCard from "./PricingCard.astro";
+
+const plans = [
+    {
+        title: "Básico",
+        planTag: "Plan Mensual Flexible",
+        suscripcion: "30",
+        price: "25",
+        time: "mes",
+        description:
+            "Ideal para emprendedores y pequeños negocios que inician su digitalización y control de ventas.",
+        popular: false,
+        features: [
+            { text: "Hasta 1,000 ítems en inventario", highlight: false },
+            { text: "Hasta 5 usuarios del sistema", highlight: false },
+            {
+                text: "Personalización básica con el logo de tu empresa",
+                highlight: false,
+            },
+        ],
+        highlightBox: {
+            title: "Sin permanencia",
+            desc: "Renovación mensual sin ataduras. Escala a Pro cuando lo necesites",
+            isGift: false,
+        },
+        ctaText: "Solicitar Plan Básico",
+    },
+    {
+        title: "Pro",
+        planTag: "Plan Anual Recomendado",
+        suscripcion: "30",
+        price: "270",
+        time: "año",
+        savingsBadge: "Ahorra $30/año",
+        description:
+            "Solución integral ilimitada para empresas en crecimiento que requieren máxima potencia y presencia digital.",
+        popular: true,
+        features: [
+            { text: "Ítems de inventario ILIMITADOS", highlight: true },
+            { text: "Usuarios y accesos ILIMITADOS", highlight: true },
+            {
+                text: "Personalización total con tu identidad de marca",
+                highlight: false,
+            },
+            { text: "Soporte prioritario 24/7 preferencial", highlight: true },
+        ],
+        highlightBox: {
+            title: "Regalo Exclusivo Incluido",
+            desc: "Landing Page personalizada + Dominio .com gratis por 1 año",
+            isGift: true,
+        },
+        ctaText: "Elegir Plan Pro",
+    },
+];
+---
+
+<section
+    class="relative snap-start scroll-mt-20 px-4 sm:px-6 lg:px-8 py-20 sm:py-24 lg:py-28 min-h-screen flex flex-col justify-center items-center overflow-hidden"
+    id="planes"
+>
+    <!-- Multi-layered Ambient Glows -->
+    <div class="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[850px] h-[500px] bg-accent/10 blur-[150px] rounded-full"
+        >
+        </div>
+        <div
+            class="absolute top-1/4 -left-20 w-[450px] h-[350px] bg-tertiary/10 blur-[130px] rounded-full"
+        >
+        </div>
+        <div
+            class="absolute bottom-1/4 -right-20 w-[450px] h-[350px] bg-accent/10 blur-[140px] rounded-full"
+        >
+        </div>
+    </div>
+
+    <div
+        class="mx-auto max-w-5xl w-full relative z-10 flex flex-col items-center"
+    >
+        <!-- Section Header -->
+        <div class="mb-12 sm:mb-16 flex flex-col items-center text-center">
+            <div
+                class="inline-flex items-center gap-2 px-4 py-1.5 mb-4 rounded-full border border-accent/40 bg-accent/10 backdrop-blur-md shadow-[0_0_20px_rgba(168,85,247,0.25)]"
+            >
+                <span
+                    class="w-2 h-2 rounded-full bg-accent animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.8)]"
+                ></span>
+                <span
+                    class="text-xs sm:text-sm font-bold uppercase tracking-wider text-accent drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]"
+                >
+                    Inversión Clara y Transparente
+                </span>
+            </div>
+            <h2
+                class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight max-w-3xl"
+            >
+                Planes diseñados para <br class="hidden sm:inline" /><span
+                    class="text-transparent bg-clip-text bg-linear-to-r from-accent via-purple-300 to-tertiary drop-shadow-[0_0_25px_rgba(168,85,247,0.5)]"
+                    >hacer crecer tu negocio</span
+                >
+            </h2>
+        </div>
+
+        <!-- Cards Grid (2 cards centered side by side) -->
+        <div
+            class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10 w-full max-w-4xl items-stretch justify-center"
+        >
+            {plans.map((plan) => <PricingCard {...plan} />)}
+        </div>
+    </div>
+</section>
